@@ -111,7 +111,10 @@ export function PerformanceCard({
     <View style={[styles.card, { backgroundColor: colors.card }, style]}>
       <View style={styles.header}>
         <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
-        {delta != null && <DeltaLabel delta={shownDelta} suffix="%" fontSize={14} />}
+        {/* No arrow for no change: a 0% with a down arrow read as getting worse. */}
+        {delta != null && delta !== 0 && (
+          <DeltaLabel delta={shownDelta} suffix="%" fontSize={14} />
+        )}
       </View>
 
       {/* Forty-eight ticks, a bubble and a marker are one reading of one

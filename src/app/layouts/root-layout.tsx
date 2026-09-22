@@ -14,6 +14,7 @@ import {
   usePurchases,
   useReferralSync,
   useQuickActions,
+  useDayRollover,
 } from '@/app/providers';
 import { useOnboarded } from '@/entities/session';
 import { fontAssets } from '@/shared/config';
@@ -72,6 +73,7 @@ export function RootLayout() {
   // backoff that silences the app is cleared by any open, not only by a tap on
   // a notification.
   useNotificationScheduler();
+  useDayRollover();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

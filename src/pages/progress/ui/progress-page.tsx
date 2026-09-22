@@ -12,9 +12,11 @@ import {
   TODAY_INDEX,
   blockName,
   completedThrough,
+  currentDay,
   computeScore,
   currentLevels,
   latestRetest,
+  logFor,
   painFor,
   painOn,
   useStreak,
@@ -225,14 +227,18 @@ export function ProgressPage() {
    */
   const brief = (() => {
     if (range.days === 7) {
-      const logged = completedThrough(TODAY_INDEX) - completedThrough(Math.max(TODAY_INDEX - 7, 0));
+      // Today counts once it is finished, like every other day in the week.
+      const doneToday = logFor(currentDay())?.sessionCompleted === true;
+      const logged =
+        completedThrough(TODAY_INDEX, doneToday) - completedThrough(Math.max(TODAY_INDEX - 7, 0));
       return weekTokens(logged);
     }
     const half = Math.floor(range.days / 2);
     const recent = meanPain(TODAY_INDEX - half, TODAY_INDEX);
     const earlier = meanPain(TODAY_INDEX - range.days, TODAY_INDEX - half);
     if (recent == null || earlier == null || TODAY_INDEX < MIN_WINDOW_DAYS) {
-      return tooEarlyTokens(TODAY_INDEX);
+      // Day 1 is one day in, not zero.
+      return tooEarlyTokens(TODAY_INDEX + 1);
     }
     return trendTokens(range.window, Math.round(earlier), Math.round(recent));
   })();
@@ -290,7 +296,9 @@ export function ProgressPage() {
         <IntroReveal order={3}>
           <ScoreCard
             score={score}
-            title="You’re doing great!"
+            // Praise only once the score has something in it; "doing great"
+            // over a 0 read as the screen contradicting itself.
+            title={score > 0 ? 'You’re doing great!' : 'Just getting started'}
             headline={`${streak.current} day streak!`}
             note={`Keep it up to finish the ${blockName(today.block)} block.`}
           />

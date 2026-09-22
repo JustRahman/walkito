@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 import { fonts, primaryButton } from '@/shared/config';
@@ -30,6 +31,7 @@ const PRESS_OUT_MS = 160;
 /** How far the face shrinks under a finger. Small — a big scale on something
  * this large reads as the screen lurching, not as a press. */
 const PRESS_SCALE = 0.975;
+const DISABLED_OPACITY = 0.35;
 
 export type PrimaryButtonProps = {
   label: string;
@@ -47,6 +49,13 @@ export type PrimaryButtonProps = {
    * pair or neither — there is no safe default for an arbitrary hue.
    */
   tint?: { fill: string; label: string };
+  /**
+   * Keeps a disabled button tappable, for a screen that lets a deliberate
+   * burst of taps override the wait. The screen owns what the taps mean.
+   */
+  onDisabledPress?: () => void;
+  /** 0–1: how much of a disabled face is filled back in, from the left. */
+  charge?: SharedValue<number>;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -64,6 +73,8 @@ export function PrimaryButton({
   icon,
   disabled = false,
   tint,
+  onDisabledPress,
+  charge,
   style,
 }: PrimaryButtonProps) {
   const scheme = useColorScheme();
@@ -73,13 +84,28 @@ export function PrimaryButton({
   const faceStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 - pressed.value * (1 - PRESS_SCALE) }],
   }));
+  const chargeStyle = useAnimatedStyle(() => ({
+    width: `${(charge?.value ?? 0) * 100}%`,
+  }));
+  // Always attached once there is a charge, and full opacity when enabled:
+  // removing an animated style leaves its last value on the view, which kept
+  // "Continue" dimmed after the countdown ended.
+  const chargeLabelStyle = useAnimatedStyle(
+    () => ({
+      opacity: disabled
+        ? DISABLED_OPACITY + (1 - DISABLED_OPACITY) * (charge?.value ?? 0)
+        : 1,
+    }),
+    [disabled],
+  );
+  const tappable = !disabled || onDisabledPress != null;
 
   return (
     <Animated.View style={[style, faceStyle]}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled }}
-        disabled={disabled}
+        disabled={!tappable}
         onPressIn={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           pressed.value = withTiming(1, {
@@ -97,16 +123,29 @@ export function PrimaryButton({
             reduceMotion: ReduceMotion.System,
           });
         }}
-        onPress={onPress}
-        style={[styles.face, { backgroundColor: theme.fill }, disabled && styles.disabled]}>
-        <View style={styles.row}>
+        onPress={disabled ? onDisabledPress : onPress}
+        style={styles.face}>
+        {/* The dimmed fill is its own layer rather than an opacity on the face,
+            so the charge can paint the full colour over it. */}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: theme.fill },
+            disabled && styles.disabled,
+          ]}
+        />
+        {disabled && charge != null && (
+          <Animated.View style={[styles.charge, { backgroundColor: theme.fill }, chargeStyle]} />
+        )}
+        <Animated.View
+          style={[styles.row, charge != null ? chargeLabelStyle : disabled && styles.disabled]}>
           <Text style={[styles.label, { color: theme.label }]} numberOfLines={1}>
             {label}
           </Text>
           {icon != null && (
             <HugeiconsIcon icon={icon} size={20} color={theme.label} strokeWidth={2.2} />
           )}
-        </View>
+        </Animated.View>
       </Pressable>
     </Animated.View>
   );
@@ -119,6 +158,13 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  charge: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
   },
   row: {
     flexDirection: 'row',
@@ -131,6 +177,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   disabled: {
-    opacity: 0.35,
+    opacity: DISABLED_OPACITY,
   },
 });

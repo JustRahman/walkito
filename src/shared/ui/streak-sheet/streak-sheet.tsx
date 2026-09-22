@@ -103,6 +103,12 @@ export function StreakSheet({ visible, onClose, current, total, week }: StreakSh
       return () => cancelAnimationFrame(frame);
     }
 
+    // A fresh function per exit, never the setter itself. Worklets caches the
+    // bridge to a JS function by identity and frees it once the worklet that
+    // used it is collected — and the mount-time pass through this branch is such
+    // a worklet. Reusing `setMounted` later reached a freed bridge and aborted
+    // the app on close.
+    const unmount = () => setMounted(false);
     t.value = withTiming(
       0,
       { duration: OUT_MS, easing: Easing.in(Easing.cubic), reduceMotion: ReduceMotion.System },
@@ -110,7 +116,7 @@ export function StreakSheet({ visible, onClose, current, total, week }: StreakSh
         // Only when it ran to the end. Reopening mid-exit cancels this timing,
         // and unmounting then would pull the sheet out from under the animation
         // that is already bringing it back.
-        if (finished) runOnJS(setMounted)(false);
+        if (finished) runOnJS(unmount)();
       },
     );
     return undefined;

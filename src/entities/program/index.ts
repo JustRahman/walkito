@@ -111,6 +111,7 @@ export {
   type ResolvedDay,
   type ResolvedExercise,
 } from './model/adapt';
+export { resolveToday } from './model/today';
 
 export {
   allLogs,

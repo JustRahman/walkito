@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -38,6 +38,11 @@ export type SessionDoneSheetProps = {
   /** How many moves were just completed. */
   moves: number;
   onClose: () => void;
+  /** The exit has finished and the modal is gone. Anything that dismisses a
+   * screen this sheet sits on must wait for this: closing the parent while this
+   * modal is still up leaves an invisible window on iOS that swallows every
+   * touch. */
+  onHidden?: () => void;
 };
 
 /**
@@ -55,7 +60,13 @@ export type SessionDoneSheetProps = {
  * finished — is the evidence. Covering it would replace the thing being
  * celebrated with a picture of celebrating.
  */
-export function SessionDoneSheet({ visible, streak, moves, onClose }: SessionDoneSheetProps) {
+export function SessionDoneSheet({
+  visible,
+  streak,
+  moves,
+  onClose,
+  onHidden,
+}: SessionDoneSheetProps) {
   const scheme = useColorScheme();
   const colors = palette[scheme];
   const meter = meterColors[scheme];
@@ -68,6 +79,15 @@ export function SessionDoneSheet({ visible, streak, moves, onClose }: SessionDon
    * has happened twice in this project.
    */
   const [mounted, setMounted] = useState(false);
+  const wasMounted = useRef(false);
+  const onHiddenRef = useRef(onHidden);
+  onHiddenRef.current = onHidden;
+  // After the commit that removed the modal, not in the animation callback that
+  // asked for it — the parent may only go once this modal is really gone.
+  useEffect(() => {
+    if (wasMounted.current && !mounted) onHiddenRef.current?.();
+    wasMounted.current = mounted;
+  }, [mounted]);
   const t = useSharedValue(0);
   /** The badge lands rather than fades: an emblem that appears at full size has
    * already happened, where one arriving with weight behind it reads as having
@@ -102,6 +122,12 @@ export function SessionDoneSheet({ visible, streak, moves, onClose }: SessionDon
     }
 
     pop.value = 0;
+    // A fresh function per exit, never the setter itself. Worklets caches the
+    // bridge to a JS function by identity and frees it once the worklet that
+    // used it is collected — and the mount-time pass through this branch is such
+    // a worklet. Reusing `setMounted` later reached a freed bridge and aborted
+    // the app on close.
+    const unmount = () => setMounted(false);
     t.value = withTiming(
       0,
       { duration: OUT_MS, easing: Easing.in(Easing.cubic), reduceMotion: ReduceMotion.System },
@@ -109,7 +135,7 @@ export function SessionDoneSheet({ visible, streak, moves, onClose }: SessionDon
         // Only when it ran to the end. Reopening mid-exit cancels this timing,
         // and unmounting then would pull the sheet out from under the animation
         // already bringing it back.
-        if (finished) runOnJS(setMounted)(false);
+        if (finished) runOnJS(unmount)();
       },
     );
     return undefined;

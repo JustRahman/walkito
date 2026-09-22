@@ -17,18 +17,11 @@ import {
   RETEST_MINUTES,
   RETEST_TESTS,
   TODAY_INDEX,
-  blockFor,
   currentDay,
-  daysSinceLastSession,
-  hoursBaseline,
-  hoursOnFeetOn,
-  kindFor,
-  painAverage,
-  painOn,
-  programState,
-  resolveDay,
   useLogsVersion,
   writeLog,
+  logFor,
+  resolveToday,
   useProgramState,
   type ExerciseCategory,
   type ProgramDay,
@@ -120,25 +113,11 @@ export type Task = {
  * header already prints.
  */
 function tasksForToday(): { tasks: readonly Task[]; retest: boolean } {
-  const dayNumber = currentDay();
-  const state = programState();
-  const block = blockFor(dayNumber, state.planLength);
   // Past the final block there is no block to resolve against, and maintenance
   // supplies its own schedule. The list says nothing rather than guessing, and
   // its empty state is already the right thing to show.
-  if (block == null) return { tasks: [], retest: false };
-
-  const resolved = resolveDay({
-    dayNumber,
-    block,
-    kind: kindFor(dayNumber),
-    painToday: painOn(dayNumber),
-    pain7dAvg: painAverage(dayNumber, 7),
-    hoursOnFeetYesterday: hoursOnFeetOn(dayNumber - 1),
-    hoursBaseline: hoursBaseline(dayNumber),
-    daysSinceLastSession: daysSinceLastSession(dayNumber),
-    progressionOffset: state.progressionOffset,
-  });
+  const resolved = resolveToday();
+  if (resolved == null) return { tasks: [], retest: false };
 
   return {
     // A retest day resolves to no exercises, which is not the same fact as a
@@ -167,7 +146,6 @@ export function TodayTasks() {
   const scheme = useColorScheme();
   const colors = palette[scheme];
   const meter = meterColors[scheme];
-  const [done, setDone] = useState<readonly string[]>([]);
   /** Which task's player is up. The task itself is the state — there is nothing
    * to know about the sheet the task does not already say. */
   const [open, setOpen] = useState<Task | null>(null);
@@ -196,6 +174,15 @@ export function TodayTasks() {
   }, [logsVersion, state]);
 
   /**
+   * What is ticked, read from today's saved log rather than held here — so the
+   * ticks survive a restart, and a session finished from the Program screen
+   * shows every task as done.
+   */
+  const log = logFor(currentDay());
+  const done: readonly string[] =
+    log?.sessionCompleted === true ? tasks.map((task) => task.id) : (log?.exercisesDone ?? []);
+
+  /**
    * Unfinished first, in their original order; finished sink to the bottom.
    *
    * A stable sort, so ticking one task never reshuffles the others around it —
@@ -221,7 +208,6 @@ export function TodayTasks() {
    * completed by opening it.
    */
   const record = (next: readonly string[]) => {
-    setDone(next);
     writeLog(currentDay(), {
       exercisesDone: [...next],
       sessionCompleted: tasks.length > 0 && next.length >= tasks.length,
@@ -305,6 +291,8 @@ export function TodayTasks() {
               // simply has nowhere to go next, which is what makes the end of the
               // move the end of the task.
               moves={[open.title]}
+              // Only the task that completes today's list gets the celebration.
+              celebrate={tasks.every((task) => task.id === open.id || done.includes(task.id))}
               onBack={() => setOpen(null)}
               onFinish={() => {
                 finish(open.id);

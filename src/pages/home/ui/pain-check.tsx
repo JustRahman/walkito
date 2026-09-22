@@ -99,7 +99,12 @@ export type PainCheckProps = {
 export function PainCheck({ onLogged }: PainCheckProps) {
   const scheme = useColorScheme();
   const meter = meterColors[scheme];
-  const [selected, setSelected] = useState<CardKey | null>(null);
+  /** Today's answer, if one was already given — so reopening the app shows the
+   * check-in as done instead of asking again. */
+  const [savedPain] = useState(() => painOn(currentDay()));
+  const [selected, setSelected] = useState<CardKey | null>(
+    savedPain == null ? null : savedPain === 0 ? 'nopain' : 'pain',
+  );
   const [open, setOpen] = useState(false);
   /**
    * Whether today's answer is committed.
@@ -109,7 +114,7 @@ export function PainCheck({ onLogged }: PainCheckProps) {
    * down to it offers a second commit: another burst of confetti, or the pain
    * sheet re-presented over a day that is already logged.
    */
-  const [logged, setLogged] = useState(false);
+  const [logged, setLogged] = useState(savedPain != null);
   /**
    * What the app says back, once the answer is in.
    *
@@ -119,7 +124,9 @@ export function PainCheck({ onLogged }: PainCheckProps) {
    * beat later. This block is the one place every path ends up looking at —
    * including "No pain today", which never opens the sheet at all.
    */
-  const [ack, setAck] = useState<string | null>(null);
+  const [ack, setAck] = useState<string | null>(
+    savedPain == null ? null : acknowledgement(savedPain),
+  );
   const ackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -241,7 +248,7 @@ const USUAL_WINDOW = 30;
 /** Fewer readings than this and there is no ordinary day to describe yet. */
 const USUAL_MIN_READINGS = 3;
 
-function usualRange(): { low: number; high: number } {
+function usualRange(): { low: number; high: number; known: boolean } {
   const today = currentDay();
   const logged: number[] = [];
   for (let day = Math.max(1, today - USUAL_WINDOW); day < today; day += 1) {
@@ -252,8 +259,8 @@ function usualRange(): { low: number; high: number } {
     // usual" and put both edge marks on the same pixel.
     if (pain != null) logged.push(pain);
   }
-  if (logged.length < USUAL_MIN_READINGS) return { low: PAIN_MIN, high: PAIN_MAX };
-  return { low: Math.min(...logged), high: Math.max(...logged) };
+  if (logged.length < USUAL_MIN_READINGS) return { low: PAIN_MIN, high: PAIN_MAX, known: false };
+  return { low: Math.min(...logged), high: Math.max(...logged), known: true };
 }
 
 /**
@@ -436,7 +443,7 @@ function Sheet({
           the same colour the sheet is already painting, so there is no seam. */}
       <Animated.View
         style={[styles.pane, { backgroundColor: colors.background }, reliefPane]}>
-        {relieving && <SessionView day={relief} onBack={onClose} />}
+        {relieving && <SessionView day={relief} onBack={onClose} onFinish={onClose} />}
       </Animated.View>
     </View>
   );

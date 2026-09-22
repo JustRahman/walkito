@@ -1,6 +1,7 @@
 import ArrowExpandDiagonal01Icon from '@hugeicons/core-free-icons/ArrowExpandDiagonal01Icon';
 import ArrowShrink01Icon from '@hugeicons/core-free-icons/ArrowShrink01Icon';
 import ArrowLeft02Icon from '@hugeicons/core-free-icons/ArrowLeft02Icon';
+import ArrowRight02Icon from '@hugeicons/core-free-icons/ArrowRight02Icon';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import SquareLock02Icon from '@hugeicons/core-free-icons/SquareLock02Icon';
 import * as Haptics from 'expo-haptics';
@@ -18,6 +19,7 @@ import Animated, {
   useAnimatedStyle,
   useFrameCallback,
   useSharedValue,
+  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -92,6 +94,17 @@ const EXPAND_EASING = Easing.bezier(0.23, 1, 0.32, 1);
 /** The chip the expand control sits in. White enough to guarantee the black
  * glyph reads over any frame the clip happens to be showing. */
 const EXPAND_CHIP = 36;
+
+/** Skipping a move early: each tap on the waiting button fills a quarter of
+ * it, and a pause lets it drain back, so only four taps in a row fill it. Full,
+ * it holds and offers Skip, and one more tap is what actually skips — a stray
+ * burst never passes a move on its own. */
+const SKIP_STEP = 1 / 4;
+const SKIP_FILL_MS = 260;
+const SKIP_ARMED_MS = 2500;
+const SKIP_DRAIN_MS = 1100;
+const SKIP_FILL_EASING = Easing.out(Easing.cubic);
+const SKIP_DRAIN_EASING = Easing.inOut(Easing.quad);
 
 /** "01:00", counting down. Padded on both halves so the digits never reflow. */
 function clock(seconds: number): string {
@@ -213,7 +226,18 @@ export type SessionViewProps = {
   /** The last move ran out. Fires once, and not on the way back — leaving early
    * is not finishing. */
   onFinish?: () => void;
+  /** Whether finishing shows the celebration. Off for a single task that
+   * leaves others on today's list — that is progress, not a finished day. */
+  celebrate?: boolean;
+  /** Where to pick up: a session left by the back arrow, reopened. `progress`
+   * is how far into that move, 0–1. */
+  resumeFrom?: SessionPosition;
+  /** Called when the user leaves before the session is over, with where they
+   * were — so an accidental back can pick up there instead of from zero. */
+  onLeave?: (at: SessionPosition) => void;
 };
+
+export type SessionPosition = { step: number; progress: number };
 
 /**
  * One session, playing.
@@ -234,7 +258,15 @@ export type SessionViewProps = {
  * you have not done before — the one where you need to see the shape of it, not
  * how many seconds are left.
  */
-export function SessionView({ day, onBack, moves: override, onFinish }: SessionViewProps) {
+export function SessionView({
+  day,
+  onBack,
+  moves: override,
+  onFinish,
+  celebrate = true,
+  resumeFrom,
+  onLeave,
+}: SessionViewProps) {
   const scheme = useColorScheme();
   const colors = palette[scheme];
   const meter = meterColors[scheme];
@@ -265,7 +297,16 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
    * the clock causes without becoming one of them. */
   const startedAt = useRef(new Date());
 
-  const [step, setStep] = useState(0);
+  /** Where this run starts: the top, or where a left session stopped. Clamped
+   * to the list, which a new check-in can have shortened since. */
+  const startStep =
+    resumeFrom != null && resumeFrom.step < moves.length ? resumeFrom.step : 0;
+  const startProgress =
+    resumeFrom != null && startStep === resumeFrom.step
+      ? Math.min(Math.max(resumeFrom.progress, 0), 1)
+      : 0;
+
+  const [step, setStep] = useState(startStep);
   const [playing, setPlaying] = useState(true);
   /**
    * Whole seconds into the current move.
@@ -275,7 +316,9 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
    * sampling elapsed time keeps that arithmetic in a pure function that can be
    * tested, rather than in a worklet that can only be watched.
    */
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(() =>
+    Math.floor(startProgress * (plan[startStep]?.seconds ?? SECONDS_PER_MOVE)),
+  );
   /**
    * The last move ran out and there is nothing after it.
    *
@@ -290,7 +333,11 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
    * scrubber writes it from a finger at 120Hz and the fill reads it on the same
    * thread; pushing it through state would re-render the video card on every
    * frame of a drag. */
-  const progress = useSharedValue(0);
+  const progress = useSharedValue(startProgress);
+
+  /** How full the skip gesture is on the waiting button, 0–1. Emptied on every
+   * change of move, so a charge built on one exercise never skips the next. */
+  const skipCharge = useSharedValue(0);
 
   /** 0 collapsed, 1 full-screen. Drives the card's frame and both sets of
    * chrome off one number, so nothing can arrive out of step with the corner
@@ -563,6 +610,7 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
       // takes React to re-render. The two writes below are what tell it to
       // start measuring, so the length has to be true before them.
       moveMs.value = next.seconds * 1000;
+      skipCharge.value = 0;
       progress.value = 0;
       deadline.value = 0;
       // The readout opens the next move on its first phase, rather than holding
@@ -573,7 +621,7 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
       player.currentTime = 0;
       return true;
     },
-    [player, progress, deadline, moveMs],
+    [player, progress, deadline, moveMs, skipCharge],
   );
 
   const advance = useCallback(() => {
@@ -602,7 +650,7 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
     // same reason: this is the only place that means the last move actually ran
     // out. Leaving by the arrow gets no confetti, which is correct — nothing
     // was finished.
-    setCelebrating(true);
+    if (celebrate) setCelebrating(true);
     void saveSessionToHealth({
       dayNumber: day.day,
       moves,
@@ -613,24 +661,13 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
     // Deliberately NOT calling `onFinish` here. Home unmounts this player when
     // it fires, and doing that at the instant the clock hits zero would take
     // the celebration off screen before it was drawn. The sheet calls it on the
-    // way out instead.
-  }, [goTo, step, progress, deadline, endActivity, activitySnapshot, day, moves]);
+    // way out instead. Without the sheet there is nothing to wait for.
+    if (!celebrate) onFinish?.();
+  }, [goTo, step, progress, deadline, endActivity, activitySnapshot, day, moves, celebrate, onFinish]);
 
-  /**
-   * The move running out, from either direction.
-   *
-   * Scrubbing to the end and letting the minute elapse are the same event, so
-   * they are one reaction rather than two code paths that have to agree. It
-   * waits for the finger to leave — advancing mid-drag would pull the screen
-   * out from under a gesture that is still going.
-   */
-  useAnimatedReaction(
-    () => progress.value >= 1 && open.value < 0.5,
-    (done, was) => {
-      if (done && !was) runOnJS(advance)();
-    },
-    [advance],
-  );
+  // A move running out does not advance on its own: the clock stops at zero and
+  // Continue is the only way on, so nobody is pulled into the next exercise
+  // before they have finished this one.
 
   const leave = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -642,8 +679,11 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
     // toward something the user has already abandoned. This view stays mounted
     // behind the departing pane, so nothing else would have ended it.
     endActivity();
+    // Mid-session, hand back where they were; a finished session has nothing
+    // to resume.
+    if (!finished) onLeave?.({ step, progress: progress.value });
     onBack();
-  }, [onBack, endActivity]);
+  }, [onBack, endActivity, finished, onLeave, step, progress]);
 
   /**
    * The session, handed to the Lock Screen for the length of its run.
@@ -758,8 +798,8 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
   });
 
   /**
-   * The move is done and Continue can be pressed. Expanded, nothing advances
-   * on its own — the reaction above stands down — so this is the only way on.
+   * The move is done and Continue can be pressed. Nothing advances on its own,
+   * so this is the only way on.
    *
    * Gated on what is left of the *move*, not on the big number: on a tempo move
    * the big number is a three-second phase, and it reaching one would open the
@@ -844,13 +884,47 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
    * the old three-icon transport long after the button had replaced it
    * everywhere else.
    */
+  /** The button is full and showing Skip. */
+  const [skipArmed, setSkipArmed] = useState(false);
+  useAnimatedReaction(
+    () => skipCharge.value >= 0.999,
+    (full, was) => {
+      if (full !== was) runOnJS(setSkipArmed)(full);
+    },
+  );
+  const chargeSkip = useCallback(() => {
+    if (skipArmed) {
+      skipCharge.value = 0;
+      setPlaying(true);
+      advance();
+      return;
+    }
+    const next = Math.min(1, skipCharge.value + SKIP_STEP);
+    const hold = next >= 0.999 ? SKIP_ARMED_MS : 0;
+    skipCharge.value = withTiming(
+      next >= 0.999 ? 1 : next,
+      { duration: SKIP_FILL_MS, easing: SKIP_FILL_EASING },
+      (done) => {
+        if (done) {
+          skipCharge.value = withDelay(
+            hold,
+            withTiming(0, { duration: SKIP_DRAIN_MS, easing: SKIP_DRAIN_EASING }),
+          );
+        }
+      },
+    );
+  }, [skipArmed, skipCharge, advance]);
+
+  /** The press that ends the whole day's work: the one button that is green. */
+  const finale = last && celebrate;
+
   const ctaButton = (
     <PrimaryButton
       // Green only on the last one. The single colour change in the whole
       // screen, spent on the press that ends the session — a button that looks
       // the same for move one and move five gives no sense of arriving
       // anywhere.
-      tint={last ? { fill: meter.positive, label: primaryButton.dark.label } : undefined}
+      tint={finale ? { fill: meter.positive, label: primaryButton.dark.label } : undefined}
       // The clock lives in the button rather than somewhere else on the screen.
       // Reading the time off the thing you are waiting to press is the plainest
       // way to say why it cannot be pressed yet — which is why it counts the
@@ -860,9 +934,21 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
       // "Finish" on the last one: pressing Continue for the final time and
       // having the session simply stop is the moment this screen most needs to
       // not feel like a bug.
-      label={ready ? (last ? 'Finish' : 'Continue') : clock(moveLeft)}
+      // The green button always says Finish, even when a burst of taps arms it.
+      label={
+        ready ? (last ? 'Finish' : 'Continue') : skipArmed ? (finale ? 'Finish' : 'Skip') : clock(moveLeft)
+      }
+      icon={!ready && skipArmed ? ArrowRight02Icon : undefined}
       disabled={!ready}
+      charge={skipCharge}
+      onDisabledPress={chargeSkip}
       onPress={() => {
+        // Already over: the press is a way out, not a second finish — running
+        // `advance` again would celebrate and file the workout in Health twice.
+        if (finished) {
+          leave();
+          return;
+        }
         setPlaying(true);
         advance();
       }}
@@ -1077,10 +1163,10 @@ export function SessionView({ day, onBack, moves: override, onFinish }: SessionV
         visible={celebrating}
         streak={streak.current}
         moves={moveCount}
-        onClose={() => {
-          setCelebrating(false);
-          onFinish?.();
-        }}
+        onClose={() => setCelebrating(false)}
+        // Not on close: the sheet is still fading out then, and a caller that
+        // dismisses this player's own modal would strand it on screen.
+        onHidden={() => onFinish?.()}
       />
     </View>
   );

@@ -134,7 +134,7 @@ export type PainScaleProps = {
   onChange: (next: number) => void;
   /** What this person's days normally look like, low and high. The hatched
    * stretch on the track, and what "above usual" is measured against. */
-  usual: { low: number; high: number };
+  usual: { low: number; high: number; known: boolean };
 };
 
 /**
@@ -263,7 +263,12 @@ export function PainScale({ score, onChange, usual }: PainScaleProps) {
           on the frame it arrives. Three states, one shape: above, below, and
           the day that is simply normal. */}
       <View style={styles.badgeRow}>
-        <Animated.View style={[styles.badgeAnchor, badge]}>
+        {/* Hidden until there is a history to compare against: with nothing
+            logged, "usual" is the whole scale and every score, 10 included,
+            would read as within it. */}
+        <Animated.View
+          accessibilityElementsHidden={!usual.known}
+          style={[styles.badgeAnchor, badge, !usual.known && styles.hidden]}>
           <View
             style={[
               styles.badge,
@@ -465,17 +470,22 @@ export function PainScale({ score, onChange, usual }: PainScaleProps) {
           styles.legend,
           { marginLeft: Math.min(usualFrom, Math.max(width - 152, 0)) },
         ]}>
-        <Text
-          accessibilityLabel={`Usual range, ${usual.low} to ${usual.high}`}
-          style={[styles.legendText, { color: meter.label }]}>
-          USUAL RANGE {usual.low}–{usual.high}
-        </Text>
+        {usual.known && (
+          <Text
+            accessibilityLabel={`Usual range, ${usual.low} to ${usual.high}`}
+            style={[styles.legendText, { color: meter.label }]}>
+            USUAL RANGE {usual.low}–{usual.high}
+          </Text>
+        )}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  hidden: {
+    opacity: 0,
+  },
   root: {
     alignSelf: 'stretch',
   },

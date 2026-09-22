@@ -15,6 +15,7 @@ import {
   RETEST_MINUTES,
   RETEST_TESTS,
   SESSION_META,
+  TODAY_INDEX,
   blockName,
   dateFor,
   movePlanFor,
@@ -59,6 +60,9 @@ export type DaySheetProps = {
   /** The day being read, or null when nothing is open. */
   day: ProgramDay | null;
   status: DayStatus;
+  /** Today's length and move count after the check-in, when they differ from
+   * the template — so the sheet quotes the session that will actually play. */
+  today?: { minutes: number; moves: number } | null;
   onClose: () => void;
   /** Only offered on the day it can actually be started. */
   onStart: () => void;
@@ -76,7 +80,7 @@ export type DaySheetProps = {
  * day has no figure and the sheet closes up around the gap — see `kind-art.ts`
  * for why recovery is deliberately unillustrated.
  */
-export function DaySheet({ day, status, onClose, onStart }: DaySheetProps) {
+export function DaySheet({ day, status, today, onClose, onStart }: DaySheetProps) {
   const scheme = useColorScheme();
   const colors = palette[scheme];
   const meter = meterColors[scheme];
@@ -111,11 +115,17 @@ export function DaySheet({ day, status, onClose, onStart }: DaySheetProps) {
       return () => cancelAnimationFrame(frame);
     }
 
+    // A fresh function per exit, never the setter itself. Worklets caches the
+    // bridge to a JS function by identity and frees it once the worklet that
+    // used it is collected — and the mount-time pass through this branch is such
+    // a worklet. Reusing `setMounted` later reached a freed bridge and aborted
+    // the app on close.
+    const unmount = () => setMounted(false);
     t.value = withTiming(
       0,
       { duration: OUT_MS, easing: Easing.in(Easing.cubic), reduceMotion: ReduceMotion.System },
       (finished) => {
-        if (finished) runOnJS(setMounted)(false);
+        if (finished) runOnJS(unmount)();
       },
     );
     return undefined;
@@ -132,12 +142,15 @@ export function DaySheet({ day, status, onClose, onStart }: DaySheetProps) {
   const art = artFor(shown.day.kind);
   const kind = SESSION_META[shown.day.kind];
   const retest = shown.day.checkpoint;
-  const moves = retest ? RETEST_TESTS : movePlanFor(shown.day).length;
-  const minutes = retest ? RETEST_MINUTES : shown.day.minutes;
+  const adjusted = shown.day.index === TODAY_INDEX ? today : null;
+  const moves = retest ? RETEST_TESTS : (adjusted?.moves ?? movePlanFor(shown.day).length);
+  const minutes = retest ? RETEST_MINUTES : (adjusted?.minutes ?? shown.day.minutes);
   /** Only today can be begun. Every other card in the list carries a padlock,
    * and a sheet that offered to start a locked day would be contradicting the
    * one rule the list is built on. */
   const startable = shown.status === 'today';
+  /** Today, already finished: shown as done, and still there to do again. */
+  const redoable = shown.status === 'done' && shown.day.index === TODAY_INDEX;
 
   return (
     <Modal transparent animationType="none" visible statusBarTranslucent onRequestClose={onClose}>
@@ -189,7 +202,9 @@ export function DaySheet({ day, status, onClose, onStart }: DaySheetProps) {
               <Stat value={`Day ${shown.day.day}`} label={blockName(shown.day.block)} />
             </View>
 
-            {startable && <PrimaryButton label="Get Started" onPress={onStart} />}
+            {(startable || redoable) && (
+              <PrimaryButton label={redoable ? 'Done today · Do again' : 'Get Started'} onPress={onStart} />
+            )}
           </View>
         </Animated.View>
       </View>

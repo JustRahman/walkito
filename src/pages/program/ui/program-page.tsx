@@ -17,6 +17,11 @@ import {
   PROGRAM,
   PROGRAM_LENGTH,
   TODAY_INDEX,
+  currentDay,
+  logFor,
+  useLogsVersion,
+  resolveToday,
+  type ResolvedDay,
   clearRetestRequest,
   exerciseById,
   firstNewExercise,
@@ -31,7 +36,7 @@ import { fonts, meterColors, palette } from '@/shared/config';
 import { useProgram } from '@/shared/lib/program';
 import { useColorScheme } from '@/shared/lib/theme';
 
-import { SessionView } from '@/widgets/session-player';
+import { SessionView, type SessionPosition } from '@/widgets/session-player';
 
 import { DayCard } from './day-card';
 import { BlockAhead, BlockFooter, BlockOpening, ProgramFinish } from './block-marks';
@@ -102,6 +107,18 @@ export function ProgramPage() {
    * inert subtree and keeps the exit readable.
    */
   const [session, setSession] = useState<ProgramDay | null>(null);
+  /** Today's plan after the check-in, fixed when the session starts — the same
+   * moves Home lists, so a flare day is the short session here too. Null for
+   * any other day, and for a day the engine leaves empty. */
+  const [sessionPlan, setSessionPlan] = useState<ResolvedDay | null>(null);
+  /**
+   * Where a session was left by the back arrow, for the day it belongs to.
+   *
+   * An accidental back used to throw the whole session away — reopening the
+   * day started it from zero. Held until the day is finished or a different
+   * day is started, and only for this launch.
+   */
+  const [leftAt, setLeftAt] = useState<(SessionPosition & { day: number }) | null>(null);
   /**
    * How many times a session has been started.
    *
@@ -115,6 +132,16 @@ export function ProgramPage() {
   const [reading, setReading] = useState<{ day: ProgramDay; status: DayStatus } | null>(null);
 
   const today = PROGRAM[TODAY_INDEX];
+  // Re-render on any log write, so finishing today — here or from Home's task
+  // list — turns today's node done without leaving the screen.
+  useLogsVersion();
+  const doneToday = logFor(currentDay())?.sessionCompleted === true;
+  /** What today's sheet quotes: the check-in-adjusted length and move count. */
+  const resolved = resolveToday();
+  const todayPlan =
+    resolved != null && resolved.exercises.length > 0
+      ? { minutes: resolved.minutes, moves: resolved.exercises.length }
+      : null;
   const lines = todayLines();
   const days = PROGRAM.filter((day) => day.block === today.block);
 
@@ -128,7 +155,7 @@ export function ProgramPage() {
    */
   const block = PLAN_BLOCKS[today.block - 1];
   const doneInBlock = days.filter((day) => {
-    const status = statusFor(day, TODAY_INDEX);
+    const status = statusFor(day, TODAY_INDEX, doneToday);
     return status === 'done' || status === 'rest';
   }).length;
   const nextBlock = PLAN_BLOCKS[today.block] ?? null;
@@ -142,6 +169,8 @@ export function ProgramPage() {
    * sheet hands over below, are the same act and go through one path. */
   const start = useCallback(
     (day: ProgramDay) => {
+      const plan = day.index === TODAY_INDEX && !day.checkpoint ? resolveToday() : null;
+      setSessionPlan(plan != null && plan.exercises.length > 0 ? plan : null);
       setSession(day);
       setRun((n) => n + 1);
       program?.openDetail();
@@ -206,8 +235,8 @@ export function ProgramPage() {
    * screen nobody had asked for yet.
    */
   const openToday = useCallback(() => {
-    setReading({ day: today, status: statusFor(today, TODAY_INDEX) });
-  }, [today]);
+    setReading({ day: today, status: statusFor(today, TODAY_INDEX, doneToday) });
+  }, [today, doneToday]);
 
   useAnimatedReaction(
     () => (program?.progress.value ?? 0) > 0.99,
@@ -286,7 +315,7 @@ export function ProgramPage() {
             { paddingTop: 10, paddingBottom: insets.bottom + 120 },
           ]}>
           {days.map((day, i) => {
-            const status = statusFor(day, TODAY_INDEX);
+            const status = statusFor(day, TODAY_INDEX, doneToday);
             const last = i === days.length - 1;
             // Every third day the run pauses on a marker. Counted off the day
             // number rather than off the loop index, so it lands on days 3, 6
@@ -354,6 +383,7 @@ export function ProgramPage() {
 
       <DaySheet
         day={reading?.day ?? null}
+        today={todayPlan}
         status={reading?.status ?? 'upcoming'}
         onClose={() => setReading(null)}
         onStart={() => {
@@ -372,7 +402,10 @@ export function ProgramPage() {
         {session != null && (
           <SessionView
             key={run}
-            day={session}
+            resumeFrom={leftAt?.day === session.day ? leftAt : undefined}
+            onLeave={(at) => setLeftAt({ ...at, day: session.day })}
+            day={sessionPlan == null ? session : { ...session, minutes: sessionPlan.minutes }}
+            moves={sessionPlan?.exercises.map(({ exercise }) => exercise.title)}
             onBack={() => program?.closeDetail()}
             // Finishing is the only thing that marks a day done. Without this
             // the program could not move: the path stayed grey, the streak
@@ -382,11 +415,16 @@ export function ProgramPage() {
             onFinish={
               session.checkpoint
                 ? undefined
-                : () =>
+                : () => {
+                    setLeftAt(null);
                     writeLog(session.day, {
                       sessionCompleted: true,
-                      exercisesDone: [...planFor(session.block, session.kind)],
-                    })
+                      exercisesDone:
+                        sessionPlan == null
+                          ? [...planFor(session.block, session.kind)]
+                          : sessionPlan.exercises.map(({ exercise }) => exercise.id),
+                    });
+                  }
             }
           />
         )}

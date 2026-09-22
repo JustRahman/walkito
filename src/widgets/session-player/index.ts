@@ -1,1 +1,1 @@
-export { SessionView, type SessionViewProps } from './ui/session-view';
+export { SessionView, type SessionPosition, type SessionViewProps } from './ui/session-view';

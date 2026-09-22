@@ -6,3 +6,4 @@ export { useHealthPipeline } from './health-pipeline';
 export { usePurchases } from './purchases';
 export { useReferralSync } from './referral-sync';
 export { useNotificationScheduler } from './notification-scheduler';
+export { useDayRollover } from './day-rollover';
