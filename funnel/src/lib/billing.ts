@@ -39,11 +39,17 @@ export async function loadPackages(userId: string, variant: PriceVariant): Promi
 
 export type BuyResult = { status: 'bought' } | { status: 'cancelled' } | { status: 'failed'; code: string; message: string };
 
-export async function buy(userId: string, pkg: Package, email: string, target: HTMLElement): Promise<BuyResult> {
+/**
+ * RevenueCat's own full-page checkout, with its own close button: in-page,
+ * never a pop-up or a redirect, which the Facebook and Instagram browsers lose.
+ * (Given an element instead, it drops the close button and the page has to
+ * supply one it cannot wire to the purchase.)
+ */
+export async function buy(userId: string, pkg: Package, email: string): Promise<BuyResult> {
   const rc = await purchases(userId);
   const { ErrorCode, PurchasesError } = await import('@revenuecat/purchases-js');
   try {
-    await rc.purchase({ rcPackage: pkg, customerEmail: email, htmlTarget: target, selectedLocale: 'en', skipSuccessPage: true });
+    await rc.purchase({ rcPackage: pkg, customerEmail: email, selectedLocale: 'en', skipSuccessPage: true });
     return { status: 'bought' };
   } catch (error) {
     if (error instanceof PurchasesError && error.errorCode === ErrorCode.UserCancelledError) return { status: 'cancelled' };

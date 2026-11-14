@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 import { COMPANY_LINE, DEFAULT_VARIANT, DESCRIPTOR, GUARANTEE_DAYS, money, PRICE_VARIANTS, REMINDER_DAYS_BEFORE, SITE, SUPPORT_EMAIL, url } from '../config';
 import { addDays, FOCUS_LABEL, PROGRAM, shortDate, STEP } from '../flow';
@@ -34,7 +33,6 @@ export function Price() {
   const [phase, setPhase] = useState<'idle' | 'opening' | 'open' | 'held-back'>('idle');
   const [heldBack, setHeldBack] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const target = useRef<HTMLDivElement>(null);
 
   const today = useMemo(() => new Date(), []);
   const m = variant.monthly;
@@ -75,7 +73,7 @@ export function Price() {
     setPhase('opening');
     const loaded = await packages.current;
     const pkg = plan === 'monthly' ? loaded?.monthly : loaded?.quarter;
-    if (!billingReady() || pkg == null || target.current == null) {
+    if (!billingReady() || pkg == null) {
       setError('Checkout is not open yet. Please try again in a few minutes.');
       setPhase('idle');
       return;
@@ -86,7 +84,7 @@ export function Price() {
     track('checkout_opened', { plan });
     meta('InitiateCheckout', `checkout-${user.id}-${Date.now()}`);
     setPhase('open');
-    const result = await buy(user.id, pkg, s.email, target.current);
+    const result = await buy(user.id, pkg, s.email);
     if (result.status === 'bought') {
       const value = plan === 'monthly' ? m.intro : q.price;
       update({ purchased: true, plan });
@@ -193,7 +191,6 @@ export function Price() {
         </>
       )}
 
-      {createPortal(<div id="checkout" ref={target} />, document.body)}
 
       <div className="note">
         <b>Not for you?</b> Reply to any email within {GUARANTEE_DAYS} days of a charge and we refund it.
