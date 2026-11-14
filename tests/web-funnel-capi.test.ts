@@ -139,7 +139,7 @@ describe("the visitor's address", () => {
 describe('CORS', () => {
   test('the funnel and a dev server, plus any origin added by environment', () => {
     const origins = funnelOrigins('https://walkito-funnel.pages.dev/, not an origin');
-    expect(origins).toEqual(['https://start.walkito.site', 'http://localhost:3000', 'https://walkito-funnel.pages.dev']);
+    expect(origins).toEqual(['https://walkito.site', 'https://start.walkito.site', 'http://localhost:3000', 'https://walkito-funnel.pages.dev']);
     expect(corsHeaders('https://start.walkito.site', origins, 'POST')['Access-Control-Allow-Origin']).toBe('https://start.walkito.site');
     expect(corsHeaders('https://evil.example', origins, 'POST')['Access-Control-Allow-Origin']).toBeUndefined();
     expect(corsHeaders(null, origins, 'POST')['Access-Control-Allow-Origin']).toBeUndefined();

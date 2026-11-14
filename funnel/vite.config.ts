@@ -19,6 +19,7 @@ export default defineConfig({
     react(),
   ],
   envPrefix: 'FUNNEL_',
+  base: process.env.FUNNEL_BASE || '/go/',
   server: { fs: { allow: ['..'] } },
   build: { target: 'es2020', sourcemap: true },
 });

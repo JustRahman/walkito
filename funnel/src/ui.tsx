@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
+import { url } from './config';
 import { appLink } from './flow';
 import { track } from './lib/analytics';
 import { back, go } from './router';
@@ -25,8 +26,8 @@ export function Page({
             <Chevron /> Back
           </button>
         ) : (
-          <a className="brand" href="/" onClick={(e) => (e.preventDefault(), go('/'))} style={{ color: 'inherit', textDecoration: 'none' }}>
-            <img src="/img/icon.webp" alt="" width={28} height={28} />
+          <a className="brand" href={url('/')} onClick={(e) => (e.preventDefault(), go('/'))} style={{ color: 'inherit', textDecoration: 'none' }}>
+            <img src={url('/img/icon.webp')} alt="" width={28} height={28} />
             Walkito
           </a>
         )}
@@ -64,10 +65,10 @@ export function Tick() {
 export function Footer() {
   return (
     <footer className="footer">
-      <a href="/terms">Terms</a>
-      <a href="/privacy">Privacy</a>
-      <a href="/health-data">Consumer health data</a>
-      <a href="/s/me">Sign in</a>
+      <a href={url('/terms')}>Terms</a>
+      <a href={url('/privacy')}>Privacy</a>
+      <a href={url('/health-data')}>Consumer health data</a>
+      <a href={url('/s/me')}>Sign in</a>
     </footer>
   );
 }
@@ -113,7 +114,7 @@ export function Check({ checked, onChange, children }: { checked: boolean; onCha
 export function Carla({ line }: { line?: string }) {
   return (
     <div className="person">
-      <img src="/img/carla-shayman.webp" srcSet="/img/carla-shayman.webp 1x, /img/carla-shayman@2x.webp 2x" alt="Dr. Carla Shayman" width={64} height={64} />
+      <img src={url('/img/carla-shayman.webp')} srcSet={`${url('/img/carla-shayman.webp')} 1x, ${url('/img/carla-shayman@2x.webp')} 2x`} alt="Dr. Carla Shayman" width={64} height={64} />
       <div>
         <div style={{ fontWeight: 700 }}>Dr. Carla Shayman, PT, DPT</div>
         <div className="small">{line ?? 'Physical therapist. Reviewed the exercises in Walkito.'}</div>

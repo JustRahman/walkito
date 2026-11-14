@@ -42,7 +42,19 @@ export const ONELINK = 'https://walkito.onelink.me/2L97/';
 export const SUPPORT_EMAIL = import.meta.env.FUNNEL_SUPPORT_EMAIL || 'hello@walkito.site';
 export const COMPANY = 'Nemy LLC';
 export const POSTAL_ADDRESS = import.meta.env.FUNNEL_POSTAL_ADDRESS || '';
-export const DESCRIPTOR = 'WALKITO';
+/** Nemy LLC's Stripe account descriptor, shared with the agency, so not changed for Walkito. */
+export const DESCRIPTOR = 'NEMY LLC';
+
+/** Where the funnel is served: "/go" under walkito.site, from Vite's `base`. */
+export const BASE = import.meta.env.BASE_URL.replace(/\/+$/, '');
+
+/** A funnel path or public file, under the base. */
+export function url(path: string): string {
+  return BASE + path;
+}
+
+/** How the funnel's address is written in copy, without the scheme. */
+export const SITE = 'walkito.site' + BASE;
 
 export const env = {
   supabaseUrl: import.meta.env.FUNNEL_SUPABASE_URL ?? '',

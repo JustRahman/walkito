@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { COMPANY, DEFAULT_VARIANT, DESCRIPTOR, GUARANTEE_DAYS, money, POSTAL_ADDRESS, PRICE_VARIANTS, REMINDER_DAYS_BEFORE, SUPPORT_EMAIL } from '../config';
+import { COMPANY, DEFAULT_VARIANT, DESCRIPTOR, GUARANTEE_DAYS, money, POSTAL_ADDRESS, PRICE_VARIANTS, REMINDER_DAYS_BEFORE, SITE, SUPPORT_EMAIL, url } from '../config';
 import { addDays, FOCUS_LABEL, PROGRAM, shortDate, STEP } from '../flow';
 import { currentUser, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
@@ -184,7 +184,7 @@ export function Price() {
             {phase === 'opening' ? 'Opening checkout…' : plan === 'monthly' ? `Start my first week for ${money(m.intro)}` : `Pay ${money(q.price)} for 3 months`}
           </button>
           <p className="caption center">
-            By paying you agree to the <a href="/terms">Terms</a>. Charges appear as {DESCRIPTOR}.
+            By paying you agree to the <a href={url('/terms')}>Terms</a>. Charges appear as {DESCRIPTOR}.
           </p>
         </>
       )}
@@ -224,7 +224,7 @@ export function Price() {
         <details>
           <summary>How do I cancel?</summary>
           <p className="lead">
-            Open the link in any email from us, or go to start.walkito.site/s/cancel, and tap Cancel. Or reply to any email
+            Open the link in any email from us, or go to {SITE}/s/cancel, and tap Cancel. Or reply to any email
             and we will do it for you. You keep access until the end of the time you paid for.
           </p>
         </details>

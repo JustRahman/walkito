@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Build the funnel and upload it to the droplet beside walkito.site.
+ * Build the funnel and upload it to the droplet, where walkito.site serves it
+ * at /go/ (deploy/walkito-funnel.conf).
  *
  *   bun run deploy                  production env from ~/.walkito/funnel.env
  *   bun run deploy --dry-run        build and show what would change
@@ -17,7 +18,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const TARGET = process.env.DEPLOY_TARGET || 'root@161.35.52.54:/var/www/walkito-start/';
+const TARGET = process.env.DEPLOY_TARGET || 'root@161.35.52.54:/var/www/walkito-funnel/go/';
 const DRY = process.argv.includes('--dry-run');
 const ENV_FILE = join(homedir(), '.walkito', 'funnel.env');
 

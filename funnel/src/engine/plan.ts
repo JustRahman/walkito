@@ -15,6 +15,9 @@ import { CLIPS } from '@app/shared/config/clip-manifest';
 
 import { toDateKey } from './shims/state';
 
+/** Vite's base ("/go/"), or "/" under the Bun tests. */
+const ASSETS: string = (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
+
 export type Focus = 'heel' | 'steady' | 'flat' | 'allday' | 'moving';
 
 export type PlanFacts = {
@@ -106,8 +109,8 @@ export function moveOf(item: Pick<PlannedExercise, 'id' | 'dose'> | { id: string
     seated: planMeta(item.id)?.position === 'seated',
     seconds: dose != null ? Math.round(doseSeconds(dose)) : 60,
     dose: dose != null ? doseLabel(dose.sets, dose.reps, dose.holdSec, dose.perSide) : '',
-    clip: CLIPS[item.id] != null ? `/clips/${item.id}.mp4` : null,
-    poster: `/posters/${item.id}.webp`,
+    clip: CLIPS[item.id] != null ? `${ASSETS}clips/${item.id}.mp4` : null,
+    poster: `${ASSETS}posters/${item.id}.webp`,
   };
 }
 

@@ -109,7 +109,7 @@ describe('web_welcome', () => {
     expect(e.after).toContain(GUARANTEE);
     expect(e.after).toContain(DESCRIPTOR);
     expect(GUARANTEE).toBe('Not for you? Reply to any email within 14 days of a charge and we refund it.');
-    expect(DESCRIPTOR).toContain('WALKITO');
+    expect(DESCRIPTOR).toContain('NEMY LLC');
   });
 
   test('a receipt for the 3-month plan', () => {

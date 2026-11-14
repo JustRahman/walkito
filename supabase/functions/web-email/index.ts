@@ -52,7 +52,7 @@ const TEST_RECIPIENTS = new Set(
     .map((x) => x.trim().toLowerCase())
     .filter(Boolean),
 );
-const FUNNEL = env('WEB_FUNNEL_BASE') || 'https://start.walkito.site';
+const FUNNEL = env('WEB_FUNNEL_BASE') || 'https://walkito.site/go';
 const FROM = env('EMAIL_FROM') || 'walkito <hello@walkito.site>';
 
 const config: WebMailConfig = {

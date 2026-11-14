@@ -50,7 +50,7 @@ const META_PIXEL_ID = Deno.env.get('META_PIXEL_ID') ?? '';
 const META_CAPI_TOKEN = Deno.env.get('META_CAPI_TOKEN') ?? '';
 const META_TEST_EVENT_CODE = Deno.env.get('META_TEST_EVENT_CODE') ?? '';
 const META_GRAPH_VERSION = Deno.env.get('META_GRAPH_VERSION') ?? '';
-const FUNNEL = (Deno.env.get('WEB_FUNNEL_BASE') || 'https://start.walkito.site').replace(/\/+$/, '');
+const FUNNEL = (Deno.env.get('WEB_FUNNEL_BASE') || 'https://walkito.site/go').replace(/\/+$/, '');
 
 const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 

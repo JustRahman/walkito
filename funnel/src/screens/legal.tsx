@@ -1,4 +1,4 @@
-import { COMPANY, DESCRIPTOR, GUARANTEE_DAYS, POSTAL_ADDRESS, SUPPORT_EMAIL } from '../config';
+import { COMPANY, DESCRIPTOR, GUARANTEE_DAYS, POSTAL_ADDRESS, SITE, SUPPORT_EMAIL, url } from '../config';
 import { Page } from '../ui';
 
 const UPDATED = 'November 15, 2026';
@@ -11,7 +11,7 @@ const who = (
 );
 
 /**
- * Written from what start.walkito.site does, not from a template. If the
+ * Written from what the funnel (walkito.site/go) does, not from a template. If the
  * funnel starts collecting or sending something new, these pages are wrong
  * from that moment, and nothing fails to build to say so.
  */
@@ -24,7 +24,7 @@ export function Terms() {
 
         <h2>Who we are</h2>
         <p>
-          Walkito is made by {who}. These terms cover start.walkito.site and a Walkito plan bought there. The Walkito app has
+          Walkito is made by {who}. These terms cover {SITE} and a Walkito plan bought there. The Walkito app has
           its own terms at walkito.site/terms, and they apply when you use the app.
         </p>
 
@@ -52,13 +52,13 @@ export function Terms() {
         </ul>
         <p>
           Your plan renews automatically. Payments are handled by Stripe through RevenueCat, and they appear on your statement
-          as {DESCRIPTOR}. Prices are in US dollars and include any tax shown at checkout.
+          as {DESCRIPTOR}, the company that makes Walkito. Prices are in US dollars and include any tax shown at checkout.
         </p>
         <p>We email you a reminder before the first full monthly charge, and before each 3-month renewal.</p>
 
         <h2>Cancelling</h2>
         <p>
-          Cancel at any time at start.walkito.site/s/cancel, with the link in any email from us, or by writing to {mail}. It
+          Cancel at any time at {SITE}/s/cancel, with the link in any email from us, or by writing to {mail}. It
           takes one step. Your access continues until the end of the period you have paid for, and nothing more is charged.
         </p>
 
@@ -117,7 +117,7 @@ export function Privacy() {
           to start, anything to plan around, minutes a day) and <b>your try-it notes</b> (how your feet felt before and after,
           and the optional balance seconds). They are kept in your browser’s storage to build your plan. They are saved to our
           server only if you tick “Save my answers with my plan”. Our{' '}
-          <a href="/health-data">Consumer Health Data Privacy Policy</a> covers them in detail.
+          <a href={url('/health-data')}>Consumer Health Data Privacy Policy</a> covers them in detail.
         </p>
         <p>
           <b>Your email address</b>, to send you a sign-in code, save your plan, send your receipt and the emails about your
@@ -199,7 +199,7 @@ export function HealthData() {
         <p className="caption">Last updated: {UPDATED}</p>
         <p>
           Some laws, such as Washington’s My Health My Data Act, protect information that could describe your health. This
-          page says what of that kind Walkito collects on start.walkito.site and what we do with it. It applies to everyone,
+          page says what of that kind Walkito collects on {SITE} and what we do with it. It applies to everyone,
           wherever you live.
         </p>
 

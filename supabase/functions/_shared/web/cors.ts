@@ -4,7 +4,7 @@
  * preview deploy, without a code change.
  */
 
-export const FUNNEL_ORIGINS: readonly string[] = ['https://start.walkito.site', 'http://localhost:3000'];
+export const FUNNEL_ORIGINS: readonly string[] = ['https://walkito.site', 'https://start.walkito.site', 'http://localhost:3000'];
 
 export function funnelOrigins(extra: string | null | undefined): string[] {
   const more = (extra ?? '')

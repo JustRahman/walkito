@@ -40,7 +40,7 @@ export type WebEmail = {
 };
 
 export const GUARANTEE = 'Not for you? Reply to any email within 14 days of a charge and we refund it.';
-export const DESCRIPTOR = 'Your card statement will show WALKITO.';
+export const DESCRIPTOR = 'Your card statement will show NEMY LLC, the company behind Walkito.';
 const REPLY = 'Questions? Just reply. A real person reads every email.';
 
 /** The OneLink that opens the App Store or Google Play, tagged with the email it came from. */
@@ -66,7 +66,7 @@ function hostOf(base: string): string {
   try {
     return new URL(base).host;
   } catch {
-    return 'start.walkito.site';
+    return 'walkito.site';
   }
 }
 
