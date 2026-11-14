@@ -18,16 +18,39 @@
  * purchase is looked up in RevenueCat's record of that customer, never taken
  * from the event, so a forged event grants nothing. A pass bought before its
  * buyer was linked to an account is picked up later by `pass-sync`.
+ *
+ * And the web funnel's purchases (start.walkito.site, RevenueCat Billing).
+ * There the RevenueCat app user id is the buyer's own Supabase user id, a
+ * UUID, so no link is needed. From the same record it writes `web_customers`
+ * and the buyer's `comp_access` row (reason 'web', open until a day past the
+ * paid access), which opens the app on any phone they sign in on; when the
+ * record shows no access any more (expired, refunded, moved away), that row
+ * goes, and only a row with reason 'web' is ever touched
+ * (`_shared/web/customer.ts`). A web event that cannot be looked up or
+ * written answers an error, so RevenueCat delivers it again. A first web
+ * purchase that the buyer's own record confirms also sends Meta its Purchase
+ * event (`purchase-<user id>`, the amount and currency, and the browser ids
+ * the funnel stored: nothing about the buyer) and asks `web-email` for the
+ * receipt.
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { isPassProduct, premiumUntilFor, grantPass, subscriberOf } from '../_shared/pass.ts';
+import { capiEvent, sendToMeta } from '../_shared/web/capi.ts';
+import { fetchSubscriber, recordWebState, webStateOf, type RcSubscriber } from '../_shared/web/customer.ts';
+import { isWebProduct } from '../_shared/web/products.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const RC_KEY = Deno.env.get('REVENUECAT_API_KEY') ?? '';
 const AUTH = Deno.env.get('REVENUECAT_WEBHOOK_AUTH') ?? '';
+const CRON_SECRET = Deno.env.get('EMAIL_CRON_SECRET') ?? '';
+const META_PIXEL_ID = Deno.env.get('META_PIXEL_ID') ?? '';
+const META_CAPI_TOKEN = Deno.env.get('META_CAPI_TOKEN') ?? '';
+const META_TEST_EVENT_CODE = Deno.env.get('META_TEST_EVENT_CODE') ?? '';
+const META_GRAPH_VERSION = Deno.env.get('META_GRAPH_VERSION') ?? '';
+const FUNNEL = (Deno.env.get('WEB_FUNNEL_BASE') || 'https://start.walkito.site').replace(/\/+$/, '');
 
 const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
@@ -41,9 +64,16 @@ type RcEvent = {
   product_id?: string;
   /** The store's transaction id (Play's order id). */
   transaction_id?: string;
+  /** `APP_STORE`, `PLAY_STORE`, `RC_BILLING`, `STRIPE` … */
+  store?: string;
+  /** `SANDBOX` or `PRODUCTION`. */
+  environment?: string;
+  purchased_at_ms?: number;
+  /** In USD. */
+  price?: number | null;
+  price_in_purchased_currency?: number | null;
+  currency?: string | null;
 };
-
-type Entitlement = { expires_date: string | null; product_identifier?: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -52,28 +82,54 @@ function json(body: unknown, status = 200): Response {
 }
 
 /** What RevenueCat itself says about this customer right now. */
-async function statusOf(appUserId: string): Promise<{ status: 'active' | 'expired' | 'none'; productId: string | null } | null> {
-  const res = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`, {
-    headers: { Authorization: `Bearer ${RC_KEY}`, 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) {
-    console.warn('[revenuecat] lookup failed', res.status);
-    return null;
-  }
-  const body = (await res.json()) as {
-    subscriber?: {
-      entitlements?: Record<string, Entitlement>;
-      subscriptions?: Record<string, unknown>;
-      non_subscriptions?: Record<string, unknown[]>;
-    };
-  };
-  const sub = body.subscriber ?? {};
+function statusOf(sub: RcSubscriber): { status: 'active' | 'expired' | 'none'; productId: string | null } {
   const now = Date.now();
   const entitlements = Object.values(sub.entitlements ?? {});
   const active = entitlements.find((e) => e.expires_date == null || Date.parse(e.expires_date) > now);
   if (active != null) return { status: 'active', productId: active.product_identifier ?? null };
   const bought = entitlements.length > 0 || Object.keys(sub.subscriptions ?? {}).length > 0 || Object.keys(sub.non_subscriptions ?? {}).length > 0;
   return { status: bought ? 'expired' : 'none', productId: entitlements[0]?.product_identifier ?? null };
+}
+
+/** Meta's Purchase for a first web purchase. A sandbox purchase goes only as a test event, never into the real data. */
+async function reportPurchase(userId: string, event: RcEvent): Promise<string> {
+  if (!META_PIXEL_ID || !META_CAPI_TOKEN) return 'not configured';
+  if (event.environment === 'SANDBOX' && !META_TEST_EVENT_CODE) return 'sandbox, not sent';
+  const { data: lead } = await db.from('web_leads').select('fbp, fbc, user_agent').eq('user_id', userId).maybeSingle();
+  const inCurrency = event.price_in_purchased_currency != null && event.currency != null;
+  const purchase = capiEvent({
+    name: 'Purchase',
+    id: `purchase-${userId}`,
+    time: (event.purchased_at_ms ?? Date.now()) / 1000,
+    sourceUrl: `${FUNNEL}/`,
+    ip: null,
+    userAgent: lead?.user_agent ?? null,
+    fbp: lead?.fbp ?? null,
+    fbc: lead?.fbc ?? null,
+    value: inCurrency ? event.price_in_purchased_currency : (event.price ?? null),
+    currency: inCurrency ? event.currency : 'USD',
+  });
+  const sent = await sendToMeta(
+    { pixelId: META_PIXEL_ID, token: META_CAPI_TOKEN, testEventCode: META_TEST_EVENT_CODE || null, version: META_GRAPH_VERSION || null },
+    [purchase],
+  );
+  return sent.ok ? 'sent' : `failed ${sent.status}`;
+}
+
+/** The receipt, now rather than at the next 15-minute run (which still sends it if this call fails). */
+async function askForWelcome(userId: string): Promise<string> {
+  if (!CRON_SECRET) return 'EMAIL_CRON_SECRET not set';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/web-email`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${CRON_SECRET}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ welcomeFor: userId }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    return res.ok ? 'asked' : `failed ${res.status}`;
+  } catch (error) {
+    return `failed: ${error instanceof Error ? error.message : String(error)}`;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -98,7 +154,7 @@ Deno.serve(async (req) => {
   if (error != null) return json({ error: error.message }, 500);
   const users = new Map<string, string>();
   for (const l of links ?? []) users.set(String(l.user_id), String(l.rc_app_user_id));
-  // A RevenueCat id that is already one of ours (if the SDK ever logs in with it).
+  // A RevenueCat id that is already one of ours: a web buyer's (or the SDK's, if it ever logs in with it).
   for (const id of rcIds) if (UUID.test(id) && !users.has(id)) users.set(id, id);
   if (users.size === 0) return json({ ok: true, note: 'no linked user yet' });
 
@@ -124,15 +180,44 @@ Deno.serve(async (req) => {
     }
   }
 
+  const webEvent = isWebProduct(event.product_id, event.store);
   const written: string[] = [];
+  const web: string[] = [];
+  /** Buyers whose own RevenueCat record holds the web purchase that opened the app. */
+  const webBuyers = new Set<string>();
   for (const [userId, rcId] of users) {
-    const status = await statusOf(rcId);
-    if (status == null) continue;
+    const subscriber = await fetchSubscriber(RC_KEY, rcId);
+    if (subscriber == null) {
+      // A web buyer may be waiting on the success page for this: worth RevenueCat's retry.
+      if (webEvent && userId === rcId) return json({ error: 'lookup failed' }, 502);
+      continue;
+    }
+    const status = statusOf(subscriber);
     const { error: upsertError } = await db
       .from('subscriptions')
       .upsert({ user_id: userId, status: status.status, product_id: status.productId ?? event.product_id ?? null, updated_at: new Date().toISOString() });
     // A UUID-shaped RevenueCat id that is not one of our users fails the foreign key; that is fine.
     if (upsertError == null) written.push(`${userId}:${status.status}`);
+
+    // ── A web purchase ──────────────────────────────────────────────────────
+    // Known to RevenueCat by the buyer's own Supabase id, so the id is the user.
+    if (userId !== rcId) continue;
+    const state = webStateOf(subscriber);
+    if (state == null && !webEvent && event.type !== 'TRANSFER') continue;
+    const result = await recordWebState(db, userId, state);
+    if (result.startsWith('failed') && webEvent) return json({ error: result }, 500);
+    web.push(`${userId}:${state?.status ?? 'none'}:${result}`);
+    if (result === 'granted' || result === 'kept') webBuyers.add(userId);
   }
-  return json({ ok: true, type: event.type ?? null, written, passes });
+
+  // ── A first web purchase: Meta's Purchase, and the receipt ──────────────
+  let meta: string | null = null;
+  let welcome: string | null = null;
+  const buyer = event.app_user_id;
+  if (event.type === 'INITIAL_PURCHASE' && webEvent && buyer != null && webBuyers.has(buyer)) {
+    meta = await reportPurchase(buyer, event);
+    welcome = await askForWelcome(buyer);
+  }
+
+  return json({ ok: true, type: event.type ?? null, written, passes, web, meta, welcome });
 });

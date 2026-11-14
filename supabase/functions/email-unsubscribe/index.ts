@@ -10,8 +10,9 @@
  *   GET  ?t=…            a link opened directly: sent on to that same page,
  *                        because this domain serves HTML as plain text.
  *
- * Unsubscribing stops every email the scheduler sends. The token is enough —
- * nobody has to sign in to leave.
+ * Unsubscribing stops every email the scheduler sends, and the web funnel's
+ * lifecycle emails too (`web_leads.unsubscribed_at`, for the same user id).
+ * The token is enough — nobody has to sign in to leave.
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -43,7 +44,17 @@ async function apply(userId: string, action: 'unsubscribe' | 'resubscribe'): Pro
       : { unsubscribed_at: null, lifecycle_opt_in: true, updated_at: now };
   const { data, error } = await db.from('email_contacts').update(patch).eq('user_id', userId).select('locale').maybeSingle();
   if (error != null) throw new Error(error.message);
+  // A web funnel buyer or lead, by the same user id. Marked as well when they
+  // also use the app: one person, one "stop".
+  const { data: web, error: webError } = await db
+    .from('web_leads')
+    .update({ unsubscribed_at: action === 'unsubscribe' ? now : null })
+    .eq('user_id', userId)
+    .select('user_id')
+    .maybeSingle();
+  if (webError != null) throw new Error(webError.message);
   if (data != null) return String(data.locale ?? 'en');
+  if (web != null) return 'en';
 
   // Not an app user: try site_leads. The token's id part is the lead's uuid.
   const leadPatch =
