@@ -45,6 +45,9 @@ export const POSTAL_ADDRESS = import.meta.env.FUNNEL_POSTAL_ADDRESS || '';
 /** Nemy LLC's Stripe account descriptor, shared with the agency, so not changed for Walkito. */
 export const DESCRIPTOR = 'NEMY LLC';
 
+/** "Nemy LLC, 30 N Gould St…", whether or not the address already starts with the name. */
+export const COMPANY_LINE = POSTAL_ADDRESS === '' ? COMPANY : POSTAL_ADDRESS.startsWith(COMPANY) ? POSTAL_ADDRESS : `${COMPANY}, ${POSTAL_ADDRESS}`;
+
 /** Where the funnel is served: "/go" under walkito.site, from Vite's `base`. */
 export const BASE = import.meta.env.BASE_URL.replace(/\/+$/, '');
 

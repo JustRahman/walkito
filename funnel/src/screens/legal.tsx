@@ -1,14 +1,9 @@
-import { COMPANY, DESCRIPTOR, GUARANTEE_DAYS, POSTAL_ADDRESS, SITE, SUPPORT_EMAIL, url } from '../config';
+import { COMPANY_LINE, DESCRIPTOR, GUARANTEE_DAYS, SITE, SUPPORT_EMAIL, url } from '../config';
 import { Page } from '../ui';
 
 const UPDATED = 'November 15, 2026';
 const mail = <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>;
-const who = (
-  <>
-    {COMPANY}
-    {POSTAL_ADDRESS !== '' ? `, ${POSTAL_ADDRESS}` : ''}
-  </>
-);
+const who = <>{COMPANY_LINE}</>;
 
 /**
  * Written from what the funnel (walkito.site/go) does, not from a template. If the

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { COMPANY, DEFAULT_VARIANT, DESCRIPTOR, GUARANTEE_DAYS, money, POSTAL_ADDRESS, PRICE_VARIANTS, REMINDER_DAYS_BEFORE, SITE, SUPPORT_EMAIL, url } from '../config';
+import { COMPANY_LINE, DEFAULT_VARIANT, DESCRIPTOR, GUARANTEE_DAYS, money, PRICE_VARIANTS, REMINDER_DAYS_BEFORE, SITE, SUPPORT_EMAIL, url } from '../config';
 import { addDays, FOCUS_LABEL, PROGRAM, shortDate, STEP } from '../flow';
 import { currentUser, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
@@ -29,7 +29,7 @@ export function Price() {
   const variant = PRICE_VARIANTS[s.variant] ?? PRICE_VARIANTS[DEFAULT_VARIANT]!;
   const [plan, setPlan] = useState<PlanId>(s.plan ?? 'monthly');
   const [agreed, setAgreed] = useState(false);
-  const [packages, setPackages] = useState<Packages | null>(null);
+  const packages = useRef<Promise<Packages | null> | null>(null);
   const [phase, setPhase] = useState<'idle' | 'opening' | 'open' | 'held-back'>('idle');
   const [heldBack, setHeldBack] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +48,13 @@ export function Price() {
   useEffect(() => {
     track('price_viewed');
     if (!billingReady()) return;
-    void currentUser().then(async (user) => {
-      if (user == null) return;
+    packages.current = currentUser().then(async (user) => {
+      if (user == null) return null;
       try {
-        setPackages(await loadPackages(user.id, variant));
+        return await loadPackages(user.id, variant);
       } catch {
         setError('We could not load checkout. Please check your connection and reload the page.');
+        return null;
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,12 +71,14 @@ export function Price() {
     setError(null);
     const user = await currentUser();
     if (user == null || s.email == null) return go(STEP.email);
-    const pkg = plan === 'monthly' ? packages?.monthly : packages?.quarter;
+    setPhase('opening');
+    const loaded = await packages.current;
+    const pkg = plan === 'monthly' ? loaded?.monthly : loaded?.quarter;
     if (!billingReady() || pkg == null || target.current == null) {
       setError('Checkout is not open yet. Please try again in a few minutes.');
+      setPhase('idle');
       return;
     }
-    setPhase('opening');
     void logConsent('auto_renew', consent, true);
     track('consent_given', { kind: 'auto_renew' });
     void saveLead({ checkout_opened_at: new Date().toISOString() });
@@ -201,12 +204,7 @@ export function Price() {
         <p className="small">
           Questions: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
           <br />
-          {COMPANY}
-          {POSTAL_ADDRESS !== '' && (
-            <>
-              , {POSTAL_ADDRESS}
-            </>
-          )}
+          {COMPANY_LINE}
           <br />
           Charges appear as {DESCRIPTOR}.
         </p>
