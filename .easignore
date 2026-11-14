@@ -91,6 +91,7 @@ assets/exercises/
 /.claude/
 /site/
 /ai-assistant/
+/funnel/
 /.agents/
 /.expo-code-review/
 /supabase/

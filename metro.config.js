@@ -28,6 +28,8 @@ config.resolver.blockList = [
   new RegExp(`^${root}/assets-src/.*`),
   // The AI assistant server (ai-assistant/): Node-only, its own node_modules.
   new RegExp(`^${root}/ai-assistant/.*`),
+  // The web funnel (funnel/): a Vite app with its own React.
+  new RegExp(`^${root}/funnel/.*`),
 ];
 
 // RevenueCat's browser SDK, kept out of the phone bundles.

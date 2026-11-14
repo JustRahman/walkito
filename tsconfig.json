@@ -25,6 +25,7 @@
     "node_modules",
     "site",
     "ai-assistant",
+    "funnel",
     "supabase/functions/*/index.ts"
   ]
 }
