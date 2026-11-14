@@ -53,6 +53,10 @@ export type TemplateProps = {
   footerWhy?: string;
   /** Hide the "email settings" link (website signups have no app settings). */
   hideSettings?: boolean;
+  /** Paragraphs after the button, before the ps (the web funnel's receipt puts its small print there). */
+  afterButton?: string[];
+  /** Leave the mascot out, for a note that should read like it came from a person. */
+  hideMascot?: boolean;
 };
 
 const FONT = 'ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -83,6 +87,8 @@ export function EmailLayout(props: TemplateProps): ReactElement {
   const footer = copyFor(locale).footer;
   const text = (className: string, style: Record<string, string | number>, children: string) =>
     h(Text, { className, style: { margin: 0, fontFamily: FONT, ...style } }, children);
+  const paragraph = (p: string, i: number) =>
+    h(Text, { key: i, className: 'ink', style: { margin: '0 0 12px', color: INK, fontSize: 17, lineHeight: '26px', fontFamily: FONT } }, ...inlineLinks(p));
 
   return h(
     Html,
@@ -95,11 +101,11 @@ export function EmailLayout(props: TemplateProps): ReactElement {
       h(
         Container,
         { style: { maxWidth: 520, margin: '0 auto', padding: 0 } },
-        h(Img, { src: `${props.assetBase.replace(/\/+$/, '')}/email/mascot.png`, width: 64, height: 64, alt: 'walkito', style: { margin: '0 0 14px -6px' } }),
+        props.hideMascot
+          ? null
+          : h(Img, { src: `${props.assetBase.replace(/\/+$/, '')}/email/mascot.png`, width: 64, height: 64, alt: 'walkito', style: { margin: '0 0 14px -6px' } }),
         content.greeting != null ? text('ink', { color: INK, fontSize: 17, lineHeight: '26px', fontWeight: 700, marginBottom: 12 }, content.greeting) : null,
-        ...content.paragraphs.map((p, i) =>
-          h(Text, { key: i, className: 'ink', style: { margin: '0 0 12px', color: INK, fontSize: 17, lineHeight: '26px', fontFamily: FONT } }, ...inlineLinks(p)),
-        ),
+        ...content.paragraphs.map(paragraph),
         content.button.label
           ? h(
               Section,
@@ -125,6 +131,7 @@ export function EmailLayout(props: TemplateProps): ReactElement {
               ),
             )
           : null,
+        props.afterButton?.length ? h(Section, { style: { marginTop: 14 } }, ...props.afterButton.map(paragraph)) : null,
         content.ps != null ? text('muted', { color: MUTED, fontSize: 15, lineHeight: '22px', marginTop: 14 }, content.ps) : null,
         h(
           Section,

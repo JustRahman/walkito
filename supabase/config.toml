@@ -18,3 +18,18 @@ verify_jwt = true
 # own signature on the request instead.
 [functions.retention-message]
 verify_jwt = false
+
+# The web funnel's pages call it with no Supabase JWT; it forwards three page
+# events to Meta and nothing else, and answers 204 until the pixel is set.
+[functions.meta-capi]
+verify_jwt = false
+
+# The funnel calls it with the buyer's own token (anonymous included), which
+# the function checks itself with Supabase Auth: that works whichever keys the
+# project signs with, and its 401 carries the CORS headers the page can read.
+[functions.web-account]
+verify_jwt = false
+
+# pg_cron and revenuecat-webhook call it with EMAIL_CRON_SECRET, not a JWT.
+[functions.web-email]
+verify_jwt = false
