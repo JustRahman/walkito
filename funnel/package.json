@@ -1,0 +1,26 @@
+{
+  "name": "walkito-funnel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 3000",
+    "test": "bun test",
+    "deploy": "node scripts/deploy.mjs"
+  },
+  "dependencies": {
+    "@revenuecat/purchases-js": "^1.74.0",
+    "@supabase/supabase-js": "^2.119.0",
+    "posthog-js": "^1.449.2",
+    "react": "19",
+    "react-dom": "19"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

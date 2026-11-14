@@ -1,0 +1,247 @@
+import { COMPANY, DESCRIPTOR, GUARANTEE_DAYS, POSTAL_ADDRESS, SUPPORT_EMAIL } from '../config';
+import { Page } from '../ui';
+
+const UPDATED = 'November 15, 2026';
+const mail = <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>;
+const who = (
+  <>
+    {COMPANY}
+    {POSTAL_ADDRESS !== '' ? `, ${POSTAL_ADDRESS}` : ''}
+  </>
+);
+
+/**
+ * Written from what start.walkito.site does, not from a template. If the
+ * funnel starts collecting or sending something new, these pages are wrong
+ * from that moment, and nothing fails to build to say so.
+ */
+export function Terms() {
+  return (
+    <Page backTo="/">
+      <article className="legal">
+        <h1>Terms</h1>
+        <p className="caption">Last updated: {UPDATED}</p>
+
+        <h2>Who we are</h2>
+        <p>
+          Walkito is made by {who}. These terms cover start.walkito.site and a Walkito plan bought there. The Walkito app has
+          its own terms at walkito.site/terms, and they apply when you use the app.
+        </p>
+
+        <h2>Not medical care</h2>
+        <p>
+          Walkito is an exercise program. It is not a diagnosis, a treatment or a replacement for your doctor or physical
+          therapist. Move only as far as feels comfortable and stop if anything hurts or you feel unwell. If you have had
+          recent surgery or an injury, numbness or swelling, dizziness or a fall, ask your doctor or physical therapist before
+          you start.
+        </p>
+
+        <h2>Your plan and what it costs</h2>
+        <p>
+          The price, what you pay today, the date of each later charge and how often it repeats are shown on the checkout page
+          before you pay, and you confirm them with a checkbox. The two plans are:
+        </p>
+        <ul>
+          <li>
+            <b>Monthly:</b> a first period at a lower price (for example $0.99 for 7 days), then the monthly price shown, charged
+            every month until you cancel.
+          </li>
+          <li>
+            <b>3 months:</b> the price shown, paid today, then the same price every 3 months until you cancel.
+          </li>
+        </ul>
+        <p>
+          Your plan renews automatically. Payments are handled by Stripe through RevenueCat, and they appear on your statement
+          as {DESCRIPTOR}. Prices are in US dollars and include any tax shown at checkout.
+        </p>
+        <p>We email you a reminder before the first full monthly charge, and before each 3-month renewal.</p>
+
+        <h2>Cancelling</h2>
+        <p>
+          Cancel at any time at start.walkito.site/s/cancel, with the link in any email from us, or by writing to {mail}. It
+          takes one step. Your access continues until the end of the period you have paid for, and nothing more is charged.
+        </p>
+
+        <h2>Refunds</h2>
+        <p>
+          Not for you? Reply to any email from us, or write to {mail}, within {GUARANTEE_DAYS} days of a charge and we refund
+          that charge. Refunds go back to the card you paid with. A refunded plan ends when the refund is made.
+        </p>
+
+        <h2>Using the app with your plan</h2>
+        <p>
+          A plan bought here also unlocks the Walkito app on iPhone and Android when you sign in with the same email. It is
+          not managed by Apple or Google, so cancel it here, not in your phone’s settings.
+        </p>
+
+        <h2>Fair use</h2>
+        <p>
+          Your plan is for you. Please do not share your account, copy the videos, or use the service in a way that harms it
+          or other people. We may change or end features with notice, and if we stop offering a paid plan you have, we refund
+          the unused part.
+        </p>
+
+        <h2>Our responsibility</h2>
+        <p>
+          We work to keep Walkito accurate and available, but it is provided as it is. To the extent the law allows, our total
+          responsibility to you is limited to what you paid us in the 12 months before a claim. Nothing in these terms limits
+          rights you have under consumer law that cannot be limited.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          {who}. Email {mail}. A person reads every email.
+        </p>
+      </article>
+    </Page>
+  );
+}
+
+export function Privacy() {
+  return (
+    <Page backTo="/">
+      <article className="legal">
+        <h1>Privacy</h1>
+        <p className="caption">Last updated: {UPDATED}</p>
+
+        <h2>The short version</h2>
+        <ul>
+          <li>Your quiz answers stay in your browser unless you tick the box to save them with your plan.</li>
+          <li>We never send your answers, your ratings or your email to Meta, PostHog or any advertiser.</li>
+          <li>We never sell your data.</li>
+        </ul>
+
+        <h2>What we collect</h2>
+        <p>
+          <b>Your quiz answers</b> (age range, what you want help with, when you notice it, what you have tried, how you want
+          to start, anything to plan around, minutes a day) and <b>your try-it notes</b> (how your feet felt before and after,
+          and the optional balance seconds). They are kept in your browser’s storage to build your plan. They are saved to our
+          server only if you tick “Save my answers with my plan”. Our{' '}
+          <a href="/health-data">Consumer Health Data Privacy Policy</a> covers them in detail.
+        </p>
+        <p>
+          <b>Your email address</b>, to send you a sign-in code, save your plan, send your receipt and the emails about your
+          plan, and, only if you tick the box, foot tips and news.
+        </p>
+        <p>
+          <b>Your plan and payments:</b> which plan you bought, when, its status and next charge date. We never see your card
+          number.
+        </p>
+        <p>
+          <b>Technical data:</b> your IP address, browser and device type, the page you came from and the ad campaign in the
+          link, if any.
+        </p>
+        <p>
+          <b>Your choices:</b> each consent you give or refuse, with the exact words shown and the time.
+        </p>
+
+        <h2>Who receives data, and what</h2>
+        <ul>
+          <li>
+            <b>Supabase</b> stores your account, email, consents, your plan status and, if you agreed, your answers.
+          </li>
+          <li>
+            <b>Stripe</b> processes your payment and receives your card details and email. <b>RevenueCat</b> runs the checkout
+            and records your purchase against a random account ID.
+          </li>
+          <li>
+            <b>PostHog</b> receives events that say a step was viewed or finished, that checkout opened or a purchase was made,
+            with a random ID and, after you confirm it, your email. Never your answers or ratings.
+          </li>
+          <li>
+            <b>Meta (Facebook and Instagram)</b>: if you came from a Meta ad, Meta’s pixel and our server tell Meta that a page
+            was viewed, that the plan page was viewed, that checkout started and that a purchase was made, with its amount.
+            Meta receives your IP address, browser details and Meta’s own cookie IDs. Meta never receives your email, your
+            answers or anything about your health. Meta uses this to measure and improve its ads.
+          </li>
+          <li>
+            <b>Resend</b> delivers our emails. <b>Cloudflare</b> and <b>DigitalOcean</b> host and protect this website.
+          </li>
+        </ul>
+
+        <h2>Cookies and storage</h2>
+        <p>
+          We use your browser’s storage to keep your answers and progress, and to keep you signed in. PostHog sets a cookie for
+          its random ID. If you came from a Meta ad, Meta’s pixel sets the _fbp and _fbc cookies.
+        </p>
+
+        <h2>How long we keep it</h2>
+        <p>
+          Your account and answers: until you ask us to delete them. Analytics: up to 12 months. Payment records: as long as
+          tax and accounting law requires.
+        </p>
+
+        <h2>Your rights</h2>
+        <p>
+          You can ask for a copy of your data, ask us to correct or delete it, and withdraw any consent, by writing to {mail}.
+          We answer within 30 days. Depending on where you live, you may have more rights, and we honor them for everyone.
+          To opt out of Meta ad measurement, use an ad blocker or your browser’s tracking protection; we do not sell or share
+          data for cross-context advertising beyond what is described above.
+        </p>
+
+        <h2>Children</h2>
+        <p>Walkito is for adults. We do not knowingly collect data from anyone under 18.</p>
+
+        <h2>Contact</h2>
+        <p>
+          {who}. Email {mail}.
+        </p>
+      </article>
+    </Page>
+  );
+}
+
+export function HealthData() {
+  return (
+    <Page backTo="/">
+      <article className="legal">
+        <h1>Consumer Health Data Privacy Policy</h1>
+        <p className="caption">Last updated: {UPDATED}</p>
+        <p>
+          Some laws, such as Washington’s My Health My Data Act, protect information that could describe your health. This
+          page says what of that kind Walkito collects on start.walkito.site and what we do with it. It applies to everyone,
+          wherever you live.
+        </p>
+
+        <h2>What we collect</h2>
+        <ul>
+          <li>What you would like help with first, for example heel or arch, or feeling steadier.</li>
+          <li>When you notice it most, and what you have tried.</li>
+          <li>Whether you start seated or standing, and anything to plan around: recent surgery or injury, numbness or swelling, dizziness or a fall, or using a cane or walker.</li>
+          <li>Your age range.</li>
+          <li>How your feet felt before and after the try-it move, the optional balance seconds, and how your first session felt.</li>
+        </ul>
+
+        <h2>Where it comes from and why</h2>
+        <p>
+          Only from you, in the quiz. We use it for one purpose: to build your exercise plan and adjust it. We do not use it
+          for advertising, and we do not use it to decide prices.
+        </p>
+
+        <h2>Where it is kept</h2>
+        <p>
+          In your browser, to build your plan as you go. On our server (Supabase) only if you tick “Save my answers with my
+          plan”, so the Walkito app can use them when you sign in with the same email.
+        </p>
+
+        <h2>Who we share it with</h2>
+        <p>
+          No one, except Supabase, which stores it for us and may use it for nothing else. We never sell it, and we never send
+          it to Meta, PostHog or any advertiser.
+        </p>
+
+        <h2>Your rights</h2>
+        <p>
+          You can see it, delete it, or withdraw your consent at any time by writing to {mail}. Withdrawing consent deletes
+          what we saved. We answer within 30 days, and if we say no you can appeal by replying to that email; if we still say no,
+          you can complain to your state attorney general.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          {who}. Email {mail}.
+        </p>
+      </article>
+    </Page>
+  );
+}
