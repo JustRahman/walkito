@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { COMPANY_LINE, DEFAULT_VARIANT, DESCRIPTOR, GUARANTEE_DAYS, money, PRICE_VARIANTS, REMINDER_DAYS_BEFORE, SITE, SUPPORT_EMAIL, url } from '../config';
 import { addDays, FOCUS_LABEL, PROGRAM, shortDate, STEP } from '../flow';
@@ -192,7 +193,7 @@ export function Price() {
         </>
       )}
 
-      <div id="checkout" ref={target} />
+      {createPortal(<div id="checkout" ref={target} />, document.body)}
 
       <div className="note">
         <b>Not for you?</b> Reply to any email within {GUARANTEE_DAYS} days of a charge and we refund it.
