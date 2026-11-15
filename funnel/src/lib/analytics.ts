@@ -21,6 +21,9 @@ type Events = {
   email_submitted: Record<string, never>;
   email_code_failed: { reason: string };
   email_verified: { existing: boolean };
+  google_shown: Record<string, never>;
+  google_failed: { reason: string };
+  google_verified: { existing: boolean };
   price_viewed: Record<string, never>;
   plan_selected: { plan: string };
   consent_given: { kind: string };

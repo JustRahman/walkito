@@ -39,6 +39,13 @@ export const GUARANTEE_DAYS = 14;
 
 export const ONELINK = 'https://walkito.onelink.me/2L97/';
 
+/**
+ * The Web OAuth client the Android app signs in with (432333591174-gtnel…), whose
+ * ID tokens Supabase accepts. Empty hides "Continue with Google": it is set only
+ * once the client lists this site as an authorized JavaScript origin.
+ */
+export const GOOGLE_CLIENT_ID = import.meta.env.FUNNEL_GOOGLE_CLIENT_ID ?? '';
+
 export const SUPPORT_EMAIL = import.meta.env.FUNNEL_SUPPORT_EMAIL || 'hello@walkito.site';
 export const COMPANY = 'Nemy LLC';
 export const POSTAL_ADDRESS = import.meta.env.FUNNEL_POSTAL_ADDRESS || '';

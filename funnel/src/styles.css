@@ -202,6 +202,16 @@ p { margin: 0; }
 .error { color: #ffb4b4; background: rgba(255, 120, 120, 0.1); border-radius: 14px; padding: 0.8rem 1rem; }
 .note { background: var(--primary-soft); border-radius: 16px; padding: 0.9rem 1rem; }
 
+.google { min-height: 44px; display: flex; justify-content: center; }
+.google[aria-busy='true'] { opacity: 0.5; pointer-events: none; }
+.or { display: flex; align-items: center; gap: 0.75rem; color: var(--caption); font-size: 0.95rem; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+.steps { counter-reset: step; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+.steps li { counter-increment: step; display: flex; gap: 0.8rem; align-items: flex-start; }
+.steps li::before { content: counter(step); flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 1rem; }
+.steps b { color: var(--text); overflow-wrap: anywhere; }
+
 .person { display: flex; gap: 0.9rem; align-items: center; }
 .person img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex: none; }
 

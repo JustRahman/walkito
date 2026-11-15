@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PROGRESS, STEP } from '../flow';
 import { access, logConsent, saveAnswers, saveLead, sendCode, verifyCode, type CodeMode } from '../lib/account';
 import { identify, track } from '../lib/analytics';
+import { googleAvailable, renderGoogleButton } from '../lib/google';
 import { go } from '../router';
 import { getState, update, useFunnel } from '../state';
 import { Check, Page } from '../ui';
@@ -43,6 +44,30 @@ export function Email() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hint = suggestDomain(email.trim());
+  const consents = useRef({ health, marketing });
+  consents.current = { health, marketing };
+  const googleSlot = useRef<HTMLDivElement>(null);
+  const [google, setGoogle] = useState(googleAvailable);
+
+  useEffect(() => {
+    const slot = googleSlot.current;
+    if (!google || slot == null) return;
+    void renderGoogleButton(slot, async (result) => {
+      if (!result.ok) {
+        track('google_failed', { reason: result.reason });
+        setError(result.message);
+        return;
+      }
+      setBusy(true);
+      const existing = result.existing === true;
+      update({ email: result.email, codeMode: result.mode, via: 'google', consents: consents.current });
+      await afterSignIn(result.userId, result.email, existing);
+      track('google_verified', { existing });
+      const status = existing ? await access() : null;
+      setBusy(false);
+      go(status?.access === true ? STEP.me : STEP.price, { replace: true });
+    }).then((shown) => (shown ? track('google_shown') : setGoogle(false)));
+  }, [google]);
 
   const submit = async () => {
     setBusy(true);
@@ -55,7 +80,7 @@ export function Email() {
       setError(sent.message);
       return;
     }
-    update({ email: email.trim().toLowerCase(), codeMode: sent.mode, verified: false, consents: { health, marketing } });
+    update({ email: email.trim().toLowerCase(), codeMode: sent.mode, verified: false, via: 'email', consents: { health, marketing } });
     go(STEP.code);
   };
 
@@ -65,6 +90,12 @@ export function Email() {
         <h2>Where should we send your plan?</h2>
         <p className="small">We use this to save your plan and sign you in. We never sell it.</p>
       </div>
+      {google && (
+        <div className="stack">
+          <div ref={googleSlot} className="google" aria-busy={busy} />
+          <div className="or">or use your email</div>
+        </div>
+      )}
       <form
         className="stack"
         onSubmit={(e) => {

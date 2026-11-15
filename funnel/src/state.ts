@@ -34,6 +34,8 @@ export type FunnelState = {
   codeMode?: 'create' | 'sign-in';
   /** The address already had an account (the app, or an earlier visit). */
   existing?: boolean;
+  /** How she signed in, so the app hint names the same door. */
+  via?: 'google' | 'email';
   verified?: boolean;
   consents?: { health: boolean; marketing: boolean };
   variant: string;

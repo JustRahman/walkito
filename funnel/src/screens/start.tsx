@@ -81,15 +81,15 @@ export function StartDay1() {
     <Page footer={move == null}>
       {move == null ? (
         <>
-          <div className="stack">
-            <h1>You’re in. Start Day 1 now.</h1>
-            <p className="lead">
-              {moves.length === 1 ? 'One move' : `${moves.length} moves`}, about {Math.max(1, Math.round(total / 60))}{' '}
-              {Math.round(total / 60) > 1 ? 'minutes' : 'minute'}. At your own pace.
-            </p>
-          </div>
+          <h1>You’re in.</h1>
           <AccessLine status={status} email={s.email} />
-          <div className="stack">
+          <GetTheApp email={s.email} via={s.via} />
+          <section className="stack">
+            <h2>Or start Day 1 right here</h2>
+            <p className="small">
+              {moves.length === 1 ? 'One move' : `${moves.length} moves`}, about {Math.max(1, Math.round(total / 60))}{' '}
+              {Math.round(total / 60) > 1 ? 'minutes' : 'minute'}, in your browser. At your own pace.
+            </p>
             {moves.map((m) => (
               <div className="card move" key={m.id}>
                 <img src={m.poster} alt="" />
@@ -99,10 +99,9 @@ export function StartDay1() {
                 </div>
               </div>
             ))}
-          </div>
-          <div className="spacer" />
+          </section>
           <button
-            className="btn"
+            className="btn secondary"
             type="button"
             onClick={() => {
               update({ session1: 'started' });
@@ -110,10 +109,7 @@ export function StartDay1() {
               begin(0);
             }}
           >
-            Start Day 1
-          </button>
-          <button className="btn quiet" type="button" onClick={() => go(STEP.me)}>
-            Later
+            Start Day 1 in the browser
           </button>
         </>
       ) : (
@@ -140,6 +136,39 @@ export function StartDay1() {
         </>
       )}
     </Page>
+  );
+}
+
+/** The one thing to do after paying: the app, signed in to this same account. */
+function GetTheApp({ email, via, from = 'start' }: { email?: string; via?: 'google' | 'email'; from?: string }) {
+  const ua = navigator.userAgent;
+  const android = /Android/.test(ua);
+  const ios = /iPhone|iPad|iPod/.test(ua);
+  const address = <b>{email ?? 'the email you used here'}</b>;
+  return (
+    <div className="card stack gap-l">
+      <div className="stack">
+        <h2>Your plan is waiting in the app</h2>
+        <p className="small">Daily sessions, reminders and your progress. Already paid for, so there is nothing to buy again.</p>
+      </div>
+      <ol className="steps">
+        <li>
+          <span>Download Walkito{ios ? ' from the App Store' : android ? ' from Google Play' : ' on your phone'}.</span>
+        </li>
+        <li>
+          <span>Open it and tap “Already have an account? Sign in”.</span>
+        </li>
+        <li>
+          {via === 'google' && android ? (
+            <span>Tap “Continue with Google” and choose {address}.</span>
+          ) : (
+            <span>Tap “Use email instead” and enter {address}. We email you a 6-digit code.</span>
+          )}
+        </li>
+      </ol>
+      <AppButton from={from} label="Download Walkito" />
+      {!ios && !android && <p className="caption">On a computer? Search “Walkito” in the App Store or Google Play on your phone.</p>}
+    </div>
   );
 }
 
@@ -221,14 +250,7 @@ function AfterSession() {
             Done. We will remind you {s.remindAt === 'morning' ? 'in the morning' : s.remindAt === 'midday' ? 'around midday' : 'in the evening'}
             {s.remindBy === 'email' ? ' by email.' : ' once you have the app.'}
           </p>
-          <div className="card stack">
-            <h2>Get the app</h2>
-            <p className="lead">
-              Your plan is waiting in the Walkito app on iPhone and Android. Open it, tap “Already have an account”, and sign
-              in with <b style={{ color: 'var(--text)' }}>{s.email}</b>. No new payment.
-            </p>
-            <AppButton from="success" label="Get the app" />
-          </div>
+          <GetTheApp email={s.email} via={s.via} from="success" />
           <button className="btn quiet" type="button" onClick={() => go(STEP.me)}>
             Keep using Walkito in the browser
           </button>
