@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { url } from '../config';
 import { sessionOne, STEP } from '../flow';
 import { access, saveAnswers } from '../lib/account';
 import { track } from '../lib/analytics';
@@ -147,9 +148,10 @@ function GetTheApp({ email, via, from = 'start' }: { email?: string; via?: 'goog
   const address = <b>{email ?? 'the email you used here'}</b>;
   return (
     <div className="card stack gap-l">
-      <div className="stack">
-        <h2>Your plan is waiting in the app</h2>
-        <p className="small">Daily sessions, reminders and your progress. Already paid for, so there is nothing to buy again.</p>
+      <img className="hero" style={{ height: 210 }} src={url('/img/phone-home.webp')} alt="The Walkito app" />
+      <div className="stack gap-s center">
+        <h2>Now get the app</h2>
+        <p className="small">Your plan is already in it. Nothing to buy again.</p>
       </div>
       <ol className="steps">
         <li>
@@ -191,7 +193,7 @@ function AfterSession() {
     void saveAnswers({ plan: { minutes: next.answers.minutes, focus: s.consents?.health === true ? next.answers.focus : undefined, remindAt: next.remindAt, remindBy: next.remindBy, feeling: s.consents?.health === true ? next.feeling : undefined } });
   };
   return (
-    <Page>
+    <Page footer>
       <h1>Day 1 is done.</h1>
       {s.feeling == null ? (
         <section className="stack">

@@ -2,36 +2,35 @@ import { useEffect, useRef, type ReactNode } from 'react';
 
 import { url } from './config';
 import { appLink } from './flow';
+import { ICONS, type IconName } from './icons.gen';
 import { track } from './lib/analytics';
 import { back, go } from './router';
+
+export type { IconName };
 
 export function Page({
   children,
   progress,
   backTo,
-  step,
-  footer = true,
+  footer = false,
 }: {
   children: ReactNode;
   progress?: number;
   backTo?: string;
-  step?: string;
   footer?: boolean;
 }) {
   return (
     <main className="page">
       <header className="topbar">
-        {backTo != null ? (
+        {backTo != null && (
           <button className="back" type="button" onClick={() => back(backTo)} aria-label="Back">
-            <Chevron /> Back
+            <Chevron />
           </button>
-        ) : (
-          <a className="brand" href={url('/')} onClick={(e) => (e.preventDefault(), go('/'))} style={{ color: 'inherit', textDecoration: 'none' }}>
-            <img src={url('/img/icon.webp')} alt="" width={28} height={28} />
-            Walkito
-          </a>
         )}
-        {step != null && <span className="step">{step}</span>}
+        <a className="brand" href={url('/')} onClick={(e) => (e.preventDefault(), go('/'))}>
+          <img src={url('/img/icon.webp')} alt="" width={26} height={26} />
+          Walkito
+        </a>
       </header>
       {progress != null && (
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
@@ -46,10 +45,10 @@ export function Page({
   );
 }
 
-function Chevron() {
+function Chevron({ right }: { right?: boolean }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={right === true ? 'M9 5l7 7-7 7' : 'M15 5l-7 7 7 7'} stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -62,12 +61,24 @@ export function Tick() {
   );
 }
 
+/** A Fluent Emoji drawing from the app's set, in its own colours. */
+export function Icon({ name, size }: { name: IconName; size?: number }) {
+  return (
+    <svg className="ico" viewBox="0 0 32 32" fill="none" aria-hidden="true" style={size != null ? { width: size, height: size } : undefined} dangerouslySetInnerHTML={{ __html: ICONS[name] }} />
+  );
+}
+
+/** The screen's one action, kept at the bottom edge while the page scrolls. */
+export function Cta({ children }: { children: ReactNode }) {
+  return <div className="cta">{children}</div>;
+}
+
 export function Footer() {
   return (
     <footer className="footer">
       <a href={url('/terms')}>Terms</a>
       <a href={url('/privacy')}>Privacy</a>
-      <a href={url('/health-data')}>Consumer health data</a>
+      <a href={url('/health-data')}>Health data</a>
       <a href={url('/s/me')}>Sign in</a>
     </footer>
   );
@@ -77,47 +88,84 @@ export function Choice({
   children,
   selected,
   onClick,
-  number,
+  icon,
+  hint,
+  tag,
+  arrow,
+  className,
 }: {
   children: ReactNode;
   selected?: boolean;
   onClick: () => void;
-  number?: number;
+  icon?: IconName;
+  hint?: string;
+  tag?: string;
+  arrow?: boolean;
+  className?: string;
 }) {
   return (
-    <button className="choice" type="button" aria-pressed={selected === true} onClick={onClick}>
-      {number != null && <span className="num">{number}</span>}
-      <span>{children}</span>
+    <button className={className != null ? `choice ${className}` : 'choice'} type="button" aria-pressed={selected === true} onClick={onClick}>
+      {icon != null && <Icon name={icon} />}
+      <span className="grow">
+        {children}
+        {hint != null && <span className="hint">{hint}</span>}
+      </span>
+      {tag != null && <span className="tag">{tag}</span>}
+      {arrow === true && (
+        <span className="go">
+          <Chevron right />
+        </span>
+      )}
     </button>
   );
 }
 
-export function MultiChoice({ children, checked, onToggle }: { children: ReactNode; checked: boolean; onToggle: () => void }) {
+export function MultiChoice({ children, checked, onToggle, icon }: { children: ReactNode; checked: boolean; onToggle: () => void; icon?: IconName }) {
   return (
     <button className="choice" type="button" role="checkbox" aria-checked={checked} onClick={onToggle}>
-      <span>{children}</span>
+      {icon != null && <Icon name={icon} />}
+      <span className="grow">{children}</span>
       <span className="tick">{checked && <Tick />}</span>
     </button>
   );
 }
 
-export function Check({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode }) {
+/** 1 to 5 in one row, with only the two ends named. */
+export function Scale({ value, onPick, low, high }: { value?: number; onPick: (n: number) => void; low: string; high: string }) {
   return (
-    <label className="check">
+    <div className="stack gap-s">
+      <div className="scale" role="radiogroup">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} className="choice" type="button" role="radio" aria-checked={value === n} aria-label={`${n} of 5`} onClick={() => onPick(n)}>
+            {n}
+          </button>
+        ))}
+      </div>
+      <div className="scale-ends">
+        <span>{low}</span>
+        <span>{high}</span>
+      </div>
+    </div>
+  );
+}
+
+export function Check({ checked, onChange, children, className }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode; className?: string }) {
+  return (
+    <label className={className != null ? `check ${className}` : 'check'}>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>{children}</span>
     </label>
   );
 }
 
-/** Dr. Carla, at the size the app shows her: a 64 px portrait beside her name. */
-export function Carla({ line }: { line?: string }) {
+/** Dr. Carla, beside her name, or large above it. */
+export function Carla({ line, big }: { line?: string; big?: boolean }) {
   return (
-    <div className="person">
-      <img src={url('/img/carla-shayman.webp')} srcSet={`${url('/img/carla-shayman.webp')} 1x, ${url('/img/carla-shayman@2x.webp')} 2x`} alt="Dr. Carla Shayman" width={64} height={64} />
+    <div className={big === true ? 'person big' : 'person'}>
+      <img src={url('/img/carla-shayman.webp')} srcSet={`${url('/img/carla-shayman.webp')} 1x, ${url('/img/carla-shayman@2x.webp')} 2x`} alt="Dr. Carla Shayman" width={56} height={56} />
       <div>
-        <div style={{ fontWeight: 700 }}>Dr. Carla Shayman, PT, DPT</div>
-        <div className="small">{line ?? 'Physical therapist. Reviewed the exercises in Walkito.'}</div>
+        <div style={{ fontWeight: 800 }}>Dr. Carla Shayman, PT, DPT</div>
+        <div className="small">{line ?? 'Physical therapist. Reviewed every exercise.'}</div>
       </div>
     </div>
   );
@@ -141,7 +189,7 @@ export function Clip({ src, poster, playing, label }: { src: string; poster: str
 
 export function AppButton({ from, label, quiet }: { from: string; label: string; quiet?: boolean }) {
   return (
-    <a className={quiet === true ? 'btn secondary' : 'btn'} href={appLink(from)} onClick={() => track('app_link_tapped', { from })}>
+    <a className={quiet === true ? 'btn quiet' : 'btn'} href={appLink(from)} onClick={() => track('app_link_tapped', { from })}>
       {label}
     </a>
   );

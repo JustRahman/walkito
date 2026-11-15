@@ -87,8 +87,8 @@ export function Email() {
   return (
     <Page progress={PROGRESS[STEP.email]} backTo={STEP.plan}>
       <div className="stack">
-        <h2>Where should we send your plan?</h2>
-        <p className="small">We use this to save your plan and sign you in. We never sell it.</p>
+        <h2>Save your plan</h2>
+        <p className="small">Your email keeps your plan and signs you in. We never sell it.</p>
       </div>
       {google && (
         <div className="stack">
@@ -121,10 +121,10 @@ export function Email() {
             Did you mean {hint.slice(hint.indexOf('@') + 1)}?
           </button>
         )}
-        <Check checked={health} onChange={setHealth}>
+        <Check className="plain" checked={health} onChange={setHealth}>
           {CONSENT_HEALTH}
         </Check>
-        <Check checked={marketing} onChange={setMarketing}>
+        <Check className="plain" checked={marketing} onChange={setMarketing}>
           {CONSENT_MARKETING}
         </Check>
         {error != null && (
@@ -133,9 +133,9 @@ export function Email() {
           </p>
         )}
         <button className="btn" type="submit" disabled={busy || email.trim().length < 5}>
-          {busy ? 'Sending…' : 'Save my plan'}
+          {busy ? 'Sending…' : 'Continue'}
         </button>
-        <p className="caption">We will email you a 6-digit code to confirm it is you. No password.</p>
+        <p className="caption center">We email you a 6-digit code. No password.</p>
       </form>
     </Page>
   );
@@ -209,7 +209,7 @@ export function Code() {
       <div className="stack">
         <h2>Check your email</h2>
         <p className="lead">
-          We sent a 6-digit code to <b style={{ color: 'var(--text)' }}>{email}</b>.
+          We sent a 6-digit code to <b>{email}</b>.
           {mode === 'sign-in' && ' This address already has a Walkito account, so the code signs you in to it.'}
         </p>
       </div>

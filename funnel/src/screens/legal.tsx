@@ -12,7 +12,7 @@ const who = <>{COMPANY_LINE}</>;
  */
 export function Terms() {
   return (
-    <Page backTo="/">
+    <Page backTo="/" footer>
       <article className="legal">
         <h1>Terms</h1>
         <p className="caption">Last updated: {UPDATED}</p>
@@ -94,7 +94,7 @@ export function Terms() {
 
 export function Privacy() {
   return (
-    <Page backTo="/">
+    <Page backTo="/" footer>
       <article className="legal">
         <h1>Privacy</h1>
         <p className="caption">Last updated: {UPDATED}</p>
@@ -188,7 +188,7 @@ export function Privacy() {
 
 export function HealthData() {
   return (
-    <Page backTo="/">
+    <Page backTo="/" footer>
       <article className="legal">
         <h1>Consumer Health Data Privacy Policy</h1>
         <p className="caption">Last updated: {UPDATED}</p>

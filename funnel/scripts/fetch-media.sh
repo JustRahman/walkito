@@ -9,6 +9,9 @@ URL="${FUNNEL_SUPABASE_URL:-$(grep '^EXPO_PUBLIC_SUPABASE_URL=' "$REPO/.env.loca
 mkdir -p public/clips public/posters public/img
 cp "$REPO/site/public/team/carla-shayman.webp" "$REPO/site/public/team/carla-shayman@2x.webp" public/img/
 cp "$REPO/assets/icon-small.webp" public/img/icon.webp
+cp "$REPO/assets/program/mascot-balance.png" "$REPO/assets/program/mascot-mobility.png" "$REPO/assets/program/mascot-strength.png" public/img/
+cp "$REPO/assets/offer/phone-home.webp" public/img/
+for art in foot shield calendar star clipboard; do cp "$REPO/assets/onboarding/building/$art.webp" "public/img/art-$art.webp"; done
 ids=$(grep -oE "^  [a-z_]+: \{ file: '[^']+'" "$REPO/src/shared/config/clip-manifest.ts" | sed -E "s/^  ([a-z_]+): .*/\1/")
 for id in $ids; do
   cp "$REPO/assets/exercise-posters/$id.webp" public/posters/ 2>/dev/null || true

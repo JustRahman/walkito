@@ -90,7 +90,7 @@ function SignIn({ title, onSignedIn }: { title: string; onSignedIn: (s: { userId
           }}
         >
           <p className="lead">
-            We sent a code to <b style={{ color: 'var(--text)' }}>{email}</b>.
+            We sent a code to <b>{email}</b>.
           </p>
           <input
             className="field code"
@@ -151,12 +151,12 @@ export function Me() {
   if (session === undefined) return <Page footer={false}>{null}</Page>;
   if (session == null)
     return (
-      <Page>
+      <Page footer>
         <SignIn title="Sign in to Walkito" onSignedIn={setSession} />
       </Page>
     );
   return (
-    <Page>
+    <Page footer>
       <h1>Your plan</h1>
       <p className="lead">Signed in as {session.email}.</p>
       {status === undefined ? (
@@ -178,7 +178,7 @@ export function Me() {
         <h2>Walkito works best in the app</h2>
         <p className="lead">
           Every day’s session, reminders and your progress. Open the app, tap “Already have an account”, and sign in with{' '}
-          <b style={{ color: 'var(--text)' }}>{session.email}</b>.
+          <b>{session.email}</b>.
         </p>
         <AppButton from="account" label="Get the app" />
       </section>
@@ -215,7 +215,7 @@ export function Cancel() {
   if (session === undefined) return <Page footer={false}>{null}</Page>;
   if (session == null)
     return (
-      <Page>
+      <Page footer>
         <SignIn title="Manage your plan" onSignedIn={setSession} />
       </Page>
     );
@@ -228,7 +228,7 @@ export function Cancel() {
   const cancelMail = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Cancel my plan')}&body=${encodeURIComponent(`Please cancel the Walkito plan for ${session.email}.`)}`;
 
   return (
-    <Page backTo={STEP.me}>
+    <Page backTo={STEP.me} footer>
       <h1>Manage your plan</h1>
       {status === undefined && <p className="caption">Checking your plan…</p>}
       {status != null && <p className="note">{planLine(status)}</p>}

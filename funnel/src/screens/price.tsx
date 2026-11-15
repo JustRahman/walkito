@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { COMPANY_LINE, DEFAULT_VARIANT, DESCRIPTOR, GUARANTEE_DAYS, money, PRICE_VARIANTS, REMINDER_DAYS_BEFORE, SITE, SUPPORT_EMAIL, url } from '../config';
-import { addDays, FOCUS_LABEL, PROGRAM, shortDate, STEP } from '../flow';
+import { addDays, PROGRAM, shortDate, STEP } from '../flow';
 import { currentUser, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
@@ -33,6 +33,8 @@ export function Price() {
   const [phase, setPhase] = useState<'idle' | 'opening' | 'open' | 'held-back'>('idle');
   const [heldBack, setHeldBack] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [nudge, setNudge] = useState(false);
+  const consentBox = useRef<HTMLDivElement>(null);
 
   const today = useMemo(() => new Date(), []);
   const m = variant.monthly;
@@ -68,6 +70,12 @@ export function Price() {
 
   const checkout = async () => {
     setError(null);
+    if (!agreed) {
+      setNudge(true);
+      consentBox.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      setTimeout(() => setNudge(false), 1600);
+      return;
+    }
     const user = await currentUser();
     if (user == null || s.email == null) return go(STEP.email);
     setPhase('opening');
@@ -104,16 +112,19 @@ export function Price() {
   };
 
   const focus = s.answers.focus ?? 'heel';
+  const perDay = (total: number, days: number) => money(Math.round((total / days) * 100) / 100);
+  const quarterDays = Math.round((renew.getTime() - today.getTime()) / 86_400_000);
   return (
-    <Page backTo={STEP.plan}>
-      <div className="stack">
-        <h1>Your first week is ready.</h1>
-        <div className="card stack" style={{ gap: '0.35rem' }}>
-          <div>
-            <b>{PROGRAM[focus]}</b>: {FOCUS_LABEL[focus].toLowerCase()}
-          </div>
-          <div className="lead">{s.answers.start === 'standing' ? 'Standing, hand on a counter' : 'Seated moves'}</div>
-          <div className="lead">{s.answers.minutes ?? 5} minutes a day, 5 days a week</div>
+    <Page backTo={STEP.plan} footer>
+      <div className="stack center">
+        <span className="chip" style={{ alignSelf: 'center' }}>
+          {PROGRAM[focus]}
+        </span>
+        <h1>Your plan is ready</h1>
+        <div className="chips" style={{ justifyContent: 'center' }}>
+          <span className="chip">{s.answers.start === 'standing' ? 'Standing' : 'Seated'}</span>
+          <span className="chip">{s.answers.minutes ?? 5} min a day</span>
+          <span className="chip">New every week</span>
         </div>
       </div>
 
@@ -129,52 +140,83 @@ export function Price() {
       ) : (
         <>
           <div className="plans" role="radiogroup" aria-label="Choose a plan">
-            <Choice selected={plan === 'monthly'} onClick={() => choose('monthly')}>
-              <span className="plan">
-                <span className="price">{money(m.intro)} today</span>
-                <br />
-                for your first {m.introDays} days, then {money(m.price)} a month until you cancel
+            <button className="choice plan" type="button" role="radio" aria-checked={plan === 'monthly'} aria-pressed={plan === 'monthly'} onClick={() => choose('monthly')}>
+              <span className="tag flag">Best to start</span>
+              <span className="radio" />
+              <span className="grow">
+                <span className="name">{m.introDays}-day start</span>
+                <span className="hint">
+                  {money(m.intro)} today, then {money(m.price)} a month
+                </span>
               </span>
-            </Choice>
-            <Choice selected={plan === 'quarter'} onClick={() => choose('quarter')}>
-              <span className="plan">
-                <span className="price">3 months for {money(q.price)}</span>
-                <br />
-                paid once today, renews at {money(q.price)} every 3 months
+              <span className="perday">
+                <b>{perDay(m.intro, m.introDays)}</b>
+                <span>per day</span>
               </span>
-            </Choice>
+            </button>
+            <button className="choice plan" type="button" role="radio" aria-checked={plan === 'quarter'} aria-pressed={plan === 'quarter'} onClick={() => choose('quarter')}>
+              <span className="radio" />
+              <span className="grow">
+                <span className="name">3 months</span>
+                <span className="hint">{money(q.price)} every 3 months</span>
+              </span>
+              <span className="perday">
+                <b>{perDay(q.price, quarterDays)}</b>
+                <span>per day</span>
+              </span>
+            </button>
           </div>
 
-          <section className="card timeline" aria-label="What happens and when">
-            {plan === 'monthly' ? (
-              <>
-                <TimelineRow now title={`Today, ${shortDate(today)}`} text={`You pay ${money(m.intro)}. Your plan starts now.`} />
-                <TimelineRow
-                  title={shortDate(addDays(today, m.introDays - REMINDER_DAYS_BEFORE))}
-                  text={`We email you a reminder, ${REMINDER_DAYS_BEFORE} days before the first full charge.`}
-                />
-                <TimelineRow title={shortDate(charge)} text={`${money(m.price)}, then ${money(m.price)} every month until you cancel.`} />
-              </>
-            ) : (
-              <>
-                <TimelineRow now title={`Today, ${shortDate(today)}`} text={`You pay ${money(q.price)} for 3 months.`} />
-                <TimelineRow title={shortDate(addDays(renew, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
-                <TimelineRow title={shortDate(renew)} text={`${money(q.price)} for the next 3 months, until you cancel.`} />
-              </>
-            )}
+          <div className="note ok" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+            <img src={url('/img/art-shield.webp')} alt="" width={44} height={44} style={{ objectFit: 'contain', flex: 'none' }} />
+            <div>
+              <b>{GUARANTEE_DAYS}-day money-back guarantee</b>
+              <div className="small">Not for you? Reply to any email and we refund it.</div>
+            </div>
+          </div>
+
+          <section className="card stack" aria-label="What happens and when">
+            <h3>How it works</h3>
+            <div className="timeline">
+              {plan === 'monthly' ? (
+                <>
+                  <TimelineRow now title="Today" text={`${money(m.intro)}. Your plan starts now.`} />
+                  <TimelineRow title={shortDate(addDays(today, m.introDays - REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
+                  <TimelineRow title={shortDate(charge)} text={`${money(m.price)} a month. Cancel any time.`} />
+                </>
+              ) : (
+                <>
+                  <TimelineRow now title="Today" text={`${money(q.price)} for 3 months.`} />
+                  <TimelineRow title={shortDate(addDays(renew, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
+                  <TimelineRow title={shortDate(renew)} text={`${money(q.price)} for the next 3 months. Cancel any time.`} />
+                </>
+              )}
+            </div>
           </section>
 
-          <p>Cancel any time online or by email. One step. No phone tree.</p>
+          <section className="card stack">
+            <h3>What you get</h3>
+            <ul className="ticks">
+              <li>Your plan, new every week</li>
+              <li>A video for every move</li>
+              <li>Reviewed by a physical therapist</li>
+              <li>The Walkito app for iPhone and Android</li>
+            </ul>
+          </section>
 
-          <Check
-            checked={agreed}
-            onChange={(v) => {
-              setAgreed(v);
-              if (v) track('consent_given', { kind: 'auto_renew_box' });
-            }}
-          >
-            {consent}
-          </Check>
+          <div ref={consentBox}>
+            <Check
+              className={nudge ? 'nudge' : undefined}
+              checked={agreed}
+              onChange={(v) => {
+                setAgreed(v);
+                if (v) track('consent_given', { kind: 'auto_renew_box' });
+              }}
+            >
+              {consent}
+            </Check>
+          </div>
+          {nudge && <p className="small center">Tick the box above to continue.</p>}
 
           {error != null && (
             <p className="error" role="alert">
@@ -182,61 +224,55 @@ export function Price() {
             </p>
           )}
 
-          <button className="btn" type="button" disabled={!agreed || phase !== 'idle'} onClick={() => void checkout()}>
-            {phase === 'opening' ? 'Opening checkout…' : plan === 'monthly' ? `Start my first week for ${money(m.intro)}` : `Pay ${money(q.price)} for 3 months`}
+          <button className="btn" type="button" disabled={phase !== 'idle'} onClick={() => void checkout()}>
+            {phase === 'opening' ? 'Opening checkout…' : 'Get my plan'}
           </button>
+          <div className="pay">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor" />
+              <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="2.2" />
+            </svg>
+            Secure checkout · Cancel any time
+          </div>
           <p className="caption center">
             By paying you agree to the <a href={url('/terms')}>Terms</a>. Charges appear as {DESCRIPTOR}.
           </p>
         </>
       )}
 
-
-      <div className="note">
-        <b>Not for you?</b> Reply to any email within {GUARANTEE_DAYS} days of a charge and we refund it.
-      </div>
-
-      <section className="card stack">
+      <section className="card">
         <Carla />
-        <p className="lead">We are a new app. The exercises were reviewed by a physical therapist. Walkito is not medical care.</p>
-        <p className="small">
-          Questions: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
-          <br />
-          {COMPANY_LINE}
-          <br />
-          Charges appear as {DESCRIPTOR}.
-        </p>
       </section>
 
       <section className="stack" aria-label="Questions">
         <details>
           <summary>What do I get?</summary>
-          <p className="lead">
-            A plan of short daily foot exercises, {s.answers.minutes ?? 5} minutes a day, with a video for every move. It
-            changes each week from how the last one went. It works here in your browser and in the Walkito app on iPhone and
-            Android, with the same email.
+          <p className="small">
+            Short daily foot exercises, {s.answers.minutes ?? 5} minutes a day, with a video for every move. The plan changes each week. It works
+            in your browser and in the Walkito app, with the same email.
           </p>
         </details>
         <details>
           <summary>How do I cancel?</summary>
-          <p className="lead">
-            Open the link in any email from us, or go to {SITE}/s/cancel, and tap Cancel. Or reply to any email
-            and we will do it for you. You keep access until the end of the time you paid for.
+          <p className="small">
+            Go to {SITE}/s/cancel and tap Cancel, or reply to any email from us. You keep access until the end of the time you paid for.
           </p>
         </details>
         <details>
           <summary>Is this medical care?</summary>
-          <p className="lead">
-            No. Walkito is an exercise program, not a diagnosis or treatment. If something hurts, feels worse, or you are not
-            sure an exercise is right for you, ask your doctor or physical therapist.
+          <p className="small">
+            No. Walkito is an exercise program, not a diagnosis or treatment. If something hurts or feels worse, ask your doctor or physical
+            therapist.
           </p>
         </details>
       </section>
 
-      <div className="stack" style={{ marginTop: '0.5rem' }}>
-        <p className="small center">Prefer the App Store?</p>
-        <AppButton from="price" quiet label="Download and start in the app" />
-      </div>
+      <p className="caption center">
+        Questions: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+        <br />
+        {COMPANY_LINE}
+      </p>
+      <AppButton from="price" quiet label="Prefer the App Store? Get the app" />
     </Page>
   );
 }
@@ -246,8 +282,8 @@ function TimelineRow({ title, text, now }: { title: string; text: string; now?: 
     <div className={now === true ? 't now' : 't'}>
       <span className="dot" />
       <div>
-        <div style={{ fontWeight: 700 }}>{title}</div>
-        <div className="lead">{text}</div>
+        <div style={{ fontWeight: 800 }}>{title}</div>
+        <div className="small">{text}</div>
       </div>
     </div>
   );
@@ -271,7 +307,7 @@ function HeldBack({ picked, onPick, onBack }: { picked: string | null; onPick: (
           </Choice>
         ))
       ) : (
-        <p className="card lead">{ANSWER[picked]}</p>
+        <p className="card">{ANSWER[picked]}</p>
       )}
       <button className="btn secondary" type="button" onClick={onBack}>
         Back to my plan

@@ -4,9 +4,7 @@ import { FOCUS_LABEL, offersBalance, PROGRESS, STEP, tryMove } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel } from '../state';
-import { Choice, Clip, clock, Page } from '../ui';
-
-const FEEL = ['Loose and easy', 'A little stiff', 'Stiff', 'Quite stiff', 'Very stiff'] as const;
+import { Carla, clock, Clip, Cta, Page, Scale } from '../ui';
 
 export function Before() {
   const s = useFunnel();
@@ -17,17 +15,13 @@ export function Before() {
   };
   return (
     <Page progress={PROGRESS[STEP.before]} backTo={STEP.minutes}>
-      <div className="stack">
-        <h2>Let’s try one move. 60 seconds, seated.</h2>
-        <p className="lead">First: how do your feet feel right now?</p>
+      <div className="stack gap-s">
+        <span className="eyebrow">Try it now</span>
+        <h2>One move. 60 seconds. Seated.</h2>
+        <p className="lead">First, how do your feet feel right now?</p>
       </div>
-      <div className="stack">
-        {FEEL.map((label, i) => (
-          <Choice key={label} number={i + 1} selected={s.tryIt.before === i + 1} onClick={() => pick(i + 1)}>
-            {label}
-          </Choice>
-        ))}
-      </div>
+      <Scale value={s.tryIt.before} onPick={pick} low="Loose" high="Very stiff" />
+      <div className="spacer" />
       <button
         className="btn quiet"
         type="button"
@@ -37,7 +31,7 @@ export function Before() {
           go(STEP.building);
         }}
       >
-        Skip the move, show my plan
+        Skip, show my plan
       </button>
     </Page>
   );
@@ -74,33 +68,27 @@ export function TryMove() {
   };
 
   return (
-    <Page progress={PROGRESS[STEP.move]} backTo={STEP.before} footer={false}>
-      <div className="stack">
-        <h2>{move.title}</h2>
-        {state === 'ready' && (
-          <p className="lead">
-            Sit toward the front of a sturdy chair. Both feet on the floor. Move only as far as feels comfortable. Stop if
-            anything hurts or you feel unwell.
-          </p>
-        )}
-      </div>
+    <Page progress={PROGRESS[STEP.move]} backTo={STEP.before}>
+      <h2>{move.title}</h2>
       {move.clip != null && <Clip src={move.clip} poster={move.poster} playing={state === 'running'} label={`${move.title}: ${move.cue}`} />}
       <p className="card" aria-live="polite">
         {move.cue}
       </p>
       {state === 'ready' ? (
         <>
-          <div className="spacer" />
-          <button
-            className="btn"
-            type="button"
-            onClick={() => {
-              track('tryit_started');
-              setState('running');
-            }}
-          >
-            Start the 60 seconds
-          </button>
+          <p className="small">Sit at the front of a sturdy chair, feet on the floor. Stop if anything hurts.</p>
+          <Cta>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => {
+                track('tryit_started');
+                setState('running');
+              }}
+            >
+              Start 60 seconds
+            </button>
+          </Cta>
         </>
       ) : (
         <>
@@ -112,14 +100,16 @@ export function TryMove() {
               <div style={{ width: `${((LENGTH - left) / LENGTH) * 100}%` }} />
             </div>
           </div>
-          <div className="row">
-            <button className="btn secondary" type="button" onClick={() => setState(state === 'running' ? 'paused' : 'running')}>
-              {state === 'running' ? 'Pause' : 'Keep going'}
-            </button>
-          </div>
-          <button className="btn quiet" type="button" onClick={() => finish(true)}>
-            That’s enough for me
-          </button>
+          <Cta>
+            <div className="row">
+              <button className="btn secondary" type="button" onClick={() => setState(state === 'running' ? 'paused' : 'running')}>
+                {state === 'running' ? 'Pause' : 'Keep going'}
+              </button>
+              <button className="btn secondary" type="button" onClick={() => finish(true)}>
+                That’s enough
+              </button>
+            </div>
+          </Cta>
         </>
       )}
     </Page>
@@ -131,49 +121,51 @@ export function After() {
   const [now, setNow] = useState<number | undefined>(s.tryIt.after);
   const before = s.tryIt.before;
   const next = offersBalance(s.answers) ? STEP.balance : STEP.building;
+  if (now == null)
+    return (
+      <Page progress={PROGRESS[STEP.after]} backTo={STEP.move}>
+        <div className="stack gap-s">
+          <span className="eyebrow">Well done</span>
+          <h2>How do your feet feel now?</h2>
+        </div>
+        <Scale
+          onPick={(n) => {
+            setNow(n);
+            update((x) => ({ tryIt: { ...x.tryIt, after: n } }));
+            track('step_completed', { step: STEP.after });
+          }}
+          low="Loose"
+          high="Very stiff"
+        />
+      </Page>
+    );
   return (
     <Page progress={PROGRESS[STEP.after]} backTo={STEP.move}>
-      <div className="stack">
-        <h2>{now == null ? 'Well done. And now?' : 'Thank you.'}</h2>
-        {now == null && <p className="lead">How do your feet feel after the move?</p>}
+      <div className="stack gap-s center">
+        <span className="eyebrow">Day 1, move 1</span>
+        <h2>That’s your first move done</h2>
       </div>
-      {now == null ? (
-        <div className="stack">
-          {FEEL.map((label, i) => (
-            <Choice
-              key={label}
-              number={i + 1}
-              onClick={() => {
-                setNow(i + 1);
-                update((x) => ({ tryIt: { ...x.tryIt, after: i + 1 } }));
-                track('step_completed', { step: STEP.after });
-              }}
-            >
-              {label}
-            </Choice>
-          ))}
-        </div>
-      ) : (
-        <>
-          <div className="card stack">
-            <div className="row" style={{ textAlign: 'center' }}>
-              <div>
-                <div className="caption">Before</div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 800 }}>{before ?? '–'}</div>
-              </div>
-              <div>
-                <div className="caption">Now</div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 800 }}>{now}</div>
-              </div>
-            </div>
-            <p className="lead">This is your own note for today. Some days it changes. Some days it does not.</p>
+      <div className="card pop">
+        <div className="row center">
+          <div>
+            <div className="caption">Before</div>
+            <div style={{ fontSize: '2.6rem', fontWeight: 800 }}>{before ?? '–'}</div>
           </div>
-          <div className="spacer" />
-          <button className="btn" type="button" onClick={() => go(next)}>
-            Continue
-          </button>
-        </>
-      )}
+          <div style={{ flex: 'none', alignSelf: 'center', color: 'var(--caption)', fontSize: '1.6rem' }} aria-hidden="true">
+            →
+          </div>
+          <div>
+            <div className="caption">Now</div>
+            <div style={{ fontSize: '2.6rem', fontWeight: 800, color: 'var(--primary)' }}>{now}</div>
+          </div>
+        </div>
+      </div>
+      <p className="small center">Your own note for today. Some days it changes, some days it doesn’t.</p>
+      <Cta>
+        <button className="btn" type="button" onClick={() => go(next)}>
+          Continue
+        </button>
+      </Cta>
     </Page>
   );
 }
@@ -203,40 +195,41 @@ export function Balance() {
   };
 
   return (
-    <Page progress={PROGRESS[STEP.balance]} backTo={STEP.after} footer={false}>
-      <h2>An optional balance check</h2>
+    <Page progress={PROGRESS[STEP.balance]} backTo={STEP.after}>
       {phase === 'intro' && (
         <>
-          <div className="card stack">
-            <p>
-              Stand next to a kitchen counter or a sturdy chair back. Keep one hand just above it. Lift one foot a little.
-              We count up to 10 seconds.
-            </p>
-            <p className="lead">Put your foot down or hold on any time. That is not failing.</p>
+          <div className="stack gap-s">
+            <span className="eyebrow">Optional</span>
+            <h2>A 10-second balance check</h2>
           </div>
-          <div className="spacer" />
-          <button
-            className="btn"
-            type="button"
-            onClick={() => {
-              started.current = Date.now();
-              track('balance_started');
-              setPhase('holding');
-            }}
-          >
-            Start
-          </button>
-          <button
-            className="btn quiet"
-            type="button"
-            onClick={() => {
-              update((x) => ({ tryIt: { ...x.tryIt, balance: 'skipped' } }));
-              track('balance_skipped');
-              go(STEP.building);
-            }}
-          >
-            Skip this
-          </button>
+          <div className="card stack">
+            <p>Stand by a counter, one hand just above it. Lift one foot a little. We count to 10.</p>
+            <p className="small">Put your foot down or hold on any time. That is not failing.</p>
+          </div>
+          <Cta>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => {
+                started.current = Date.now();
+                track('balance_started');
+                setPhase('holding');
+              }}
+            >
+              Start
+            </button>
+            <button
+              className="btn quiet"
+              type="button"
+              onClick={() => {
+                update((x) => ({ tryIt: { ...x.tryIt, balance: 'skipped' } }));
+                track('balance_skipped');
+                go(STEP.building);
+              }}
+            >
+              Skip this
+            </button>
+          </Cta>
         </>
       )}
       {phase === 'holding' && (
@@ -247,62 +240,78 @@ export function Balance() {
           <div className="ring">
             <div style={{ width: `${(held / HOLD) * 100}%` }} />
           </div>
-          <div className="spacer" />
-          <button
-            className="btn"
-            type="button"
-            style={{ minHeight: 96 }}
-            onClick={() => stop(Math.min(HOLD, Math.floor((Date.now() - started.current) / 1000)))}
-          >
-            Foot down
-          </button>
+          <Cta>
+            <button className="btn" type="button" style={{ minHeight: 96 }} onClick={() => stop(Math.min(HOLD, Math.floor((Date.now() - started.current) / 1000)))}>
+              Foot down
+            </button>
+          </Cta>
         </>
       )}
       {phase === 'done' && (
         <>
-          <div className="card stack">
-            <h3>
-              You held {held} {held === 1 ? 'second' : 'seconds'} today.
-            </h3>
-            <p className="lead">This is a starting note for your plan. It is not a medical test.</p>
+          <div className="stack gap-s center">
+            <h2>
+              You held {held} {held === 1 ? 'second' : 'seconds'}
+            </h2>
+            <p className="lead">A starting note for your plan. Not a medical test.</p>
           </div>
-          <div className="spacer" />
-          <button className="btn" type="button" onClick={() => go(STEP.building)}>
-            Continue
-          </button>
+          <Cta>
+            <button className="btn" type="button" onClick={() => go(STEP.building)}>
+              Continue
+            </button>
+          </Cta>
         </>
       )}
     </Page>
   );
 }
 
+const BUILD_MS = 3600;
+const R = 72;
+const TURN = 2 * Math.PI * R;
+
+/** The plan being put together: a dial that fills as her own answers tick off. */
 export function Building() {
   const s = useFunnel();
   const lines = [
-    `Focus: ${FOCUS_LABEL[s.answers.focus ?? 'heel'].toLowerCase()}`,
-    `Start: ${s.answers.start === 'standing' ? 'standing, hand on a counter' : s.answers.start === 'bed' ? 'on the edge of the bed' : 'in a chair'}`,
+    FOCUS_LABEL[s.answers.focus ?? 'heel'],
+    s.answers.start === 'standing' ? 'Standing, hand on a counter' : s.answers.start === 'bed' ? 'On the edge of the bed' : 'In a chair',
     `${s.answers.minutes ?? 5} minutes a day`,
+    'Reviewed by a physical therapist',
   ];
-  const [shown, setShown] = useState(0);
+  const [done, setDone] = useState(0);
   useEffect(() => {
-    const timers = lines.map((_, i) => setTimeout(() => setShown(i + 1), 500 + i * 600));
-    const done = setTimeout(() => go(STEP.plan, { replace: true }), 500 + lines.length * 600 + 500);
-    return () => {
-      timers.forEach(clearTimeout);
-      clearTimeout(done);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const part = Math.min(1, (Date.now() - started) / BUILD_MS);
+      setDone(part);
+      if (part >= 1) {
+        clearInterval(timer);
+        setTimeout(() => go(STEP.plan, { replace: true }), 450);
+      }
+    }, 60);
+    return () => clearInterval(timer);
   }, []);
   return (
-    <Page progress={PROGRESS[STEP.building]} footer={false}>
-      <h2>Putting your first week together…</h2>
-      <div className="stack">
-        {lines.map((line, i) => (
-          <div key={line} className="card" style={{ opacity: i < shown ? 1 : 0.25, transition: 'opacity 300ms ease' }}>
-            {line}
-          </div>
-        ))}
+    <Page progress={PROGRESS[STEP.building]}>
+      <h2 className="center">Building your plan…</h2>
+      <div className="dial" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(done * 100)}>
+        <svg viewBox="0 0 168 168">
+          <circle className="bg" cx="84" cy="84" r={R} />
+          <circle className="fg" cx="84" cy="84" r={R} strokeDasharray={TURN} strokeDashoffset={TURN * (1 - done)} />
+        </svg>
+        <b>{Math.round(done * 100)}%</b>
       </div>
+      <div className="card">
+        <ul className="ticks">
+          {lines.map((line, i) => (
+            <li key={line} style={{ opacity: done >= (i + 1) / (lines.length + 0.5) ? 1 : 0.25, transition: 'opacity 300ms ease' }}>
+              {line}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <Carla />
     </Page>
   );
 }

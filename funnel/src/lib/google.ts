@@ -71,7 +71,7 @@ export async function renderGoogleButton(parent: HTMLElement, onResult: (result:
     });
     gis.accounts.id.renderButton(parent, {
       type: 'standard',
-      theme: 'filled_black',
+      theme: 'outline',
       size: 'large',
       shape: 'pill',
       text: 'continue_with',

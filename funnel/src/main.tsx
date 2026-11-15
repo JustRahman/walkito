@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { meta, startAnalytics, startPixel, track, webview } from './lib/analytics';
 import { getState, update } from './state';
+import '@fontsource-variable/nunito/wght.css';
 import './styles.css';
 
 const params = new URLSearchParams(location.search);

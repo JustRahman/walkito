@@ -1,10 +1,28 @@
 import { useEffect, useMemo } from 'react';
 
+import { url } from '../config';
+import type { Focus } from '../engine/plan';
 import { PROGRAM, PROGRESS, planView, STEP } from '../flow';
 import { meta, track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
-import { Page } from '../ui';
+import { Cta, Icon, Page, type IconName } from '../ui';
+
+export const FOCUS_ICON: Readonly<Record<Focus, IconName>> = {
+  heel: 'foot',
+  steady: 'balance',
+  flat: 'sandal',
+  allday: 'briefcase',
+  moving: 'runningShoe',
+};
+
+const FOCUS_SHORT: Readonly<Record<Focus, string>> = {
+  heel: 'Heel & arch',
+  steady: 'Balance',
+  flat: 'Flat feet',
+  allday: 'All-day feet',
+  moving: 'Mobility',
+};
 
 export function Plan() {
   const s = useFunnel();
@@ -13,61 +31,104 @@ export function Plan() {
     track('plan_viewed');
     meta('ViewContent', `plan-${crypto.randomUUID()}`);
   }, []);
-  const [today, ...rest] = view.days;
-  const start = view.facts.seated ? 'Seated' : 'Standing, hand on a counter';
+  const today = view.days[0];
+  const active = view.days.filter((d) => !d.rest).length;
   return (
-    <Page progress={PROGRESS[STEP.plan]} backTo={STEP.minutes}>
-      <div className="stack">
-        <span className="chip" style={{ alignSelf: 'flex-start' }}>
+    <Page progress={PROGRESS[STEP.plan]} backTo={STEP.minutes} footer>
+      <div className="stack center">
+        <span className="chip" style={{ alignSelf: 'center' }}>
           {PROGRAM[view.facts.focus]}
         </span>
-        <h1>Your first week</h1>
-        <p className="lead">Built from what you told us.</p>
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <span className="chip">{start}</span>
-        <span className="chip">{view.facts.minutes} minutes a day</span>
-        <span className="chip">5 days a week</span>
+        <h1>Your plan is ready</h1>
       </div>
 
-      {today != null && (
+      <div className="facts">
+        <div className="f">
+          <Icon name={FOCUS_ICON[view.facts.focus]} />
+          <span className="k">Focus</span>
+          <span className="v">{FOCUS_SHORT[view.facts.focus]}</span>
+        </div>
+        <div className="f">
+          <Icon name={view.facts.seated ? 'couch' : 'balance'} />
+          <span className="k">Position</span>
+          <span className="v">{view.facts.seated ? 'Seated' : 'Standing'}</span>
+        </div>
+        <div className="f">
+          <Icon name="stopwatch" />
+          <span className="k">Each day</span>
+          <span className="v">{view.facts.minutes} min</span>
+        </div>
+      </div>
+
+      <section className="card stack">
+        <div className="day-head">
+          <h3>Your first week</h3>
+          <span className="caption">
+            {active} days · {view.days.length - active} rest
+          </span>
+        </div>
+        <div className="week">
+          {view.days.map((day, i) => {
+            const [y, m, d] = day.date.split('-').map(Number);
+            return (
+              <div key={day.date} className={`d${day.rest ? ' rest' : ''}${i === 0 ? ' today' : ''}`}>
+                <i>{day.rest ? 'Rest' : day.minutes}</i>
+                {i === 0 ? 'Today' : new Date(y!, m! - 1, d!).toLocaleDateString('en-US', { weekday: 'short' })}
+              </div>
+            );
+          })}
+        </div>
+        <p className="caption">Minutes a day. Next week adapts to how this one goes.</p>
+      </section>
+
+      {today != null && !today.rest && (
         <section className="card day">
           <div className="day-head">
-            <h3>{today.label}</h3>
-            <span className="caption">{today.rest ? 'Rest' : `${today.minutes} min`}</span>
+            <h3>Today</h3>
+            <span className="caption">{today.minutes} min</span>
           </div>
           {today.moves.map((m) => (
             <div className="move" key={m.id}>
               <img src={m.poster} alt="" loading="lazy" />
               <div>
-                <div style={{ fontWeight: 700 }}>{m.title}</div>
+                <div style={{ fontWeight: 800 }}>{m.title}</div>
                 <div className="caption">{m.dose}</div>
               </div>
-              {m.doneToday && <span className="done">Done today</span>}
+              {m.doneToday && <span className="done">Done</span>}
             </div>
           ))}
-          {today.rest && <p className="lead">A rest day. Your feet get a break.</p>}
         </section>
       )}
 
-      {rest.map((day) => (
-        <section className="card outline day" key={day.date}>
-          <div className="day-head">
-            <h3>{day.label}</h3>
-            <span className="caption">{day.rest ? 'Rest' : `${day.minutes} min`}</span>
+      <section className="card rows">
+        <div className="r">
+          <img src={url('/img/art-foot.webp')} alt="" />
+          <div>
+            <div className="t">A video for every move</div>
+            <div className="d">Real feet, one clear cue.</div>
           </div>
-          {day.rest ? (
-            <p className="small">A rest day.</p>
-          ) : (
-            <p className="small">{day.moves.map((m) => m.title).join(' · ')}</p>
-          )}
-        </section>
-      ))}
+        </div>
+        <div className="r">
+          <img src={url('/img/art-shield.webp')} alt="" />
+          <div>
+            <div className="t">Reviewed by a physical therapist</div>
+            <div className="d">Dr. Carla Shayman, PT, DPT</div>
+          </div>
+        </div>
+        <div className="r">
+          <img src={url('/img/art-calendar.webp')} alt="" />
+          <div>
+            <div className="t">A new week, every week</div>
+            <div className="d">Easier, the same, or a step up.</div>
+          </div>
+        </div>
+      </section>
 
-      <p className="small">Next week is built from how this one goes: easier, the same, or a step up.</p>
-      <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
-        Save my plan
-      </button>
+      <Cta>
+        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
+          Get my plan
+        </button>
+      </Cta>
     </Page>
   );
 }
