@@ -1,6 +1,6 @@
 import type { Package, Purchases } from '@revenuecat/purchases-js';
 
-import { env, RC_OFFERING, type PriceVariant } from '../config';
+import { env, type PriceVariant } from '../config';
 
 let instance: Promise<Purchases> | null = null;
 let configuredFor: string | null = null;
@@ -24,19 +24,18 @@ export function billingReady(): boolean {
   return env.rcKey !== '';
 }
 
-export type Packages = { monthly: Package | null; quarter: Package | null; yearly: Package | null };
+export type Packages = { monthly: Package | null; yearly: Package | null };
 
 export async function loadPackages(userId: string, variant: PriceVariant): Promise<Packages> {
   const rc = await purchases(userId);
   const offerings = await rc.getOfferings();
-  const offering = offerings.all[RC_OFFERING] ?? offerings.current;
+  const offering = offerings.all[variant.offering] ?? null;
   const find = (pkg: string, product: string) =>
     offering?.availablePackages.find((p) => p.identifier === pkg && p.product.identifier === product) ??
     offering?.availablePackages.find((p) => p.product.identifier === product) ??
     null;
   return {
     monthly: find(variant.monthly.pkg, variant.monthly.product),
-    quarter: find(variant.quarter.pkg, variant.quarter.product),
     yearly: find(variant.yearly.pkg, variant.yearly.product),
   };
 }

@@ -90,9 +90,11 @@ function every(months: number): string {
   return months === 1 ? 'every month' : months === 12 ? 'every year' : `every ${months} months`;
 }
 
-/** `first week` or `first 14 days`. */
+/** `first week`, `first month` or `first 14 days`. */
 function firstPeriod(days: number): string {
-  return days === 7 ? 'first week' : `first ${days} days`;
+  if (days === 7) return 'first week';
+  if (days >= 28 && days <= 31) return 'first month';
+  return `first ${days} days`;
 }
 
 function buyerFooter(base: string, billing: boolean): string {
@@ -193,7 +195,9 @@ export function renewalNoticeEmail(input: { product: WebProduct; renewalAt: stri
   const first = intro
     ? p.intro!.days === 7
       ? `Your first week of Walkito ends on ${date}.`
-      : `Your first ${p.intro!.days} days of Walkito end on ${date}.`
+      : firstPeriod(p.intro!.days) === 'first month'
+        ? `Your first month of Walkito ends on ${date}.`
+        : `Your first ${p.intro!.days} days of Walkito end on ${date}.`
     : p.months === 1
       ? `Your month of Walkito ends on ${date}.`
       : p.months === 12

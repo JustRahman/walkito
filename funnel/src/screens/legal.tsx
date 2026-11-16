@@ -38,11 +38,8 @@ export function Terms() {
         </p>
         <ul>
           <li>
-            <b>Monthly:</b> a first period at a lower price (for example $0.99 for 7 days), then the monthly price shown, charged
-            every month until you cancel.
-          </li>
-          <li>
-            <b>3 months:</b> the price shown, paid today, then the same price every 3 months until you cancel.
+            <b>Monthly:</b> a first month at a lower price (for example $4.99), then the monthly price shown, charged every
+            month until you cancel.
           </li>
           <li>
             <b>1 year:</b> the price shown, paid today, then the same price every year until you cancel.
@@ -52,7 +49,7 @@ export function Terms() {
           Your plan renews automatically. Payments are handled by Stripe through RevenueCat, and they appear on your statement
           as {DESCRIPTOR}, the company that makes Walkito. Prices are in US dollars and include any tax shown at checkout.
         </p>
-        <p>We email you a reminder before the first full monthly charge, and before each 3-month or yearly renewal.</p>
+        <p>We email you a reminder before the first full monthly charge, and before each yearly renewal.</p>
 
         <h2>Cancelling</h2>
         <p>

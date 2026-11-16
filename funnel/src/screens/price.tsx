@@ -20,7 +20,7 @@ import { go } from '../router';
 import { update, useFunnel } from '../state';
 import { AppButton, Check, Choice, Page } from '../ui';
 
-type PlanId = 'monthly' | 'quarter' | 'yearly';
+type PlanId = 'monthly' | 'yearly';
 
 /** "Nov 16, 2027": a date a year away needs its year. */
 function yearDate(date: Date): string {
@@ -58,17 +58,13 @@ export function Price() {
 
   const today = useMemo(() => new Date(), []);
   const m = variant.monthly;
-  const q = variant.quarter;
   const y = variant.yearly;
-  const charge = addDays(today, m.introDays);
-  const renew = addMonths(today, q.months);
+  const charge = addMonths(today, 1);
   const renewYear = addMonths(today, y.months);
   const consent =
     plan === 'monthly'
       ? `I understand: ${money(m.intro)} today, then ${money(m.price)} a month from ${shortDate(charge)} until I cancel.`
-      : plan === 'quarter'
-        ? `I understand: ${money(q.price)} today, then ${money(q.price)} every 3 months from ${shortDate(renew)} until I cancel.`
-        : `I understand: ${money(y.price)} today, then ${money(y.price)} every year from ${yearDate(renewYear)} until I cancel.`;
+      : `I understand: ${money(y.price)} today, then ${money(y.price)} every year from ${yearDate(renewYear)} until I cancel.`;
 
   useEffect(() => {
     track('price_viewed');
@@ -124,7 +120,7 @@ export function Price() {
     setPhase('open');
     const result = await buy(user.id, pkg, s.email);
     if (result.status === 'bought') {
-      const value = plan === 'monthly' ? m.intro : plan === 'quarter' ? q.price : y.price;
+      const value = plan === 'monthly' ? m.intro : y.price;
       update({ purchased: true, plan });
       track('purchase_completed', { plan });
       meta('Purchase', `purchase-${user.id}`, { value, currency: 'USD' });
@@ -143,7 +139,7 @@ export function Price() {
 
   const focus = s.answers.focus ?? 'heel';
   const perDay = (total: number, days: number) => money(Math.round((total / days) * 100) / 100);
-  const quarterDays = Math.round((renew.getTime() - today.getTime()) / 86_400_000);
+  const monthDays = Math.round((charge.getTime() - today.getTime()) / 86_400_000);
   const yearDays = Math.round((renewYear.getTime() - today.getTime()) / 86_400_000);
   return (
     <Page backTo={STEP.plan} footer>
@@ -182,31 +178,13 @@ export function Price() {
               <span className="tag flag">Best to start</span>
               <span className="radio" />
               <span className="grow">
-                <span className="name">{m.introDays}-day start</span>
+                <span className="name">First month</span>
                 <span className="hint">
                   {money(m.intro)} today, then {money(m.price)} a month
                 </span>
               </span>
               <span className="perday">
-                <b>{perDay(m.intro, m.introDays)}</b>
-                <span>per day</span>
-              </span>
-            </button>
-            <button
-              className="choice plan"
-              type="button"
-              role="radio"
-              aria-checked={plan === 'quarter'}
-              aria-pressed={plan === 'quarter'}
-              onClick={() => choose('quarter')}
-            >
-              <span className="radio" />
-              <span className="grow">
-                <span className="name">3 months</span>
-                <span className="hint">{money(q.price)} every 3 months</span>
-              </span>
-              <span className="perday">
-                <b>{perDay(q.price, quarterDays)}</b>
+                <b>{perDay(m.intro, monthDays)}</b>
                 <span>per day</span>
               </span>
             </button>
@@ -246,14 +224,8 @@ export function Price() {
               {plan === 'monthly' ? (
                 <>
                   <TimelineRow now title="Today" text={`${money(m.intro)}. Your plan starts now.`} />
-                  <TimelineRow title={shortDate(addDays(today, m.introDays - REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
+                  <TimelineRow title={shortDate(addDays(charge, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
                   <TimelineRow title={shortDate(charge)} text={`${money(m.price)} a month. Cancel any time.`} />
-                </>
-              ) : plan === 'quarter' ? (
-                <>
-                  <TimelineRow now title="Today" text={`${money(q.price)} for 3 months.`} />
-                  <TimelineRow title={shortDate(addDays(renew, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
-                  <TimelineRow title={shortDate(renew)} text={`${money(q.price)} for the next 3 months. Cancel any time.`} />
                 </>
               ) : (
                 <>
@@ -357,7 +329,7 @@ function TimelineRow({ title, text, now }: { title: string; text: string; now?: 
 }
 
 const ANSWER: Readonly<Record<string, string>> = {
-  price: `If you cancel before your first full charge, the first week is all you pay. And if a charge was not worth it, reply to any email within ${GUARANTEE_DAYS} days and we refund it.`,
+  price: `If you cancel before your first full charge, the first month is all you pay. And if a charge was not worth it, reply to any email within ${GUARANTEE_DAYS} days and we refund it.`,
   unsure: `Try a week and see. If it is not for you, cancel in one step, or reply to any email within ${GUARANTEE_DAYS} days of a charge and we refund it.`,
   think: 'Of course. Your plan is saved to your email. Come back to this page any time.',
   other: `Tell us at ${SUPPORT_EMAIL}. A person reads every email.`,

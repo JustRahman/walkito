@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
 import { meta, startAnalytics, startPixel, track, webview } from './lib/analytics';
+import { DEFAULT_VARIANT, PRICE_VARIANTS } from './config';
 import { getState, update } from './state';
 import '@fontsource-variable/nunito/wght.css';
 import './styles.css';
@@ -16,7 +17,9 @@ for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'u
 if (Object.keys(utm).length > 0 && getState().utm == null) update({ utm });
 // An ad for one plan (`?plan=yearly`) opens the price page on it.
 const plan = params.get('plan');
-if (plan === 'monthly' || plan === 'quarter' || plan === 'yearly') update({ plan });
+if (plan === 'monthly' || plan === 'yearly') update({ plan });
+// A browser that saw a retired price arm gets today's.
+if (getState().purchased !== true && PRICE_VARIANTS[getState().variant] == null) update({ variant: DEFAULT_VARIANT });
 
 startAnalytics();
 startPixel();

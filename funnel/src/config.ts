@@ -9,29 +9,32 @@ export type PriceVariant = {
     /** RevenueCat package and product. */
     pkg: string;
     product: string;
-    /** First charge, today. */
+    /** First charge, today, for the first month. */
     intro: number;
-    introDays: number;
-    /** Every month after the intro. */
+    /** Every month after the first. */
     price: number;
   };
-  quarter: { pkg: string; product: string; price: number; months: 3 };
   yearly: { pkg: string; product: string; price: number; months: 12 };
+  /** RevenueCat offering the packages live in. */
+  offering: string;
 };
 
+/**
+ * Rahman's decision (Nov 13 research, E-18): a small first payment, $4.99 for
+ * the first month, then $9.99; the year at $49.99, the app's own price. No
+ * 3-month plan for now. The earlier arm ($0.99 for 7 days, 3 months, $59.99
+ * a year) lives on in RevenueCat for anyone who bought it.
+ */
 export const PRICE_VARIANTS: Readonly<Record<string, PriceVariant>> = {
-  a: {
-    id: 'a',
-    monthly: { pkg: '$rc_monthly', product: 'web_monthly_intro', intro: 0.99, introDays: 7, price: 9.99 },
-    quarter: { pkg: '$rc_three_month', product: 'web_quarter', price: 19.99, months: 3 },
-    yearly: { pkg: '$rc_annual', product: 'web_yearly', price: 59.99, months: 12 },
+  b: {
+    id: 'b',
+    monthly: { pkg: '$rc_monthly', product: 'web_monthly_499', intro: 4.99, price: 9.99 },
+    yearly: { pkg: '$rc_annual', product: 'web_yearly_4999', price: 49.99, months: 12 },
+    offering: 'web_b',
   },
 };
 
-export const DEFAULT_VARIANT = 'a';
-
-/** RevenueCat offering the web packages live in. */
-export const RC_OFFERING = 'web';
+export const DEFAULT_VARIANT = 'b';
 
 /** Days before the first full charge that the reminder email goes out. */
 export const REMINDER_DAYS_BEFORE = 2;
