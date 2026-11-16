@@ -76,7 +76,7 @@ export function Age() {
         <p className="lead">5 minutes a day. From a chair.</p>
       </div>
       <div className="stack center">
-        <span className="eyebrow">1-minute quiz</span>
+        <span className="eyebrow">2-minute quiz</span>
         <h3>Select your age</h3>
       </div>
       <div className="grid2">
@@ -210,7 +210,12 @@ export function Tried() {
   );
 }
 
+/** The ad that promises a seated week (Ad 1, "7-day seated foot plan") gets one: no standing start. */
+const SEATED_ADS = ['ad1_plancard'];
+
 export function Start() {
+  const s = useFunnel();
+  const seatedAd = SEATED_ADS.includes(s.utm?.utm_content ?? '');
   return (
     <Single
       path={STEP.start}
@@ -220,7 +225,7 @@ export function Start() {
       options={[
         { value: 'chair', label: 'In a chair', icon: 'couch' },
         { value: 'bed', label: 'On the edge of the bed', icon: 'bed' },
-        { value: 'standing', label: 'Standing', hint: 'With a hand on a counter', icon: 'balance' },
+        ...(seatedAd ? [] : [{ value: 'standing' as const, label: 'Standing', hint: 'With a hand on a counter', icon: 'balance' as const }]),
       ]}
       next={STEP.safety}
     />
