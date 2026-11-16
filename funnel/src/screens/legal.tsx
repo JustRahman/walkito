@@ -144,10 +144,14 @@ export function Privacy() {
             with a random ID and, after you confirm it, your email. Never your answers or ratings.
           </li>
           <li>
-            <b>Meta (Facebook and Instagram)</b>: if you came from a Meta ad, Meta’s pixel and our server tell Meta that a page
+            <b>Meta (Facebook and Instagram)</b>: Meta’s pixel and our server tell Meta that a page
             was viewed, that the plan page was viewed, that checkout started and that a purchase was made, with its amount.
             Meta receives your IP address, browser details and Meta’s own cookie IDs. Meta never receives your email, your
             answers or anything about your health. Meta uses this to measure and improve its ads.
+          </li>
+          <li>
+            <b>Google</b>: if you choose “Continue with Google”, Google confirms who you are and gives us your email address
+            and name. Google learns that you signed in to Walkito, and nothing about your answers.
           </li>
           <li>
             <b>Resend</b> delivers our emails. <b>Cloudflare</b> and <b>DigitalOcean</b> host and protect this website.
@@ -157,7 +161,7 @@ export function Privacy() {
         <h2>Cookies and storage</h2>
         <p>
           We use your browser’s storage to keep your answers and progress, and to keep you signed in. PostHog sets a cookie for
-          its random ID. If you came from a Meta ad, Meta’s pixel sets the _fbp and _fbc cookies.
+          its random ID. Meta’s pixel sets the _fbp cookie and, if you came from a Meta ad, the _fbc cookie.
         </p>
 
         <h2>How long we keep it</h2>

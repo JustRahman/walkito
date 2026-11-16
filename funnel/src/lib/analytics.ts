@@ -90,7 +90,7 @@ export function identify(userId: string, email?: string): void {
 
 type MetaEvent = 'PageView' | 'ViewContent' | 'InitiateCheckout' | 'Purchase';
 
-type Fbq = ((...args: unknown[]) => void) & { callMethod?: unknown; queue?: unknown[]; loaded?: boolean; version?: string; push?: unknown };
+type Fbq = ((...args: unknown[]) => void) & { callMethod?: unknown; queue?: unknown[]; loaded?: boolean; version?: string; push?: unknown; disablePushState?: boolean };
 
 declare global {
   interface Window {
@@ -125,6 +125,9 @@ export function startPixel(): void {
   n.loaded = true;
   n.version = '2.0';
   n.queue = [];
+  // The pixel sends a PageView of its own on every step of the quiz (each is
+  // a history entry), with no event id for the server's copy to pair with.
+  n.disablePushState = true;
   window.fbq = n;
   window._fbq = n;
   const script = document.createElement('script');
