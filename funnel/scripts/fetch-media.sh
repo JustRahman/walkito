@@ -7,7 +7,6 @@ cd "$(dirname "$0")/.."
 REPO=..
 URL="${FUNNEL_SUPABASE_URL:-$(grep '^EXPO_PUBLIC_SUPABASE_URL=' "$REPO/.env.local" 2>/dev/null | cut -d= -f2-)}"
 mkdir -p public/clips public/posters public/img
-cp "$REPO/site/public/team/carla-shayman.webp" "$REPO/site/public/team/carla-shayman@2x.webp" public/img/
 cp "$REPO/assets/icon-small.webp" public/img/icon.webp
 cp "$REPO/assets/program/mascot-balance.png" "$REPO/assets/program/mascot-mobility.png" "$REPO/assets/program/mascot-strength.png" public/img/
 cp "$REPO/assets/offer/phone-home.webp" public/img/

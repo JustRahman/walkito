@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { PROGRESS, STEP } from '../flow';
-import { access, logConsent, saveAnswers, saveLead, sendCode, verifyCode, type CodeMode } from '../lib/account';
+import { access, logConsent, saveAnswers, saveLead, sendCode, takeEmail, verifyCode, type CodeMode } from '../lib/account';
 import { identify, track } from '../lib/analytics';
 import { googleAvailable, renderGoogleButton } from '../lib/google';
 import { go } from '../router';
@@ -73,15 +73,25 @@ export function Email() {
     setBusy(true);
     setError(null);
     track('email_submitted');
-    const sent = await sendCode(email);
-    setBusy(false);
-    if (!sent.ok) {
-      track('email_code_failed', { reason: sent.reason });
-      setError(sent.message);
+    const taken = await takeEmail(email);
+    if (!taken.ok) {
+      setBusy(false);
+      track('email_code_failed', { reason: taken.reason });
+      setError(taken.message);
       return;
     }
-    update({ email: email.trim().toLowerCase(), codeMode: sent.mode, verified: false, via: 'email', consents: { health, marketing } });
-    go(STEP.code);
+    if (taken.next === 'code') {
+      setBusy(false);
+      update({ email: email.trim().toLowerCase(), codeMode: taken.mode, verified: false, via: 'email', consents: { health, marketing } });
+      go(STEP.code);
+      return;
+    }
+    update({ email: taken.email, verified: false, via: 'email', consents: { health, marketing } });
+    await afterSignIn(taken.userId, taken.email, taken.existing);
+    track('email_saved', { existing: taken.existing });
+    const status = taken.existing ? await access() : null;
+    setBusy(false);
+    go(status?.access === true ? STEP.me : STEP.price, { replace: true });
   };
 
   return (
@@ -133,15 +143,19 @@ export function Email() {
           </p>
         )}
         <button className="btn" type="submit" disabled={busy || email.trim().length < 5}>
-          {busy ? 'Sending…' : 'Continue'}
+          {busy ? 'Saving…' : 'Continue'}
         </button>
-        <p className="caption center">We email you a 6-digit code. No password.</p>
+        <p className="caption center">No password. You sign in to the app with this email.</p>
       </form>
     </Page>
   );
 }
 
-/** After the code: everything she agreed to, written once under her account. */
+/**
+ * Once the address is hers (a new one kept with this browser's account, or a
+ * code or Google for one that has an account): everything she agreed to,
+ * written once under that account. `verified` opens the price page.
+ */
 async function afterSignIn(userId: string, email: string, existing: boolean): Promise<void> {
   const s = getState();
   identify(userId, email);

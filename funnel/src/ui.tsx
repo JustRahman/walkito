@@ -158,14 +158,14 @@ export function Check({ checked, onChange, children, className }: { checked: boo
   );
 }
 
-/** Dr. Carla, beside her name, or large above it. */
-export function Carla({ line, big }: { line?: string; big?: boolean }) {
+/** Where the exercises come from. No person is named: we hold no consent to name one. */
+export function Guidelines({ line }: { line?: string }) {
   return (
-    <div className={big === true ? 'person big' : 'person'}>
-      <img src={url('/img/carla-shayman.webp')} srcSet={`${url('/img/carla-shayman.webp')} 1x, ${url('/img/carla-shayman@2x.webp')} 2x`} alt="Dr. Carla Shayman" width={56} height={56} />
+    <div className="person">
+      <img src={url('/img/art-shield.webp')} alt="" width={56} height={56} style={{ objectFit: 'contain' }} />
       <div>
-        <div style={{ fontWeight: 800 }}>Dr. Carla Shayman, PT, DPT</div>
-        <div className="small">{line ?? 'Physical therapist. Reviewed every exercise.'}</div>
+        <div style={{ fontWeight: 800 }}>Exercises built on physical therapy guidelines</div>
+        <div className="small">{line ?? 'Gentle, step by step, with a video for every move.'}</div>
       </div>
     </div>
   );

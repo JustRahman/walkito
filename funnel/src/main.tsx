@@ -14,6 +14,9 @@ for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'u
   if (value != null) utm[key] = value.slice(0, 200);
 }
 if (Object.keys(utm).length > 0 && getState().utm == null) update({ utm });
+// An ad for one plan (`?plan=yearly`) opens the price page on it.
+const plan = params.get('plan');
+if (plan === 'monthly' || plan === 'quarter' || plan === 'yearly') update({ plan });
 
 startAnalytics();
 startPixel();

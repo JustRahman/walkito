@@ -129,14 +129,14 @@ function useAccess(session: Session | undefined): Access | null | undefined {
 }
 
 function planLine(a: Access): string {
-  const quarter = a.product_id?.includes('quarter') === true;
+  const name = a.product_id?.includes('yearly') === true ? 'Yearly plan' : a.product_id?.includes('quarter') === true ? '3-month plan' : 'Monthly plan';
   const next = a.intro_ends_at != null && new Date(a.intro_ends_at) > new Date() ? a.intro_ends_at : a.period_end;
   if (a.status === 'cancelled' || a.status === 'expired')
     return a.period_end != null && new Date(a.period_end) > new Date()
       ? `Your plan is cancelled. You keep access until ${longDate(new Date(a.period_end))}.`
       : 'Your plan has ended.';
   if (next == null) return 'Your plan is active.';
-  return `${quarter ? '3-month plan' : 'Monthly plan'}. Next charge: ${longDate(new Date(next))}.`;
+  return `${name}. Next charge: ${longDate(new Date(next))}.`;
 }
 
 export function Me() {

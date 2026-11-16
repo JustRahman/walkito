@@ -111,8 +111,8 @@ export function Plan() {
         <div className="r">
           <img src={url('/img/art-shield.webp')} alt="" />
           <div>
-            <div className="t">Reviewed by a physical therapist</div>
-            <div className="d">Dr. Carla Shayman, PT, DPT</div>
+            <div className="t">Built on physical therapy guidelines</div>
+            <div className="d">Gentle, and step by step.</div>
           </div>
         </div>
         <div className="r">

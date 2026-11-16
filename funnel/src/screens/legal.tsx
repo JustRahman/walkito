@@ -34,7 +34,7 @@ export function Terms() {
         <h2>Your plan and what it costs</h2>
         <p>
           The price, what you pay today, the date of each later charge and how often it repeats are shown on the checkout page
-          before you pay, and you confirm them with a checkbox. The two plans are:
+          before you pay, and you confirm them with a checkbox. The plans are:
         </p>
         <ul>
           <li>
@@ -44,12 +44,15 @@ export function Terms() {
           <li>
             <b>3 months:</b> the price shown, paid today, then the same price every 3 months until you cancel.
           </li>
+          <li>
+            <b>1 year:</b> the price shown, paid today, then the same price every year until you cancel.
+          </li>
         </ul>
         <p>
           Your plan renews automatically. Payments are handled by Stripe through RevenueCat, and they appear on your statement
           as {DESCRIPTOR}, the company that makes Walkito. Prices are in US dollars and include any tax shown at checkout.
         </p>
-        <p>We email you a reminder before the first full monthly charge, and before each 3-month renewal.</p>
+        <p>We email you a reminder before the first full monthly charge, and before each 3-month or yearly renewal.</p>
 
         <h2>Cancelling</h2>
         <p>

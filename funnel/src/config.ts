@@ -16,6 +16,7 @@ export type PriceVariant = {
     price: number;
   };
   quarter: { pkg: string; product: string; price: number; months: 3 };
+  yearly: { pkg: string; product: string; price: number; months: 12 };
 };
 
 export const PRICE_VARIANTS: Readonly<Record<string, PriceVariant>> = {
@@ -23,6 +24,7 @@ export const PRICE_VARIANTS: Readonly<Record<string, PriceVariant>> = {
     id: 'a',
     monthly: { pkg: '$rc_monthly', product: 'web_monthly_intro', intro: 0.99, introDays: 7, price: 9.99 },
     quarter: { pkg: '$rc_three_month', product: 'web_quarter', price: 19.99, months: 3 },
+    yearly: { pkg: '$rc_annual', product: 'web_yearly', price: 59.99, months: 12 },
   },
 };
 

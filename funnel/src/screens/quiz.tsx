@@ -5,7 +5,7 @@ import { PROGRESS, STEP } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, useFunnel, type Answers } from '../state';
-import { Carla, Choice, Cta, MultiChoice, Page, type IconName } from '../ui';
+import { Choice, Guidelines, Cta, MultiChoice, Page, type IconName } from '../ui';
 
 type Option<V> = { value: V; label: string; icon?: IconName; hint?: string; tag?: string };
 
@@ -87,7 +87,7 @@ export function Age() {
         ))}
       </div>
       <div className="card">
-        <Carla line="Physical therapist. Reviewed every exercise in Walkito." />
+        <Guidelines />
       </div>
       <p className="caption center">
         By choosing your age you agree to our <a href={url('/terms')}>Terms</a> and <a href={url('/privacy')}>Privacy Policy</a>.
@@ -272,15 +272,15 @@ export function Who() {
   return (
     <Page progress={PROGRESS[STEP.who]} backTo={STEP.safety}>
       <div className="stack center">
-        <span className="eyebrow">Who is behind your plan</span>
-        <h2>Every exercise is reviewed by a physical therapist</h2>
+        <span className="eyebrow">How your plan works</span>
+        <h2>A few short moves a day, picked from your answers</h2>
       </div>
       <div className="card stack gap-l pop">
-        <Carla big line="Physical therapist" />
+        <Guidelines line="Each move shows how to do it, how much, and what to do if it doesn’t feel right." />
         <ul className="ticks">
-          <li>How each move is done</li>
-          <li>How much to do</li>
-          <li>What to do if it doesn’t feel right</li>
+          <li>A video for every move</li>
+          <li>Seated or standing, as you choose</li>
+          <li>A new week every week: easier, the same, or a step up</li>
         </ul>
       </div>
       <Cta>

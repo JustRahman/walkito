@@ -169,7 +169,7 @@ describe('the others', () => {
     const e = day3Email({ base: BASE });
     expect(e.personal).toBe(true);
     expect(e.button).toBeNull();
-    expect(e.paragraphs.at(-1)).toBe('Rahim and Carla');
+    expect(e.paragraphs.at(-1)).toBe('Rahim, Walkito');
   });
 
   test('the abandoned-checkout emails offer nothing and hurry nobody', () => {
@@ -235,12 +235,12 @@ describe('the message Resend receives', () => {
     expect(await verifyUnsubscribeToken(token, CONFIG.unsubscribeSecret)).toBe(USER);
   });
 
-  test('day 3 comes from two people, with no mascot and no button', async () => {
+  test('day 3 comes from Rahim, with no mascot and no button', async () => {
     const m = await composeWebMessage(day3Email({ base: BASE }), { userId: USER, email: 'sam@example.com' }, CONFIG);
-    expect(m.from).toBe('Rahim and Carla <hello@walkito.site>');
+    expect(m.from).toBe('Rahim from Walkito <hello@walkito.site>');
     expect(m.reply_to).toBe('hello@walkito.site');
     expect(m.html).not.toContain('mascot.png');
-    expect(m.html).toContain('Rahim and Carla');
+    expect(m.html).toContain('Rahim, Walkito');
     expect(m.html).toContain('https://walkito.site/unsubscribe/?t=');
   });
 

@@ -28,8 +28,8 @@ export type WebMailConfig = {
   unsubscribeSecret: string;
 };
 
-/** `Rahim and Carla <hello@walkito.site>`: the same address as `from`, with the people's names. */
-export function personalSender(from: string, names = 'Rahim and Carla'): string {
+/** `Rahim from Walkito <hello@walkito.site>`: the same address as `from`, with the people's names. */
+export function personalSender(from: string, names = 'Rahim from Walkito'): string {
   const address = /<([^>]+)>/.exec(from)?.[1] ?? from.trim();
   return `${names} <${address}>`;
 }

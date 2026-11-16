@@ -132,6 +132,29 @@ async function askForWelcome(userId: string): Promise<string> {
   }
 }
 
+/**
+ * A funnel buyer who never typed a code: her address is in `web_leads.email`
+ * and her account is still anonymous (funnel/src/lib/account.ts, takeEmail).
+ * Once she has paid it goes on the account, confirmed, so the app's email
+ * sign-in finds her plan. Never over an address the account already has, and
+ * never one another account holds (the update fails, and she is asked to
+ * write to us from the account page).
+ */
+async function claimEmail(userId: string): Promise<string> {
+  const { data, error } = await db.auth.admin.getUserById(userId);
+  if (error != null || data.user == null) return 'no user';
+  if (data.user.email) return 'has one';
+  const { data: lead } = await db.from('web_leads').select('email').eq('user_id', userId).maybeSingle();
+  const email = typeof lead?.email === 'string' ? lead.email.trim().toLowerCase() : '';
+  if (email === '') return 'no address';
+  const { error: updateError } = await db.auth.admin.updateUserById(userId, { email, email_confirm: true });
+  if (updateError != null) {
+    console.warn('[revenuecat] could not put the funnel address on', userId, updateError.message);
+    return `failed: ${updateError.message}`;
+  }
+  return 'claimed';
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (AUTH && req.headers.get('Authorization') !== AUTH) return json({ error: 'unauthorized' }, 401);
@@ -210,6 +233,9 @@ Deno.serve(async (req) => {
     if (result === 'granted' || result === 'kept') webBuyers.add(userId);
   }
 
+  const emails: string[] = [];
+  for (const userId of webBuyers) emails.push(`${userId}:${await claimEmail(userId)}`);
+
   // ── A first web purchase: Meta's Purchase, and the receipt ──────────────
   let meta: string | null = null;
   let welcome: string | null = null;
@@ -219,5 +245,5 @@ Deno.serve(async (req) => {
     welcome = await askForWelcome(buyer);
   }
 
-  return json({ ok: true, type: event.type ?? null, written, passes, web, meta, welcome });
+  return json({ ok: true, type: event.type ?? null, written, passes, web, emails, meta, welcome });
 });

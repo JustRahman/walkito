@@ -50,6 +50,15 @@ export const WEB_PRODUCTS: Readonly<Record<string, WebProduct>> = {
     months: 3,
     notice: 'every',
   },
+  web_yearly: {
+    id: 'web_yearly',
+    name: 'Walkito, 1 year',
+    currency: 'USD',
+    intro: null,
+    amount: 59.99,
+    months: 12,
+    notice: 'every',
+  },
 };
 
 /** RevenueCat Billing and Stripe: the stores a web purchase comes from. */

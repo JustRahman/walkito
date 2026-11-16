@@ -39,7 +39,7 @@ export type FunnelState = {
   verified?: boolean;
   consents?: { health: boolean; marketing: boolean };
   variant: string;
-  plan?: 'monthly' | 'quarter';
+  plan?: 'monthly' | 'quarter' | 'yearly';
   purchased?: boolean;
   utm?: Record<string, string>;
   askedWhy?: boolean;

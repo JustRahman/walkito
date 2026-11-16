@@ -4,7 +4,7 @@ import { FOCUS_LABEL, offersBalance, PROGRESS, STEP, tryMove } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel } from '../state';
-import { Carla, clock, Clip, Cta, Page, Scale } from '../ui';
+import { clock, Clip, Cta, Page, Scale } from '../ui';
 
 export function Before() {
   const s = useFunnel();
@@ -70,7 +70,7 @@ export function TryMove() {
   return (
     <Page progress={PROGRESS[STEP.move]} backTo={STEP.before}>
       <h2>{move.title}</h2>
-      {move.clip != null && <Clip src={move.clip} poster={move.poster} playing={state === 'running'} label={`${move.title}: ${move.cue}`} />}
+      {move.clip != null && <Clip src={move.clip} poster={move.poster} playing={state !== 'paused'} label={`${move.title}: ${move.cue}`} />}
       <p className="card" aria-live="polite">
         {move.cue}
       </p>
@@ -311,7 +311,6 @@ export function Building() {
           ))}
         </ul>
       </div>
-      <Carla />
     </Page>
   );
 }

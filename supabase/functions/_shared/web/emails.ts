@@ -80,14 +80,14 @@ export function shortDate(iso: string, zone: string): string {
   return new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: zone }).format(new Date(iso));
 }
 
-/** `month` or `3 months`. */
+/** `month`, `3 months` or `year`. */
 function span(months: number): string {
-  return months === 1 ? 'month' : `${months} months`;
+  return months === 1 ? 'month' : months === 12 ? 'year' : `${months} months`;
 }
 
-/** `every month` or `every 3 months`. */
+/** `every month`, `every 3 months` or `every year`. */
 function every(months: number): string {
-  return months === 1 ? 'every month' : `every ${months} months`;
+  return months === 1 ? 'every month' : months === 12 ? 'every year' : `every ${months} months`;
 }
 
 /** `first week` or `first 14 days`. */
@@ -158,19 +158,19 @@ export function morningEmail(input: { base: string }): WebEmail {
   };
 }
 
-/** Day 3: a note from two people, made to look like one. Replies reach a person. */
+/** Day 3: a note from Rahim. Replies reach a person. */
 export function day3Email(input: { base: string }): WebEmail {
   return {
     kind: 'web_day3',
     subject: 'How is it going?',
-    preheader: 'A quick question from the two of us.',
+    preheader: 'A quick question from Rahim.',
     greeting: null,
     paragraphs: [
       'Hi there,',
       'You started Walkito a couple of days ago, and we wanted to check in.',
       'How do your feet feel after the sessions so far? Is anything hard or unclear?',
       'Just hit reply and tell us. Even one line helps. We read every reply ourselves.',
-      'Rahim and Carla',
+      'Rahim, Walkito',
     ],
     button: null,
     after: [],
@@ -196,7 +196,9 @@ export function renewalNoticeEmail(input: { product: WebProduct; renewalAt: stri
       : `Your first ${p.intro!.days} days of Walkito end on ${date}.`
     : p.months === 1
       ? `Your month of Walkito ends on ${date}.`
-      : `Your ${p.months} months of Walkito end on ${date}.`;
+      : p.months === 12
+        ? `Your year of Walkito ends on ${date}.`
+        : `Your ${p.months} months of Walkito end on ${date}.`;
   const charge = intro
     ? `On that day, we will charge ${amount} to your card for the next ${span(p.months)}. After that, it is ${amount} ${every(p.months)} until you cancel.`
     : `On that day, we will charge ${amount} to your card for the next ${span(p.months)}.`;

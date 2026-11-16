@@ -83,6 +83,46 @@ export async function sendCode(email: string, prefer: CodeMode = 'create'): Prom
   }
 }
 
+export type EmailTaken =
+  | { ok: true; next: 'price'; userId: string; email: string; existing: boolean }
+  | { ok: true; next: 'code'; mode: CodeMode }
+  | { ok: false; message: string; reason: string };
+
+/**
+ * The email step without a code: a new address goes straight to the price.
+ *
+ * The code was where people left: she had to go to her mail and come back
+ * before she saw a price. Now the address is kept with the anonymous account
+ * this browser holds (`web_leads.email`), she buys under that account, and
+ * `revenuecat-webhook` puts the address on the account once she has paid, so
+ * the app's own email sign-in finds her plan. The code she gets is the app's.
+ *
+ * An address that already has an account still gets a sign-in code first, as
+ * before: what she buys has to land on the account she already has.
+ * `signInWithOtp` without sign-ups mails only those, and says `otp_disabled`
+ * for every other address without sending anything.
+ */
+export async function takeEmail(email: string): Promise<EmailTaken> {
+  const address = email.trim().toLowerCase();
+  if (!ADDRESS.test(address)) return { ok: false, message: 'That email address does not look right. Please check it.', reason: 'format' };
+  const db = await supabase();
+  if (db == null) return { ok: false, message: NO_SERVER, reason: 'config' };
+  try {
+    const user = await ensureUser(db);
+    if (user.email === address) return { ok: true, next: 'price', userId: user.id, email: address, existing: true };
+    if (user.is_anonymous !== true) {
+      const sent = await sendCode(address);
+      return sent.ok ? { ok: true, next: 'code', mode: sent.mode } : sent;
+    }
+    const { error } = await db.auth.signInWithOtp({ email: address, options: { shouldCreateUser: false } });
+    if (error == null) return { ok: true, next: 'code', mode: 'sign-in' };
+    if (error.code !== 'otp_disabled') return { ok: false, message: explain(error.code), reason: error.code ?? 'unknown' };
+    return { ok: true, next: 'price', userId: user.id, email: address, existing: false };
+  } catch {
+    return { ok: false, message: NO_SERVER, reason: 'network' };
+  }
+}
+
 export async function verifyCode(email: string, code: string, mode: CodeMode): Promise<Verified> {
   const address = email.trim().toLowerCase();
   const db = await supabase();
