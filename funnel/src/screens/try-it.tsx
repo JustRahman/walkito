@@ -277,7 +277,7 @@ export function Building() {
     FOCUS_LABEL[s.answers.focus ?? 'heel'],
     s.answers.start === 'standing' ? 'Standing, hand on a counter' : s.answers.start === 'bed' ? 'On the edge of the bed' : 'In a chair',
     `${s.answers.minutes ?? 5} minutes a day`,
-    'Reviewed by a physical therapist',
+    'Built on physical therapy guidelines',
   ];
   const [done, setDone] = useState(0);
   useEffect(() => {
