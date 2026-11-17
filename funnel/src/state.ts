@@ -43,6 +43,8 @@ export type FunnelState = {
   purchased?: boolean;
   utm?: Record<string, string>;
   askedWhy?: boolean;
+  /** The one-time price offer was shown: never again, on this browser or (via web_leads) after a reload. */
+  offerShown?: boolean;
   feeling?: 'easy' | 'ok' | 'hard';
   remindAt?: 'morning' | 'midday' | 'evening';
   remindBy?: 'email' | 'app';

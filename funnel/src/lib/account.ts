@@ -180,6 +180,12 @@ export type Lead = {
   fbc?: string | null;
   user_agent?: string;
   checkout_opened_at?: string;
+  /** She reached the price page: the start of the abandoned-checkout emails. */
+  price_viewed_at?: string;
+  /** "I want to think about it": the plan emails go to her. */
+  plan_email_requested_at?: string;
+  /** The one-time price offer was shown (never again after this). */
+  offer_shown_at?: string;
 };
 
 export async function saveLead(lead: Lead): Promise<void> {

@@ -36,6 +36,24 @@ export const PRICE_VARIANTS: Readonly<Record<string, PriceVariant>> = {
 
 export const DEFAULT_VARIANT = 'b';
 
+/**
+ * The one-time offer after "What held you back?" -> "The price": the first
+ * year for $29.99, then $49.99 a year. A NEW RevenueCat product with a paid
+ * first period (one year at $29.99) that renews at $49.99; the live products
+ * are not touched. It sits in the variant's offering as its own package. Until
+ * RevenueCat has it, the offer is simply not shown.
+ */
+export type Offer = { id: string; pkg: string; product: string; intro: number; price: number; months: 12 };
+
+export const PRICE_OFFER: Offer = {
+  id: 'year_2999',
+  pkg: 'yearly_offer',
+  product: 'web_yearly_2999',
+  intro: 29.99,
+  price: 49.99,
+  months: 12,
+};
+
 /** Days before the first full charge that the reminder email goes out. */
 export const REMINDER_DAYS_BEFORE = 2;
 

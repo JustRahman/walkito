@@ -1,6 +1,6 @@
 import type { Package, Purchases } from '@revenuecat/purchases-js';
 
-import { env, type PriceVariant } from '../config';
+import { env, PRICE_OFFER, type PriceVariant } from '../config';
 
 let instance: Promise<Purchases> | null = null;
 let configuredFor: string | null = null;
@@ -24,7 +24,7 @@ export function billingReady(): boolean {
   return env.rcKey !== '';
 }
 
-export type Packages = { monthly: Package | null; yearly: Package | null };
+export type Packages = { monthly: Package | null; yearly: Package | null; offer: Package | null };
 
 export async function loadPackages(userId: string, variant: PriceVariant): Promise<Packages> {
   const rc = await purchases(userId);
@@ -37,6 +37,7 @@ export async function loadPackages(userId: string, variant: PriceVariant): Promi
   return {
     monthly: find(variant.monthly.pkg, variant.monthly.product),
     yearly: find(variant.yearly.pkg, variant.yearly.product),
+    offer: find(PRICE_OFFER.pkg, PRICE_OFFER.product),
   };
 }
 

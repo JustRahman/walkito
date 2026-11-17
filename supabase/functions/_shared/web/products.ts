@@ -68,6 +68,16 @@ export const WEB_PRODUCTS: Readonly<Record<string, WebProduct>> = {
     months: 12,
     notice: 'every',
   },
+  // The one-time offer after "The price": the first year for $29.99, then $49.99 a year.
+  web_yearly_2999: {
+    id: 'web_yearly_2999',
+    name: 'Walkito, 1 year',
+    currency: 'USD',
+    intro: { amount: 29.99, days: 365 },
+    amount: 49.99,
+    months: 12,
+    notice: 'intro',
+  },
   web_yearly: {
     id: 'web_yearly',
     name: 'Walkito, 1 year',

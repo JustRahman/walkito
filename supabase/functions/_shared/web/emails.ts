@@ -94,6 +94,7 @@ function every(months: number): string {
 function firstPeriod(days: number): string {
   if (days === 7) return 'first week';
   if (days >= 28 && days <= 31) return 'first month';
+  if (days >= 365 && days <= 366) return 'first year';
   return `first ${days} days`;
 }
 
@@ -197,7 +198,9 @@ export function renewalNoticeEmail(input: { product: WebProduct; renewalAt: stri
       ? `Your first week of Walkito ends on ${date}.`
       : firstPeriod(p.intro!.days) === 'first month'
         ? `Your first month of Walkito ends on ${date}.`
-        : `Your first ${p.intro!.days} days of Walkito end on ${date}.`
+        : firstPeriod(p.intro!.days) === 'first year'
+          ? `Your first year of Walkito ends on ${date}.`
+          : `Your first ${p.intro!.days} days of Walkito end on ${date}.`
     : p.months === 1
       ? `Your month of Walkito ends on ${date}.`
       : p.months === 12

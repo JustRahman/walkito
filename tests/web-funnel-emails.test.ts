@@ -265,3 +265,20 @@ describe('samples', () => {
     ]);
   });
 });
+
+describe('the one-time offer: first year $29.99, then $49.99', () => {
+  const offer = WEB_PRODUCTS.web_yearly_2999;
+
+  test('is in the catalog at the amounts the offer card shows', () => {
+    expect(offer?.intro).toEqual({ amount: 29.99, days: 365 });
+    expect(offer?.amount).toBe(49.99);
+    expect(offer?.months).toBe(12);
+  });
+
+  test('its renewal notice names the first year and the $49.99 that follows', () => {
+    const e = renewalNoticeEmail({ product: offer!, renewalAt: '2027-11-16T15:00:00Z', zone: NY, base: BASE });
+    expect(e.subject).toBe('Your first year ends Tuesday, November 16');
+    expect(e.paragraphs[0]).toBe('Your first year of Walkito ends on Tuesday, November 16, 2027.');
+    expect(e.paragraphs[1]).toContain('$49.99');
+  });
+});
