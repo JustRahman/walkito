@@ -234,6 +234,44 @@ export async function portalLink(v2Key: string, projectId: string, appUserId: st
   }
 }
 
+/** One account's view of a web purchase, as `web-account` reads it. */
+export type PurchaseView = {
+  userId: string;
+  customer: { status: string; period_end: string | null } | null;
+  comp: { until: string | null } | null;
+};
+
+/**
+ * Which of several accounts holds the purchase the cancel page should show.
+ *
+ * A buyer can pay under one account and sign in under another: the funnel
+ * sells to the anonymous account a browser holds, and puts the address on it
+ * after payment (`revenuecat-webhook`, claimEmail). When that address already
+ * belonged to another account (the app, an earlier visit), or the browser
+ * still holds the old anonymous session, the code on the cancel page signs
+ * her in to an account with no purchase on it. `web-account` therefore also
+ * looks at the accounts whose funnel lead carries the same verified address.
+ *
+ * The first view is the caller's own: it wins outright while it is open, and
+ * every tie. Otherwise: open access first, then any purchase at all
+ * (cancelled, refunded or expired, so the page can say so), then the latest
+ * `period_end`.
+ */
+export function bestPurchase(views: PurchaseView[], now: Date = new Date()): PurchaseView | null {
+  if (views.length === 0) return null;
+  const rank = (v: PurchaseView) => (hasAccess(v.comp, v.customer, now) ? 2 : v.customer != null ? 1 : 0);
+  const end = (v: PurchaseView) => {
+    const t = Date.parse(v.customer?.period_end ?? '');
+    return Number.isNaN(t) ? 0 : t;
+  };
+  let best = views[0]!;
+  if (rank(best) === 2) return best;
+  for (const v of views.slice(1)) {
+    if (rank(v) > rank(best) || (rank(v) === rank(best) && rank(v) > 0 && end(v) > end(best))) best = v;
+  }
+  return best;
+}
+
 /** Live statuses: the plan is open until `period_end`. */
 const OPEN: ReadonlySet<string> = new Set(['intro', 'active', 'cancelled', 'billing_issue']);
 

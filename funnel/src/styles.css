@@ -354,6 +354,11 @@ details[open] { padding-bottom: 1rem; }
 .pop { animation: pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 @keyframes pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
 
+/* Trust lines under the plan and the price: small and calm. */
+.trust p { margin: 0; }
+.trust .reviewer { display: flex; gap: 0.6rem; align-items: center; justify-content: center; }
+.trust .reviewer img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: none; }
+
 @media (prefers-reduced-motion: reduce) {
   .fade, .pop, .check.nudge { animation: none; }
   .progress > div, .ring > div, .dial .fg { transition: none; }

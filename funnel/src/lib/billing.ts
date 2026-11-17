@@ -1,6 +1,6 @@
 import type { Package, Purchases } from '@revenuecat/purchases-js';
 
-import { env, type PriceVariant } from '../config';
+import { env, PRICE_OFFER, type PriceVariant } from '../config';
 
 let instance: Promise<Purchases> | null = null;
 let configuredFor: string | null = null;
@@ -24,7 +24,7 @@ export function billingReady(): boolean {
   return env.rcKey !== '';
 }
 
-export type Packages = { monthly: Package | null; yearly: Package | null };
+export type Packages = { monthly: Package | null; yearly: Package | null; offer: Package | null };
 
 export async function loadPackages(userId: string, variant: PriceVariant): Promise<Packages> {
   const rc = await purchases(userId);
@@ -37,6 +37,7 @@ export async function loadPackages(userId: string, variant: PriceVariant): Promi
   return {
     monthly: find(variant.monthly.pkg, variant.monthly.product),
     yearly: find(variant.yearly.pkg, variant.yearly.product),
+    offer: find(PRICE_OFFER.pkg, PRICE_OFFER.product),
   };
 }
 
@@ -63,4 +64,30 @@ export async function buy(userId: string, pkg: Package, email: string): Promise<
       message: 'Your bank did not approve this. You have not been charged. Try another card, or try again in a minute.',
     };
   }
+}
+
+export type SwitchResult = { status: 'switched' } | { status: 'cancelled' } | { status: 'unsupported' } | { status: 'failed'; code: string; message: string };
+
+/**
+ * Monthly to yearly on the same card. NOT BUILT, on purpose; the screen that
+ * calls it is behind YEARLY_UPGRADE_ENABLED (config.ts), which is off.
+ *
+ * What RevenueCat Billing supports (docs: /docs/web/product-changes, Nov 2026):
+ * a product change from the Web SDK, in BETA, through `purchase()` with
+ * `productChangeInfo: { subscriptionId, subscriberToken }`. Missing here:
+ *  1. The API is internal: `productChangeInfo` is not in the SDK's types and
+ *     may change in any release (the SDK would need pinning to one version).
+ *  2. A server endpoint that mints the subscriber token: RevenueCat v2
+ *     `POST /projects/{project}/apps/{app}/authenticate` with a v2 secret key
+ *     holding `iam:authorization:issue_token`, for the signed-in user only,
+ *     plus the subscription id from `GET /customers/{id}/subscriptions`.
+ *  3. A change path in the dashboard: web_monthly_499 -> web_yearly_4999, as
+ *     an upgrade.
+ *  4. The money is not "$45.00 today": an upgrade on RevenueCat Billing
+ *     charges the full $49.99 now and refunds the unused part of the $4.99
+ *     as a separate refund (the paid first month ends; it does not carry
+ *     over). The screen's words must say that before it is switched on.
+ */
+export async function switchToYearly(): Promise<SwitchResult> {
+  return { status: 'unsupported' };
 }

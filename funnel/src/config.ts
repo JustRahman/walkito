@@ -36,6 +36,30 @@ export const PRICE_VARIANTS: Readonly<Record<string, PriceVariant>> = {
 
 export const DEFAULT_VARIANT = 'b';
 
+/**
+ * The one-time offer after "What held you back?" -> "The price": the first
+ * year for $29.99, then $49.99 a year. A NEW RevenueCat product with a paid
+ * first period (one year at $29.99) that renews at $49.99; the live products
+ * are not touched. It sits in the variant's offering as its own package. Until
+ * RevenueCat has it, the offer is simply not shown.
+ */
+export type Offer = { id: string; pkg: string; product: string; intro: number; price: number; months: 12 };
+
+export const PRICE_OFFER: Offer = {
+  id: 'year_2999',
+  pkg: 'yearly_offer',
+  product: 'web_yearly_2999',
+  intro: 29.99,
+  price: 49.99,
+  months: 12,
+};
+
+/**
+ * "Want the whole year instead?" right after a monthly purchase. OFF: see
+ * `switchToYearly` in lib/billing.ts for what is missing before it can be on.
+ */
+export const YEARLY_UPGRADE_ENABLED = false;
+
 /** Days before the first full charge that the reminder email goes out. */
 export const REMINDER_DAYS_BEFORE = 2;
 
@@ -43,6 +67,30 @@ export const REMINDER_DAYS_BEFORE = 2;
 export const GUARANTEE_DAYS = 14;
 
 export const ONELINK = 'https://walkito.onelink.me/2L97/';
+
+// ── Trust lines on the plan and price pages ────────────────────────────────
+
+/**
+ * The clinical practice guideline behind "Exercise is what physical therapists
+ * recommend first". TODO(Rahman): put the exact guideline link here. While it
+ * is empty, the line is hidden.
+ */
+export const PT_GUIDELINE_URL = '';
+
+/**
+ * "Exercises reviewed by Dr. Carla Shayman, PT, DPT" with her photo. Hidden
+ * until she has agreed in writing to be named in the funnel and its ads.
+ */
+export const CARLA_APPROVED = false;
+
+/** Her photo, as walkito.site already serves it (the funnel runs under walkito.site/go). */
+export const CARLA_PHOTO = '/team/carla-shayman.webp';
+
+/** The App Store rating the line quotes. Change it if the rating changes. */
+export const APP_STORE_RATING = '5.0';
+
+/** "Used by 1,000+ women" shows only once the server's real count passes this. */
+export const PEOPLE_THRESHOLD = 1000;
 
 /**
  * The Web OAuth client the Android app signs in with (432333591174-gtnel…), whose

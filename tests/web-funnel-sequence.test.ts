@@ -225,42 +225,49 @@ describe('web_abandon_1 and web_abandon_2', () => {
   const opened = ny('2026-11-16', 14);
   const lead = (over: Partial<WebPerson> = {}) => person({ checkoutOpenedAt: opened.toISOString(), ...over }, null);
 
-  test('the first, one to two hours after checkout opened', () => {
+  test('the first, about an hour after she left (1 to 3 hours)', () => {
     expect(why(lead(), ny('2026-11-16', 14, 59), 'web_abandon_1')).toBe('not yet');
     expect(pick(lead(), ny('2026-11-16', 15))).toBe('web_abandon_1');
-    expect(why(lead(), ny('2026-11-16', 16), 'web_abandon_1')).toBe('its window has passed');
+    expect(pick(lead(), ny('2026-11-16', 16, 45))).toBe('web_abandon_1');
+    expect(why(lead(), ny('2026-11-16', 17), 'web_abandon_1')).toBe('its window has passed');
   });
 
-  test('the second, the next day from 10:00, once', () => {
+  test('the second, about a day later (24 to 36 hours), once', () => {
     const after = lead({ log: [sent('web_abandon_1', ny('2026-11-16', 15, 5))] });
-    expect(pick(after, ny('2026-11-17', 9, 59))).toBeNull();
-    expect(pick(after, ny('2026-11-17', 10))).toBe('web_abandon_2');
-    expect(why(after, ny('2026-11-18', 10), 'web_abandon_2')).toBe('its day has passed');
-    expect(why(lead({ log: [sent('web_abandon_2', ny('2026-11-17', 10))] }), ny('2026-11-17', 15), 'web_abandon_2')).toBe('already sent');
+    expect(why(after, ny('2026-11-17', 13, 59), 'web_abandon_2')).toBe('not yet');
+    expect(pick(after, ny('2026-11-17', 14))).toBe('web_abandon_2');
+    expect(why(after, ny('2026-11-18', 2), 'web_abandon_2')).toBe('its window has passed');
+    expect(why(lead({ log: [sent('web_abandon_2', ny('2026-11-17', 14))] }), ny('2026-11-17', 15), 'web_abandon_2')).toBe('already sent');
   });
 
-  test('never at night: a checkout at 21:30 skips the first and gets the second', () => {
+  test('reaching the price page starts the clock too, with no checkout opened', () => {
+    const viewed = person({ priceViewedAt: opened.toISOString() }, null);
+    expect(pick(viewed, ny('2026-11-16', 15))).toBe('web_abandon_1');
+  });
+
+  test('"I want to think about it" also starts it, from the latest of the three moments', () => {
+    const asked = person({ priceViewedAt: opened.toISOString(), planEmailRequestedAt: ny('2026-11-16', 15).toISOString() }, null);
+    expect(why(asked, ny('2026-11-16', 15, 30), 'web_abandon_1')).toBe('not yet');
+    expect(pick(asked, ny('2026-11-16', 16))).toBe('web_abandon_1');
+  });
+
+  test('never at night: a price page at 21:30 skips the first and gets the second the next evening', () => {
     const late = person({ checkoutOpenedAt: ny('2026-11-16', 21, 30).toISOString() }, null);
     expect(why(late, ny('2026-11-16', 22, 45), 'web_abandon_1')).toBe('night time');
-    expect(pick(late, ny('2026-11-17', 10))).toBe('web_abandon_2');
-  });
-
-  test('at least twelve hours after a checkout in the small hours', () => {
-    const owl = person({ checkoutOpenedAt: ny('2026-11-17', 1).toISOString() }, null);
-    expect(why(owl, ny('2026-11-17', 12, 59), 'web_abandon_2')).toBe('not yet');
-    expect(pick(owl, ny('2026-11-17', 13))).toBe('web_abandon_2');
+    expect(pick(late, ny('2026-11-17', 21, 30))).toBe('web_abandon_2');
+    expect(why(late, ny('2026-11-17', 22, 15), 'web_abandon_2')).toBe('night time');
   });
 
   test('never to a buyer, even one whose plan has ended', () => {
     const buyer = person({ checkoutOpenedAt: opened.toISOString(), log: welcomed }, { status: 'expired' });
     expect(pick(buyer, ny('2026-11-16', 15))).toBeNull();
-    expect(pick(buyer, ny('2026-11-17', 10))).toBeNull();
+    expect(pick(buyer, ny('2026-11-17', 14))).toBeNull();
   });
 
-  test('not after an unsubscribe, not without an address, not without a checkout', () => {
+  test('not after an unsubscribe, not without an address, not before the price page', () => {
     expect(why(lead({ unsubscribed: true }), ny('2026-11-16', 15), 'web_abandon_1')).toBe('unsubscribed');
-    expect(why(lead({ unsubscribed: true }), ny('2026-11-17', 10), 'web_abandon_2')).toBe('unsubscribed');
+    expect(why(lead({ unsubscribed: true }), ny('2026-11-17', 14), 'web_abandon_2')).toBe('unsubscribed');
     expect(nextWebEmail(lead({ email: null }), ny('2026-11-16', 15)).blocked).toBe('no email address');
-    expect(nextWebEmail(person({}, null), ny('2026-11-16', 15)).blocked).toBe('never opened checkout');
+    expect(nextWebEmail(person({}, null), ny('2026-11-16', 15)).blocked).toBe('never reached the price page');
   });
 });

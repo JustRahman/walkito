@@ -100,7 +100,7 @@ async function everyRow(what: string, query: (from: number, to: number) => Promi
   }
 }
 
-/** Everyone who could be due: recent buyers, renewals within three days, checkouts opened in the last three. */
+/** Everyone who could be due: recent buyers, renewals within three days, and leads who reached the price page, opened checkout or asked for the plan in the last three. */
 async function candidates(now: Date): Promise<string[]> {
   const at = (offsetMs: number) => new Date(now.getTime() + offsetMs).toISOString();
   const lists = await Promise.all([
@@ -114,6 +114,12 @@ async function candidates(now: Date): Promise<string[]> {
     everyRow('checkouts', (a, b) =>
       db.from('web_leads').select('user_id').not('email', 'is', null).gte('checkout_opened_at', at(-3 * DAY_MS)).order('user_id').range(a, b),
     ),
+    everyRow('price views', (a, b) =>
+      db.from('web_leads').select('user_id').not('email', 'is', null).gte('price_viewed_at', at(-3 * DAY_MS)).order('user_id').range(a, b),
+    ),
+    everyRow('plan emails asked for', (a, b) =>
+      db.from('web_leads').select('user_id').not('email', 'is', null).gte('plan_email_requested_at', at(-3 * DAY_MS)).order('user_id').range(a, b),
+    ),
   ]);
   return [...new Set(lists.flat().map((r) => String(r.user_id)))];
 }
@@ -125,23 +131,42 @@ async function accountEmail(userId: string): Promise<string | null> {
   return user?.email || user?.new_email || null;
 }
 
+/** The two plan facts the emails may use, when the funnel saved them. */
+function planFrom(raw: unknown): { focus: string | null; minutes: number | null } | null {
+  if (typeof raw !== 'object' || raw == null) return null;
+  const r = raw as Record<string, unknown>;
+  return {
+    focus: typeof r.focus === 'string' ? r.focus : null,
+    minutes: typeof r.minutes === 'number' ? r.minutes : null,
+  };
+}
+
 /** What `sequence.ts` needs to know about each of these users. */
 async function people(ids: string[]): Promise<WebPerson[]> {
   const out: WebPerson[] = [];
   for (let i = 0; i < ids.length; i += CHUNK) {
     const part = ids.slice(i, i + CHUNK);
-    const [leads, customers, logs, contacts] = await Promise.all([
-      everyRow('leads', (a, b) => db.from('web_leads').select('user_id, email, utm, checkout_opened_at, unsubscribed_at').in('user_id', part).range(a, b)),
+    const [leads, customers, logs, contacts, plans] = await Promise.all([
+      everyRow('leads', (a, b) =>
+        db
+          .from('web_leads')
+          .select('user_id, email, utm, checkout_opened_at, price_viewed_at, plan_email_requested_at, unsubscribed_at')
+          .in('user_id', part)
+          .range(a, b),
+      ),
       everyRow('customers', (a, b) =>
         db.from('web_customers').select('user_id, product_id, status, period_end, intro_ends_at, first_purchase_at').in('user_id', part).range(a, b),
       ),
       everyRow('log', (a, b) => db.from('web_email_log').select('user_id, key, sent_at, status').in('user_id', part).range(a, b)),
       everyRow('contacts', (a, b) => db.from('email_contacts').select('user_id, unsubscribed_at').in('user_id', part).range(a, b)),
+      // Her plan, for the two lines in the abandoned-checkout emails. Saved only with her consent to keep her answers.
+      everyRow('plans', (a, b) => db.from('web_quiz_answers').select('user_id, plan').in('user_id', part).range(a, b)),
     ]);
     const byId = (rows: Row[]) => new Map(rows.map((r) => [String(r.user_id), r]));
     const leadOf = byId(leads);
     const customerOf = byId(customers);
     const contactOf = byId(contacts);
+    const planOf = byId(plans);
     for (const userId of part) {
       const lead = leadOf.get(userId);
       const c = customerOf.get(userId);
@@ -163,6 +188,9 @@ async function people(ids: string[]): Promise<WebPerson[]> {
         zone: zoneOf(lead?.utm),
         unsubscribed: lead?.unsubscribed_at != null || contactOf.get(userId)?.unsubscribed_at != null,
         checkoutOpenedAt: (lead?.checkout_opened_at as string | null | undefined) ?? null,
+        priceViewedAt: (lead?.price_viewed_at as string | null | undefined) ?? null,
+        planEmailRequestedAt: (lead?.plan_email_requested_at as string | null | undefined) ?? null,
+        plan: planFrom(planOf.get(userId)?.plan),
         customer,
         log: logs
           .filter((r) => String(r.user_id) === userId)

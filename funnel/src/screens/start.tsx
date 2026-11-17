@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { url } from '../config';
+import { url, YEARLY_UPGRADE_ENABLED } from '../config';
 import { sessionOne, STEP } from '../flow';
 import { access, saveAnswers } from '../lib/account';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel, type FunnelState } from '../state';
 import { AppButton, Choice, Clip, clock, Page } from '../ui';
+import { YearlyUpgrade } from './upgrade';
 
 /** Waits for the webhook to unlock the account: about a minute, then says so honestly. */
 function useAccess(): 'checking' | 'yes' | 'slow' {
@@ -76,6 +77,8 @@ export function StartDay1() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, paused]);
 
+  // Monthly buyers only, once, and only while the flag is on (it is off).
+  if (YEARLY_UPGRADE_ENABLED && s.purchased === true && s.plan === 'monthly' && s.upgrade == null && index < 0) return <YearlyUpgrade />;
   if (s.session1 === 'done' || index >= moves.length) return <AfterSession />;
 
   return (

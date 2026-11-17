@@ -10,7 +10,9 @@ import {
   day3Email,
   emailFor,
   morningEmail,
+  planLines,
   planUrl,
+  priceUrl,
   renewalNoticeEmail,
   welcomeEmail,
   type WebEmail,
@@ -175,7 +177,9 @@ describe('the others', () => {
   test('the abandoned-checkout emails offer nothing and hurry nobody', () => {
     for (const e of [abandon1Email({ base: BASE }), abandon2Email({ base: BASE })]) {
       expect(words(e).join(' ')).not.toMatch(/\$|%|today only|only \w+ left|\d+ left|soon|deal|offer|expire/i);
-      expect(e.button?.label).toBe('See my plan');
+      expect(e.button?.label).toBe('see my plan');
+      expect(e.subject).toBe('your walkito plan is saved');
+      expect(e.after.join(' ')).toContain('14-day money-back');
     }
     expect(cancelUrl('https://start.walkito.site/', 'web_abandon_1')).toBe('https://start.walkito.site/s/cancel?e=web_abandon_1');
   });
@@ -263,5 +267,45 @@ describe('samples', () => {
       'web_abandon_1',
       'web_abandon_2',
     ]);
+  });
+});
+
+describe('the one-time offer: first year $29.99, then $49.99', () => {
+  const offer = WEB_PRODUCTS.web_yearly_2999;
+
+  test('is in the catalog at the amounts the offer card shows', () => {
+    expect(offer?.intro).toEqual({ amount: 29.99, days: 365 });
+    expect(offer?.amount).toBe(49.99);
+    expect(offer?.months).toBe(12);
+  });
+
+  test('its renewal notice names the first year and the $49.99 that follows', () => {
+    const e = renewalNoticeEmail({ product: offer!, renewalAt: '2027-11-16T15:00:00Z', zone: NY, base: BASE });
+    expect(e.subject).toBe('Your first year ends Tuesday, November 16');
+    expect(e.paragraphs[0]).toBe('Your first year of Walkito ends on Tuesday, November 16, 2027.');
+    expect(e.paragraphs[1]).toContain('$49.99');
+  });
+});
+
+describe('the abandoned-checkout emails show her plan in two lines', () => {
+  test('her focus in plain words, and her minutes a day', () => {
+    const e = abandon1Email({ base: BASE, plan: { focus: 'heel', minutes: 5 } });
+    expect(e.paragraphs.slice(1)).toEqual(['focus: easier first steps', '5 minutes a day']);
+    expect(e.button?.url).toBe(priceUrl(BASE, 'web_abandon_1'));
+  });
+
+  test('without her answers (no consent to keep them): a plain plan, nothing guessed', () => {
+    expect(planLines(null)).toEqual(['focus: your feet, step by step', 'a few minutes a day']);
+    expect(planLines({ focus: 'unknown', minutes: 7 })).toEqual(['focus: your feet, step by step', 'a few minutes a day']);
+  });
+
+  test('every focus is said without a condition word', () => {
+    for (const focus of ['heel', 'steady', 'flat', 'allday', 'moving']) {
+      expect(planLines({ focus, minutes: 3 })[0]).not.toMatch(/plantar|fasci|heel|flat feet|arch|pain|ache|sore/i);
+    }
+  });
+
+  test('the link goes back to the price page', () => {
+    expect(priceUrl('https://walkito.site/go/', 'web_abandon_2')).toBe('https://walkito.site/go/s/18?e=web_abandon_2');
   });
 });

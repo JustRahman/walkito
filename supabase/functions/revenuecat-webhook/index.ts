@@ -38,7 +38,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { isPassProduct, premiumUntilFor, grantPass, subscriberOf } from '../_shared/pass.ts';
 import { capiEvent, sendToMeta } from '../_shared/web/capi.ts';
-import { fetchSubscriber, recordWebState, webStateOf, type RcSubscriber } from '../_shared/web/customer.ts';
+import { fetchSubscriber, recordWebState, webStateOf, type RcSubscriber, type WebState } from '../_shared/web/customer.ts';
+import { accountForEmail, linkAccounts, syncLinkedAccess } from '../_shared/web/links.ts';
 import { isWebProduct } from '../_shared/web/products.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -136,11 +137,17 @@ async function askForWelcome(userId: string): Promise<string> {
  * A funnel buyer who never typed a code: her address is in `web_leads.email`
  * and her account is still anonymous (funnel/src/lib/account.ts, takeEmail).
  * Once she has paid it goes on the account, confirmed, so the app's email
- * sign-in finds her plan. Never over an address the account already has, and
- * never one another account holds (the update fails, and she is asked to
- * write to us from the account page).
+ * sign-in finds her plan. Never over an address the account already has.
+ *
+ * When another account already holds the address (she had the app, or signed
+ * up between the email step and paying), the update fails. Then the purchase
+ * is linked to that account (0023_web_account_links.sql) and that account
+ * gets the same access through `comp_access`, which the app reads: she signs
+ * in to the app with her address and her plan is there. Answers what
+ * happened: `claimed`, `has one`, `no address`, `linked to <id>: …`, or
+ * `failed: …`.
  */
-async function claimEmail(userId: string): Promise<string> {
+async function claimEmail(userId: string, state: WebState | null): Promise<string> {
   const { data, error } = await db.auth.admin.getUserById(userId);
   if (error != null || data.user == null) return 'no user';
   if (data.user.email) return 'has one';
@@ -148,11 +155,17 @@ async function claimEmail(userId: string): Promise<string> {
   const email = typeof lead?.email === 'string' ? lead.email.trim().toLowerCase() : '';
   if (email === '') return 'no address';
   const { error: updateError } = await db.auth.admin.updateUserById(userId, { email, email_confirm: true });
-  if (updateError != null) {
+  if (updateError == null) return 'claimed';
+  const holder = await accountForEmail(db, email);
+  if (holder == null || holder === userId) {
     console.warn('[revenuecat] could not put the funnel address on', userId, updateError.message);
     return `failed: ${updateError.message}`;
   }
-  return 'claimed';
+  const linked = await linkAccounts(db, userId, holder, email);
+  if (linked !== 'linked') return `failed to link to ${holder}: ${linked}`;
+  const synced = await syncLinkedAccess(db, userId, state);
+  console.log('[revenuecat] web plan linked to the account that holds the address', { buyer: userId, account: holder, synced });
+  return `linked to ${holder}: ${synced.join(', ')}`;
 }
 
 Deno.serve(async (req) => {
@@ -206,8 +219,9 @@ Deno.serve(async (req) => {
   const webEvent = isWebProduct(event.product_id, event.store);
   const written: string[] = [];
   const web: string[] = [];
-  /** Buyers whose own RevenueCat record holds the web purchase that opened the app. */
-  const webBuyers = new Set<string>();
+  /** Buyers whose own RevenueCat record holds the web purchase that opened the app, with that state. */
+  const webBuyers = new Map<string, WebState | null>();
+  const linkSync: string[] = [];
   for (const [userId, rcId] of users) {
     const subscriber = await fetchSubscriber(RC_KEY, rcId);
     if (subscriber == null) {
@@ -230,11 +244,14 @@ Deno.serve(async (req) => {
     const result = await recordWebState(db, userId, state);
     if (result.startsWith('failed') && webEvent) return json({ error: result }, 500);
     web.push(`${userId}:${state?.status ?? 'none'}:${result}`);
-    if (result === 'granted' || result === 'kept') webBuyers.add(userId);
+    // Every change reaches an account this purchase is linked to: a renewal
+    // extends it, a cancel keeps it to the period end, a refund removes it.
+    linkSync.push(...(await syncLinkedAccess(db, userId, state)));
+    if (result === 'granted' || result === 'kept') webBuyers.set(userId, state);
   }
 
   const emails: string[] = [];
-  for (const userId of webBuyers) emails.push(`${userId}:${await claimEmail(userId)}`);
+  for (const [userId, state] of webBuyers) emails.push(`${userId}:${await claimEmail(userId, state)}`);
 
   // ── A first web purchase: Meta's Purchase, and the receipt ──────────────
   let meta: string | null = null;
@@ -245,5 +262,5 @@ Deno.serve(async (req) => {
     welcome = await askForWelcome(buyer);
   }
 
-  return json({ ok: true, type: event.type ?? null, written, passes, web, emails, meta, welcome });
+  return json({ ok: true, type: event.type ?? null, written, passes, web, links: linkSync, emails, meta, welcome });
 });
