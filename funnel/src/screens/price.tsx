@@ -14,7 +14,7 @@ import {
   url,
 } from '../config';
 import { addDays, PROGRAM, shortDate, STEP } from '../flow';
-import { currentUser, logConsent, saveLead } from '../lib/account';
+import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
 import { go } from '../router';
@@ -113,6 +113,7 @@ export function Price() {
     const user = await currentUser();
     if (user == null || s.email == null) return go(STEP.email);
     setPhase('opening');
+    if (!(await onHerOwnAccount(s.email))) return setPhase('idle');
     const loaded = await packages.current;
     const pkg = loaded?.[plan];
     if (!billingReady() || pkg == null) {
@@ -145,6 +146,25 @@ export function Price() {
     setPhase('idle');
   };
 
+  /**
+   * Her address may belong to another account by now (the app, or a sign-up
+   * since the email step): then she signs in to it with a code first, so the
+   * purchase is made on the account the app opens. False when checkout must
+   * not open now.
+   */
+  const onHerOwnAccount = async (email: string): Promise<boolean> => {
+    const guard = await guardCheckout(email);
+    if (guard.next === 'checkout') return true;
+    if (guard.next === 'error') {
+      setError(guard.message);
+      return false;
+    }
+    track('checkout_needs_sign_in');
+    update({ codeMode: 'sign-in', verified: false, existing: true });
+    go(STEP.code);
+    return false;
+  };
+
   /** The one-time offer's checkout: the same consent, events and success page as the main plans. */
   const buyOffer = async (consentText: string): Promise<string | null> => {
     const user = await currentUser();
@@ -152,6 +172,7 @@ export function Price() {
       go(STEP.email);
       return null;
     }
+    if (!(await onHerOwnAccount(s.email))) return null;
     const loaded = await packages.current;
     const pkg = loaded?.offer;
     if (!billingReady() || pkg == null) return 'Checkout is not open yet. Please try again in a few minutes.';

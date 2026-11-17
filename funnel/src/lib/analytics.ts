@@ -42,6 +42,7 @@ type Events = {
   cancel_viewed: Record<string, never>;
   cancel_chosen: { choice: string };
   cancel_status: { status: string; matched_by: string };
+  checkout_needs_sign_in: Record<string, never>;
   offer_shown: { offer: string };
   offer_checkout_opened: { offer: string };
   offer_bought: { offer: string };

@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 
 import { env } from '../config';
+import { beforeCheckout, type Guard } from './checkout-guard';
 
 let client: Promise<SupabaseClient | null> | null = null;
 
@@ -161,6 +162,25 @@ export async function verifyCode(email: string, code: string, mode: CodeMode): P
   } catch {
     return { ok: false, message: NO_SERVER, reason: 'network' };
   }
+}
+
+/** `beforeCheckout` with this browser's account and Supabase: see lib/checkout-guard.ts. */
+export async function guardCheckout(email: string): Promise<Guard> {
+  const db = await supabase();
+  const user = await currentUser();
+  const account = user == null ? null : { email: user.email ?? null, anonymous: user.is_anonymous === true };
+  return beforeCheckout(account, email, async (address) => {
+    if (db == null) return 'failed';
+    try {
+      const { error } = await db.auth.signInWithOtp({ email: address, options: { shouldCreateUser: false } });
+      if (error == null) return 'sent';
+      if (error.code === 'otp_disabled') return 'no-account';
+      if (error.code === 'over_email_send_rate_limit' || error.code === 'over_request_rate_limit') return 'rate-limited';
+      return 'failed';
+    } catch {
+      return 'failed';
+    }
+  });
 }
 
 export async function signOut(): Promise<void> {

@@ -26,7 +26,9 @@
  * fresh on each request with `?portal=1`: ask for it when the button is
  * tapped, not when the page loads.
  *
- * The purchase can sit on another account than the caller's (see
+ * The purchase can sit on another account than the caller's: linked to it by
+ * the webhook (0023_web_account_links.sql), or under a lead with the same
+ * address (see
  * `bestPurchase` in `_shared/web/customer.ts`): when the caller's own account
  * holds no open plan and their address is verified, the accounts whose funnel
  * lead carries that same address are read as well, and the best purchase
@@ -42,6 +44,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { bestPurchase, fetchSubscriber, hasAccess, portalLink, recordWebState, webStateOf } from '../_shared/web/customer.ts';
 import { corsHeaders, funnelOrigins } from '../_shared/web/cors.ts';
+import { syncLinkedAccess } from '../_shared/web/links.ts';
 
 const env = (name: string): string => Deno.env.get(name) ?? '';
 
@@ -96,6 +99,13 @@ async function sameAddress(email: string, callerId: string): Promise<string[]> {
   return (data ?? []).map((r: { user_id: string }) => String(r.user_id));
 }
 
+/** Accounts whose web purchase is linked to this one (0023_web_account_links.sql): the plan she opens with her real account. */
+async function linkedSources(target: string): Promise<string[]> {
+  const { data, error } = await db.from('web_account_links').select('source_user_id').eq('target_user_id', target).limit(MAX_EMAIL_MATCHES);
+  if (error != null) throw new Error(error.message);
+  return (data ?? []).map((r: { source_user_id: string }) => String(r.source_user_id));
+}
+
 /** One account's purchase, asking RevenueCat first when we hold nothing (or no portal link) yet. */
 async function view(userId: string): Promise<{ customer: CustomerRow | null; comp: { until: string | null } | null }> {
   let { customer, comp } = await read(userId);
@@ -107,6 +117,7 @@ async function view(userId: string): Promise<{ customer: CustomerRow | null; com
       if (state != null || customer != null) {
         const result = await recordWebState(db, userId, state);
         if (result.startsWith('failed')) console.warn('[web-account] could not record', userId, result);
+        await syncLinkedAccess(db, userId, state);
         ({ customer, comp } = await read(userId));
       }
     }
@@ -147,10 +158,20 @@ Deno.serve(async (req) => {
     // the webhook put on the account after payment (confirmed by us).
     const address = typeof user.email === 'string' ? user.email.trim().toLowerCase() : '';
     const verified = address !== '' && user.email_confirmed_at != null;
-    if (verified && !hasAccess(own.comp, own.customer)) {
+    // Her own purchase answers when she has one; otherwise the purchase linked
+    // to this account by the webhook, then one under a lead with her verified
+    // address. (A linked purchase opens the app through comp_access, so access
+    // alone does not mean the purchase is hers.)
+    if (own.customer == null || !hasAccess(own.comp, own.customer)) {
+      const ids = new Set(await linkedSources(user.id));
+      if (verified) for (const id of await sameAddress(address, user.id)) ids.add(id);
       const others = [];
-      for (const id of await sameAddress(address, user.id)) others.push({ userId: id, ...(await view(id)) });
-      chosen = (bestPurchase([own, ...others]) as typeof own | null) ?? own;
+      for (const id of ids) others.push({ userId: id, ...(await view(id)) });
+      // Without a purchase of her own, her comp_access row may be the linked one:
+      // it does not count as hers when ranking, so the purchase behind it is shown.
+      const ranked = own.customer == null ? { ...own, comp: null } : own;
+      const best = bestPurchase([ranked, ...others]) as typeof own | null;
+      chosen = best == null || best.userId === user.id ? own : best;
       if (chosen.userId !== user.id) console.log('[web-account] purchase found by address', { caller: user.id, owner: chosen.userId });
     }
     const { customer, comp } = chosen;
