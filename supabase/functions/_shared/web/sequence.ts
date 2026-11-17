@@ -25,10 +25,17 @@ import { webProduct, type WebProduct } from './products.ts';
  *   week to $9.99 is announced; for the 3-month plan, every renewal. Never for
  *   a plan that will not renew.
  *
- * For people who opened checkout and did not buy (no `web_customers` row):
+ * For people with an address who reached the price page (or opened
+ * checkout, or asked for the plan by email) and did not buy (no
+ * `web_customers` row). The clock starts at the latest of those moments:
  *
- * - `web_abandon_1`: one to two hours later, never between 22:00 and 08:00.
- * - `web_abandon_2`: the next day, 10:00 to 20:00, at least 12 hours later.
+ * - `web_abandon_1`: about an hour later (1 to 3 hours), never between
+ *   22:00 and 08:00.
+ * - `web_abandon_2`: about a day later (24 to 36 hours), never between
+ *   22:00 and 08:00. The last one: after it, nothing.
+ *
+ * Both stop the moment she pays (she has a `web_customers` row), after an
+ * unsubscribe, and once each has gone.
  *
  * The welcome and the renewal notice are billing emails: they go even after
  * an unsubscribe, because the price page promised them. The others are not,
@@ -63,10 +70,10 @@ const DAY3 = { from: 10, to: 14 };
 const NOTICE = { from: 9, to: 21 };
 /** A notice that cannot reach the buyer this long before the charge is no notice. */
 const NOTICE_MIN_HOURS_BEFORE = 12;
-const ABANDON_1_HOURS = { from: 1, to: 2 };
-const ABANDON_1_QUIET = { from: 22, to: 8 };
-const ABANDON_2 = { from: 10, to: 20 };
-const ABANDON_2_MIN_HOURS = 12;
+const ABANDON_1_HOURS = { from: 1, to: 3 };
+const ABANDON_2_HOURS = { from: 24, to: 36 };
+/** No abandoned-checkout email between these local hours. */
+const ABANDON_QUIET = { from: 22, to: 8 };
 /** After any email, the next non-billing one waits this long. */
 const GAP_HOURS = 3;
 
@@ -87,6 +94,12 @@ export type WebPerson = {
   zone: string;
   unsubscribed: boolean;
   checkoutOpenedAt: string | null;
+  /** She reached the price page. */
+  priceViewedAt?: string | null;
+  /** "I want to think about it" on the price page. */
+  planEmailRequestedAt?: string | null;
+  /** Her plan, as the funnel saved it (only with her consent to keep her answers). */
+  plan?: { focus: string | null; minutes: number | null } | null;
   customer: WebCustomer | null;
   log: WebLogRow[];
 };
@@ -207,20 +220,31 @@ export function nextWebEmail(p: WebPerson, now: Date): WebEvaluation {
     return none();
   }
 
-  if (p.checkoutOpenedAt == null) return none('never opened checkout');
-  const since = hoursSince(p.checkoutOpenedAt, now);
-  const quiet = local.hour >= ABANDON_1_QUIET.from || local.hour < ABANDON_1_QUIET.to;
-  if (logged.has('web_abandon_1')) skipped.push({ kind: 'web_abandon_1', reason: 'already sent' });
-  else if (p.unsubscribed) skipped.push({ kind: 'web_abandon_1', reason: 'unsubscribed' });
-  else if (since < ABANDON_1_HOURS.from) skipped.push({ kind: 'web_abandon_1', reason: 'not yet' });
-  else if (since >= ABANDON_1_HOURS.to) skipped.push({ kind: 'web_abandon_1', reason: 'its window has passed' });
-  else if (quiet) skipped.push({ kind: 'web_abandon_1', reason: 'night time' });
-  else if (lastSentHours < GAP_HOURS) skipped.push({ kind: 'web_abandon_1', reason: 'another email went out less than 3 hours ago' });
-  else return decide('web_abandon_1');
-
-  const nextDay = addDays(dayOf(p.checkoutOpenedAt, p.zone), 1);
-  const second = since < ABANDON_2_MIN_HOURS ? (logged.has('web_abandon_2') ? 'already sent' : 'not yet') : held('web_abandon_2', nextDay, ABANDON_2);
+  const left = latestOf(p.checkoutOpenedAt, p.priceViewedAt ?? null, p.planEmailRequestedAt ?? null);
+  if (left == null) return none('never reached the price page');
+  const since = hoursSince(left, now);
+  const quiet = local.hour >= ABANDON_QUIET.from || local.hour < ABANDON_QUIET.to;
+  const abandon = (kind: WebEmailKey, hours: { from: number; to: number }): string | null => {
+    if (logged.has(kind)) return 'already sent';
+    if (p.unsubscribed) return 'unsubscribed';
+    if (since < hours.from) return 'not yet';
+    if (since >= hours.to) return 'its window has passed';
+    if (quiet) return 'night time';
+    if (lastSentHours < GAP_HOURS) return 'another email went out less than 3 hours ago';
+    return null;
+  };
+  const first = abandon('web_abandon_1', ABANDON_1_HOURS);
+  if (first == null) return decide('web_abandon_1');
+  skipped.push({ kind: 'web_abandon_1', reason: first });
+  const second = abandon('web_abandon_2', ABANDON_2_HOURS);
   if (second == null) return decide('web_abandon_2');
   skipped.push({ kind: 'web_abandon_2', reason: second });
   return none();
+}
+
+/** The latest of some instants; missing ones are skipped. */
+function latestOf(...values: (string | null)[]): string | null {
+  let best: string | null = null;
+  for (const v of values) if (v != null && !Number.isNaN(Date.parse(v)) && (best == null || Date.parse(v) > Date.parse(best))) best = v;
+  return best;
 }

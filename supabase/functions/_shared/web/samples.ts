@@ -21,7 +21,7 @@ export function sampleWebEmails(now: Date, base: string, zone: string = DEFAULT_
     { name: 'web_day3', email: day3Email({ base }) },
     { name: 'web_renewal_notice', email: renewalNoticeEmail({ product: monthly, renewalAt: inDays(2), zone, base }) },
     { name: 'web_renewal_notice_quarter', email: renewalNoticeEmail({ product: quarter, renewalAt: inDays(2), zone, base }) },
-    { name: 'web_abandon_1', email: abandon1Email({ base }) },
-    { name: 'web_abandon_2', email: abandon2Email({ base }) },
+    { name: 'web_abandon_1', email: abandon1Email({ base, plan: { focus: 'heel', minutes: 5 } }) },
+    { name: 'web_abandon_2', email: abandon2Email({ base, plan: { focus: 'heel', minutes: 5 } }) },
   ];
 }

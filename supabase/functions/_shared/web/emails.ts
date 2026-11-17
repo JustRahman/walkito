@@ -53,6 +53,11 @@ export function planUrl(base: string, key: WebEmailKey): string {
   return `${trim(base)}/s/me?e=${key}`;
 }
 
+/** The funnel's price page, where she left: her plan and the plans to pick from, on the browser she used. */
+export function priceUrl(base: string, key: WebEmailKey): string {
+  return `${trim(base)}/s/18?e=${key}`;
+}
+
 /** The funnel's cancel page. */
 export function cancelUrl(base: string, key: WebEmailKey): string {
   return `${trim(base)}/s/cancel?e=${key}`;
@@ -234,32 +239,58 @@ function leadFooter(base: string): string {
   return `you're getting this because you made a walkito plan at ${hostOf(base)}.`;
 }
 
-/** An hour or two after checkout opened and nothing was bought. */
-export function abandon1Email(input: { base: string }): WebEmail {
+/**
+ * Her plan in words with no condition in them (the email rules: an inbox
+ * preview and a lock screen are not the place). Only what she agreed we keep.
+ */
+const PLAN_FOCUS: Readonly<Record<string, string>> = {
+  heel: 'easier first steps',
+  steady: 'feeling steadier',
+  flat: 'stronger feet',
+  allday: 'feet that last all day',
+  moving: 'feet that keep moving',
+};
+
+export function planLines(plan: { focus: string | null; minutes: number | null } | null | undefined): [string, string] {
+  const focus = plan?.focus != null ? PLAN_FOCUS[plan.focus] : undefined;
+  const minutes = plan?.minutes != null && [3, 5, 10].includes(plan.minutes) ? `${plan.minutes} minutes a day` : 'a few minutes a day';
+  return [`focus: ${focus ?? 'your feet, step by step'}`, minutes];
+}
+
+const MONEY_BACK = '14-day money-back: not for you? reply to any email within 14 days of a charge and we refund it.';
+
+/**
+ * About an hour after she left the price page (or closed checkout) without
+ * buying. Lowercase and friendly, like the welcome email; her plan in two
+ * lines, one button back to it.
+ */
+export function abandon1Email(input: { base: string; plan?: { focus: string | null; minutes: number | null } | null }): WebEmail {
+  const [focus, minutes] = planLines(input.plan);
   return {
     kind: 'web_abandon_1',
-    subject: 'Your plan is saved',
-    preheader: 'It is ready when you are.',
+    subject: 'your walkito plan is saved',
+    preheader: "it's ready whenever you are.",
     greeting: null,
-    paragraphs: ['You made a Walkito plan today. We saved it for you.', 'When you are ready, you can pick up where you left off.'],
-    button: { label: 'See my plan', url: planUrl(input.base, 'web_abandon_1') },
-    after: ['Have a question first? Just reply to this email. A real person will answer.'],
+    paragraphs: ["we saved the plan you made. here it is:", focus, minutes],
+    button: { label: 'see my plan', url: priceUrl(input.base, 'web_abandon_1') },
+    after: [MONEY_BACK, 'questions? just reply. a real person reads every email.'],
     ps: null,
     personal: false,
     footerWhy: leadFooter(input.base),
   };
 }
 
-/** The next day. The last one: after it, nothing. */
-export function abandon2Email(input: { base: string }): WebEmail {
+/** About a day later. The last one: after it, nothing. */
+export function abandon2Email(input: { base: string; plan?: { focus: string | null; minutes: number | null } | null }): WebEmail {
+  const [focus, minutes] = planLines(input.plan);
   return {
     kind: 'web_abandon_2',
-    subject: 'Any questions about your plan?',
-    preheader: 'Your plan is still saved for you.',
+    subject: 'your walkito plan is saved',
+    preheader: 'still here, whenever you are ready.',
     greeting: null,
-    paragraphs: ['Yesterday you made a Walkito plan. It is still saved for you.', 'If something is not clear, just reply and ask. A real person reads every email.'],
-    button: { label: 'See my plan', url: planUrl(input.base, 'web_abandon_2') },
-    after: [],
+    paragraphs: ['your plan is still saved for you:', focus, minutes],
+    button: { label: 'see my plan', url: priceUrl(input.base, 'web_abandon_2') },
+    after: [MONEY_BACK, "this is the last email about it. questions? just reply."],
     ps: null,
     personal: false,
     footerWhy: leadFooter(input.base),
@@ -297,8 +328,8 @@ export function emailFor(decision: WebDecision, person: WebPerson, base: string)
     case 'web_day3':
       return day3Email({ base });
     case 'web_abandon_1':
-      return abandon1Email({ base });
+      return abandon1Email({ base, plan: person.plan });
     case 'web_abandon_2':
-      return abandon2Email({ base });
+      return abandon2Email({ base, plan: person.plan });
   }
 }
