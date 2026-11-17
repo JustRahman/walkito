@@ -20,6 +20,7 @@ import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
 import { go } from '../router';
 import { update, useFunnel } from '../state';
 import { AppButton, Check, Choice, Page } from '../ui';
+import { TrustLines } from './trust';
 
 type PlanId = 'monthly' | 'yearly';
 
@@ -301,6 +302,8 @@ export function Price() {
               <li>The Walkito app for iPhone and Android</li>
             </ul>
           </section>
+
+          <TrustLines />
 
           <div ref={consentBox}>
             <Check

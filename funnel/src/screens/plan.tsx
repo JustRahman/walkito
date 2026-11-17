@@ -7,6 +7,7 @@ import { meta, track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
 import { Cta, Icon, Page, type IconName } from '../ui';
+import { TrustLines } from './trust';
 
 export const FOCUS_ICON: Readonly<Record<Focus, IconName>> = {
   heel: 'foot',
@@ -123,6 +124,8 @@ export function Plan() {
           </div>
         </div>
       </section>
+
+      <TrustLines />
 
       <Cta>
         <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>

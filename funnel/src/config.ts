@@ -62,6 +62,30 @@ export const GUARANTEE_DAYS = 14;
 
 export const ONELINK = 'https://walkito.onelink.me/2L97/';
 
+// ── Trust lines on the plan and price pages ────────────────────────────────
+
+/**
+ * The clinical practice guideline behind "Exercise is what physical therapists
+ * recommend first". TODO(Rahman): put the exact guideline link here. While it
+ * is empty, the line is hidden.
+ */
+export const PT_GUIDELINE_URL = '';
+
+/**
+ * "Exercises reviewed by Dr. Carla Shayman, PT, DPT" with her photo. Hidden
+ * until she has agreed in writing to be named in the funnel and its ads.
+ */
+export const CARLA_APPROVED = false;
+
+/** Her photo, as walkito.site already serves it (the funnel runs under walkito.site/go). */
+export const CARLA_PHOTO = '/team/carla-shayman.webp';
+
+/** The App Store rating the line quotes. Change it if the rating changes. */
+export const APP_STORE_RATING = '5.0';
+
+/** "Used by 1,000+ women" shows only once the server's real count passes this. */
+export const PEOPLE_THRESHOLD = 1000;
+
 /**
  * The Web OAuth client the Android app signs in with (432333591174-gtnel…), whose
  * ID tokens Supabase accepts. Empty hides "Continue with Google": it is set only
