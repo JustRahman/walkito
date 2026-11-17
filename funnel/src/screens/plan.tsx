@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { url } from '../config';
 import type { Focus } from '../engine/plan';
 import { PROGRAM, PROGRESS, planView, STEP } from '../flow';
-import { meta, track } from '../lib/analytics';
+import { track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
 import { Cta, Icon, Page, type IconName } from '../ui';
@@ -30,7 +30,7 @@ export function Plan() {
   const view = useMemo(() => planView(s), [s.answers, s.tryIt]);
   useEffect(() => {
     track('plan_viewed');
-    meta('ViewContent', `plan-${crypto.randomUUID()}`);
+    // Meta View content fires on the price page (she saw the price), not here.
   }, []);
   const today = view.days[0];
   const active = view.days.filter((d) => !d.rest).length;
