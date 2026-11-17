@@ -54,6 +54,12 @@ export const PRICE_OFFER: Offer = {
   months: 12,
 };
 
+/**
+ * "Want the whole year instead?" right after a monthly purchase. OFF: see
+ * `switchToYearly` in lib/billing.ts for what is missing before it can be on.
+ */
+export const YEARLY_UPGRADE_ENABLED = false;
+
 /** Days before the first full charge that the reminder email goes out. */
 export const REMINDER_DAYS_BEFORE = 2;
 

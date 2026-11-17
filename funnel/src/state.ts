@@ -49,6 +49,8 @@ export type FunnelState = {
   remindAt?: 'morning' | 'midday' | 'evening';
   remindBy?: 'email' | 'app';
   session1?: 'started' | 'done';
+  /** The yearly upgrade after a monthly purchase, answered once. */
+  upgrade?: 'switched' | 'declined';
 };
 
 const KEY = 'walkito-funnel-v1';
