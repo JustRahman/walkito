@@ -23,6 +23,31 @@ export async function currentUser(): Promise<User | null> {
   return data.session?.user ?? null;
 }
 
+/**
+ * The account this browser is signed in to with an address, or null.
+ *
+ * Asks the server, not the stored token: after payment the webhook puts her
+ * address on the anonymous account she bought with, and the token this
+ * browser holds still says anonymous until it is refreshed. So a buyer back
+ * on the cancel page in the same browser is recognised without a code.
+ */
+export async function signedInUser(): Promise<{ userId: string; email: string } | null> {
+  const db = await supabase();
+  if (db == null) return null;
+  const { data } = await db.auth.getSession();
+  if (data.session == null) return null;
+  try {
+    const { data: fresh, error } = await db.auth.getUser();
+    const user = error == null ? fresh.user : null;
+    if (user == null || user.email == null || user.email === '' || user.email_confirmed_at == null) return null;
+    if (data.session.user.email !== user.email) await db.auth.refreshSession().catch(() => undefined);
+    return { userId: user.id, email: user.email };
+  } catch {
+    const cached = data.session.user;
+    return cached.is_anonymous !== true && cached.email != null ? { userId: cached.id, email: cached.email } : null;
+  }
+}
+
 async function ensureUser(db: SupabaseClient): Promise<User> {
   const { data } = await db.auth.getSession();
   if (data.session?.user != null) return data.session.user;
@@ -189,12 +214,33 @@ export type Access = {
   period_end: string | null;
   intro_ends_at: string | null;
   management_url: string | null;
+  /** 'email' when the plan was found on another account with the same verified address. */
+  matched_by?: 'account' | 'email';
 };
 
-export async function access(): Promise<Access | null> {
+export type AccessCheck = { ok: true; access: Access } | { ok: false; reason: 'signed-out' | 'error' };
+
+/**
+ * The plan, or why it could not be read. "We could not reach the server" and
+ * "there is no plan" are different answers, and the account pages say so.
+ * One retry after a short wait, for a cold function or a flaky connection.
+ */
+export async function checkAccess(): Promise<AccessCheck> {
   const db = await supabase();
-  if (db == null || (await currentUser()) == null) return null;
-  const { data, error } = await db.functions.invoke<Access>('web-account', { method: 'GET' });
-  if (error != null) return null;
-  return data;
+  if (db == null || (await currentUser()) == null) return { ok: false, reason: 'signed-out' };
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const { data, error } = await db.functions.invoke<Access>('web-account', { method: 'GET' });
+      if (error == null && data != null && typeof data.access === 'boolean') return { ok: true, access: data };
+    } catch {
+      // Network: tried once more below.
+    }
+    if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
+  }
+  return { ok: false, reason: 'error' };
+}
+
+export async function access(): Promise<Access | null> {
+  const result = await checkAccess();
+  return result.ok ? result.access : null;
 }

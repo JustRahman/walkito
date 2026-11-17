@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  bestPurchase,
   compUntil,
   hasAccess,
   portalSubscription,
@@ -231,5 +232,37 @@ describe('the customer portal link', () => {
     ).toBe('sub_now');
     expect(portalSubscription([{ id: 'a', store: 'rc_billing', gives_access: false, current_period_ends_at: 1 }, { id: 'b', store: 'rc_billing', gives_access: false, current_period_ends_at: 2 }])?.id).toBe('b');
     expect(portalSubscription([{ id: 'sub_app', store: 'app_store', gives_access: true }])).toBeNull();
+  });
+});
+
+describe('the purchase the cancel page shows, across accounts with one address', () => {
+  const own = { userId: 'email-holder', customer: null, comp: null };
+  const bought = { userId: 'anonymous-buyer', customer: { status: 'intro', period_end: at(30) }, comp: { until: at(31) } };
+
+  test('a buyer who paid as the anonymous browser account and signed in with the code to another: the paid one', () => {
+    // Nov 16: paid as db13d32f..., the code on the cancel page signed her in to an account with nothing on it.
+    expect(bestPurchase([own, bought], NOW)?.userId).toBe('anonymous-buyer');
+  });
+
+  test('her own plan wins when it is open', () => {
+    const mine = { userId: 'email-holder', customer: { status: 'active', period_end: at(5) }, comp: null };
+    expect(bestPurchase([mine, bought], NOW)?.userId).toBe('email-holder');
+  });
+
+  test('a refunded or ended purchase still beats nothing, so the page can say what happened', () => {
+    const refunded = { userId: 'anonymous-buyer', customer: { status: 'refunded', period_end: at(-1) }, comp: null };
+    expect(bestPurchase([own, refunded], NOW)?.userId).toBe('anonymous-buyer');
+  });
+
+  test('of two closed purchases, the later one; on a tie, her own', () => {
+    const old = { userId: 'a', customer: { status: 'expired', period_end: at(-30) }, comp: null };
+    const recent = { userId: 'b', customer: { status: 'expired', period_end: at(-2) }, comp: null };
+    expect(bestPurchase([own, old, recent], NOW)?.userId).toBe('b');
+    expect(bestPurchase([own, { ...own, userId: 'other' }], NOW)?.userId).toBe('email-holder');
+  });
+
+  test('nothing anywhere: her own account, and nothing at all for no accounts', () => {
+    expect(bestPurchase([own], NOW)?.userId).toBe('email-holder');
+    expect(bestPurchase([], NOW)).toBeNull();
   });
 });

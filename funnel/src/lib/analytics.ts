@@ -41,6 +41,17 @@ type Events = {
   account_viewed: Record<string, never>;
   cancel_viewed: Record<string, never>;
   cancel_chosen: { choice: string };
+  cancel_status: { status: string; matched_by: string };
+  offer_shown: { offer: string };
+  offer_checkout_opened: { offer: string };
+  offer_bought: { offer: string };
+  offer_closed: { offer: string };
+  offer_failed: { offer: string; code: string };
+  plan_email_requested: Record<string, never>;
+  upgrade_shown: Record<string, never>;
+  upgrade_switched: Record<string, never>;
+  upgrade_declined: Record<string, never>;
+  upgrade_failed: { code: string };
 };
 
 let ph: PostHog | null = null;

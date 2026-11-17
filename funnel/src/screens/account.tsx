@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { DESCRIPTOR, GUARANTEE_DAYS, SUPPORT_EMAIL } from '../config';
 import { longDate, sessionOne, STEP } from '../flow';
-import { access, currentUser, sendCode, signOut, verifyCode, type Access } from '../lib/account';
+import { checkAccess, sendCode, signedInUser, signOut, verifyCode, type AccessCheck } from '../lib/account';
+import { planStatus, type PlanStatus } from '../lib/plan-status';
 import { identify, track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel } from '../state';
@@ -13,9 +14,7 @@ type Session = { userId: string; email: string } | null;
 function useSession(): [Session | undefined, (s: Session) => void] {
   const [session, setSession] = useState<Session | undefined>(undefined);
   useEffect(() => {
-    void currentUser().then((user) =>
-      setSession(user != null && user.is_anonymous !== true && user.email != null ? { userId: user.id, email: user.email } : null),
-    );
+    void signedInUser().then(setSession);
   }, []);
   return [session, setSession];
 }
@@ -119,30 +118,71 @@ function SignIn({ title, onSignedIn }: { title: string; onSignedIn: (s: { userId
   );
 }
 
-function useAccess(session: Session | undefined): Access | null | undefined {
-  const [state, setState] = useState<Access | null | undefined>(undefined);
+/** The plan, read once per sign-in; `reload` asks again (the "Try again" button). */
+function usePlan(session: Session | undefined): [PlanStatus | undefined, AccessCheck | undefined, () => void] {
+  const [check, setCheck] = useState<AccessCheck | undefined>(undefined);
+  const [round, setRound] = useState(0);
   useEffect(() => {
     if (session == null) return;
-    void access().then(setState);
-  }, [session]);
-  return state;
+    setCheck(undefined);
+    void checkAccess().then(setCheck);
+  }, [session, round]);
+  return [check === undefined ? undefined : planStatus(check), check, () => setRound((n) => n + 1)];
 }
 
-function planLine(a: Access): string {
-  const name = a.product_id?.includes('yearly') === true ? 'Yearly plan' : a.product_id?.includes('quarter') === true ? '3-month plan' : 'Monthly plan';
-  const next = a.intro_ends_at != null && new Date(a.intro_ends_at) > new Date() ? a.intro_ends_at : a.period_end;
-  if (a.status === 'cancelled' || a.status === 'expired')
-    return a.period_end != null && new Date(a.period_end) > new Date()
-      ? `Your plan is cancelled. You keep access until ${longDate(new Date(a.period_end))}.`
-      : 'Your plan has ended.';
-  if (next == null) return 'Your plan is active.';
-  return `${name}. Next charge: ${longDate(new Date(next))}.`;
+/** Exactly one line (or card) per state: the page never says "active" and "not found" at once. */
+function PlanLine({ status, email, onRetry, cancel }: { status: PlanStatus | undefined; email: string; onRetry: () => void; cancel?: boolean }) {
+  if (status === undefined) return <p className="caption">Checking your plan…</p>;
+  switch (status.kind) {
+    case 'active':
+      return (
+        <p className="note">
+          {status.nextCharge != null ? `${status.plan}. Next charge: ${longDate(status.nextCharge)}.` : 'Your plan is active.'}
+          {status.billingIssue ? ' Your last payment did not go through. We will try your card again.' : ''}
+        </p>
+      );
+    case 'cancelled':
+      return (
+        <p className="note">
+          Your plan is cancelled. You keep access until {longDate(status.endsAt)}. You will not be charged again.
+        </p>
+      );
+    case 'refunded':
+      return <p className="note">Your payment was refunded and your plan has ended. You will not be charged again.</p>;
+    case 'ended':
+      return <p className="note">Your plan has ended. You will not be charged again.</p>;
+    case 'error':
+      return (
+        <div className="card stack">
+          <p className="lead">We could not check your plan just now. This is on our side, not yours.</p>
+          <button className="btn secondary" type="button" onClick={onRetry}>
+            Try again
+          </button>
+          <p className="caption">
+            Still stuck? Write to <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+          </p>
+        </div>
+      );
+    case 'none':
+      return cancel === true ? (
+        <Blocked>
+          We could not find a plan bought with {email}. Bought in the iPhone app? Cancel in iPhone Settings → your name →
+          Subscriptions. On Android, in Google Play → Payments & subscriptions. Paid with another email? Sign out and use that one.
+        </Blocked>
+      ) : (
+        <Blocked>
+          We could not find a paid plan for this email yet. If you just paid, wait a minute and reload. Still stuck? Write to{' '}
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+        </Blocked>
+      );
+  }
 }
 
 export function Me() {
   const s = useFunnel();
   const [session, setSession] = useSession();
-  const status = useAccess(session);
+  const [status, , retry] = usePlan(session);
+  const active = status?.kind === 'active' || status?.kind === 'cancelled';
   useEffect(() => {
     if (session != null) track('account_viewed');
   }, [session]);
@@ -159,17 +199,8 @@ export function Me() {
     <Page footer>
       <h1>Your plan</h1>
       <p className="lead">Signed in as {session.email}.</p>
-      {status === undefined ? (
-        <p className="caption">Checking your plan…</p>
-      ) : status?.access === true ? (
-        <p className="note">{planLine(status)}</p>
-      ) : (
-        <Blocked>
-          We could not find a paid plan for this email yet. If you just paid, wait a minute and reload. Still stuck? Write to{' '}
-          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
-        </Blocked>
-      )}
-      {status?.access === true && moves.length > 0 && s.session1 !== 'done' && (
+      <PlanLine status={status} email={session.email} onRetry={retry} />
+      {active && moves.length > 0 && s.session1 !== 'done' && (
         <button className="btn secondary" type="button" onClick={() => go(STEP.start1)}>
           Start Day 1 in the browser
         </button>
@@ -182,7 +213,7 @@ export function Me() {
         </p>
         <AppButton from="account" label="Get the app" />
       </section>
-      {status?.access === true && (
+      {status?.kind === 'active' && (
         <button className="btn quiet" type="button" onClick={() => go(STEP.cancel)}>
           Manage or cancel my plan
         </button>
@@ -206,11 +237,15 @@ function Blocked({ children }: { children: ReactNode }) {
 
 export function Cancel() {
   const [session, setSession] = useSession();
-  const status = useAccess(session);
+  const [status, check, retry] = usePlan(session);
+  const access = check?.ok === true ? check.access : null;
   const [choice, setChoice] = useState<'pause' | 'cancel' | 'keep' | null>(null);
   useEffect(() => {
     track('cancel_viewed');
   }, []);
+  useEffect(() => {
+    if (status !== undefined) track('cancel_status', { status: status.kind, matched_by: access?.matched_by ?? 'none' });
+  }, [status, access?.matched_by]);
 
   if (session === undefined) return <Page footer={false}>{null}</Page>;
   if (session == null)
@@ -230,15 +265,8 @@ export function Cancel() {
   return (
     <Page backTo={STEP.me} footer>
       <h1>Manage your plan</h1>
-      {status === undefined && <p className="caption">Checking your plan…</p>}
-      {status != null && <p className="note">{planLine(status)}</p>}
-      {status?.access !== true && status !== undefined && (
-        <Blocked>
-          We could not find an active plan for {session.email}. Bought in the iPhone app? Cancel in iPhone Settings →
-          your name → Subscriptions. On Android, in Google Play → Payments & subscriptions.
-        </Blocked>
-      )}
-      {status?.access === true && choice == null && (
+      <PlanLine status={status} email={session.email} onRetry={retry} cancel />
+      {status?.kind === 'active' && choice == null && (
         <div className="stack">
           <button className="btn secondary" type="button" onClick={() => pick('pause')}>
             Pause for 1 month
@@ -271,8 +299,8 @@ export function Cancel() {
             You keep access until the end of the time you paid for. Nothing more is charged after that.
             {' '}Not for you? Reply to any email within {GUARANTEE_DAYS} days of a charge and we refund it.
           </p>
-          {status?.management_url != null ? (
-            <a className="btn" href={status.management_url} rel="noopener">
+          {access?.management_url != null ? (
+            <a className="btn" href={access.management_url} rel="noopener">
               Cancel my plan now
             </a>
           ) : (
