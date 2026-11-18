@@ -13,7 +13,7 @@ const NAMES = [
   'sunrise', 'couch', 'sun', 'moon', 'leafInWind',
   'healthWorker', 'softball', 'seedling',
   'bed', 'bandage', 'feather', 'crutch', 'check',
-  'stopwatch', 'calendar', 'sparkles', 'heart', 'bullseye', 'strength', 'bulb',
+  'stopwatch', 'calendar', 'sparkles', 'heart', 'bullseye', 'strength', 'bulb', 'gift',
 ] as const;
 
 const all: Readonly<Record<string, string>> = FLUENT_ICONS;

@@ -1,24 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { url } from '../config';
-import {
-  firstName,
-  goalLabels,
-  kindOf,
-  lifeFor,
-  lifeLabels,
-  PLAN_NAME,
-  planLine,
-  PROGRESS,
-  shortDate,
-  STEP,
-  suggestedGoals,
-  WHEN_LABEL,
-} from '../flow';
+import { kindOf, lifeFor, PROGRESS, shortDate, STEP, suggestedGoals } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, update, useFunnel } from '../state';
-import { Cta, MultiChoice, Page } from '../ui';
+import { Cta, MultiChoice, Page, Slide } from '../ui';
 
 /** Her Walkito card: she has joined something, on Day 0, under her own name. */
 export function Card() {
@@ -32,10 +19,7 @@ export function Card() {
   };
   return (
     <Page progress={PROGRESS[STEP.card]} backTo={STEP.age}>
-      <div className="stack gap-s center">
-        <h1>Welcome to Walkito</h1>
-        <p className="lead">Here’s your card.</p>
-      </div>
+      <h1 className="center">Here’s your Walkito card</h1>
       <div className="member pop" aria-label="Your Walkito card">
         <div className="top">
           <img src={url('/img/icon.webp')} alt="" width={40} height={40} />
@@ -56,19 +40,17 @@ export function Card() {
           </div>
         </div>
       </div>
-      <label className="stack gap-s">
-        <span className="small">What should we call you?</span>
-        <input
-          className="field"
-          type="text"
-          autoComplete="given-name"
-          maxLength={30}
-          placeholder="Your first name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && next()}
-        />
-      </label>
+      <input
+        className="field"
+        type="text"
+        autoComplete="given-name"
+        aria-label="Your first name"
+        maxLength={30}
+        placeholder="Your first name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && next()}
+      />
       <Cta>
         <button className="btn" type="button" onClick={next}>
           {name.trim() === '' ? 'Continue' : `Let’s go, ${name.trim()}`}
@@ -78,7 +60,7 @@ export function Card() {
   );
 }
 
-/** How her feet get in the way: her day, never a list of symptoms. */
+/** How her feet get in the way: a warm banner on top, her day underneath (QUITTR's symptoms screen). */
 export function Life() {
   const s = useFunnel();
   const [picked, setPicked] = useState<string[]>(s.answers.life ?? []);
@@ -90,23 +72,21 @@ export function Life() {
     });
   return (
     <Page progress={PROGRESS[STEP.life]} backTo={STEP.minutes}>
-      <div className="stack gap-s">
-        <h2>How do your feet get in the way?</h2>
-        <p className="small">Choose all that apply.</p>
-      </div>
+      <p className="alert">Foot pain changes your whole day.</p>
+      <h3>Choose all that apply:</h3>
       <div className="stack">
         {lifeFor(s.answers).map((o) => (
-          <MultiChoice key={o.value} icon={o.icon} checked={picked.includes(o.value)} onToggle={() => toggle(o.value)}>
+          <MultiChoice key={o.value} className="warm" checked={picked.includes(o.value)} onToggle={() => toggle(o.value)}>
             {o.label}
           </MultiChoice>
         ))}
-        <MultiChoice icon="check" checked={picked.includes('none')} onToggle={() => toggle('none')}>
+        <MultiChoice className="warm" checked={picked.includes('none')} onToggle={() => toggle('none')}>
           None of these
         </MultiChoice>
       </div>
       <Cta>
         <button
-          className="btn"
+          className="btn warm"
           type="button"
           disabled={picked.length === 0}
           onClick={() => {
@@ -122,24 +102,87 @@ export function Life() {
   );
 }
 
-/** One big line, one picture: what is done to feet every day, and a study that shows it. */
+const poster = (id: string) => url(`/posters/${id}.webp`);
+
+/** Card 1 of 3: the problem, with no blame on her. */
 export function Fault() {
+  const s = useFunnel();
+  const runner = kindOf(s.answers) === 'runner';
   return (
-    <Page progress={PROGRESS[STEP.fault]} backTo={STEP.life}>
-      <div className="statement">
-        <img className="hero" src={url('/img/mascot-balance.png')} alt="" />
-        <h1>It’s not your fault</h1>
-        <p className="lead">Chairs and cushioned shoes do the work your foot muscles were built to do. So those muscles get less work every day.</p>
+    <Slide tone="warm" dots={{ at: 0, of: 3 }} next={() => (track('step_completed', { step: STEP.fault }), go(STEP.path))}>
+      <img className="still" src={poster('short_foot_seated')} alt="" />
+      <h1>{runner ? 'Cushioned shoes leave your feet less to do.' : 'Sitting all day weakens your feet.'}</h1>
+      <p>Chairs and soft shoes do your foot muscles’ job.</p>
+    </Slide>
+  );
+}
+
+/** Card 2 of 3: it can change. */
+export function Path() {
+  return (
+    <Slide tone="deep" dots={{ at: 1, of: 3 }} next={() => (track('step_completed', { step: STEP.path }), go(STEP.research))}>
+      <img className="still" src={poster('big_toe_lift')} alt="" />
+      <h1>It’s not your fault. And it can change.</h1>
+      <p>Foot muscles respond to small daily work.</p>
+    </Slide>
+  );
+}
+
+/**
+ * The journals the exercises come from: only ones walkito.site cites
+ * (site/lib/citations.ts), as text, like QUITTR's press row.
+ */
+const JOURNALS = [
+  'British Journal of Sports Medicine',
+  'Journal of Orthopaedic & Sports Physical Therapy',
+  'American Journal of Sports Medicine',
+  'Medicine & Science in Sports & Exercise',
+] as const;
+
+/** Card 3 of 3: where the exercises come from. */
+export function Research() {
+  return (
+    <Slide tone="sky" dots={{ at: 2, of: 3 }} next={() => (track('step_completed', { step: STEP.research }), go(STEP.compare))}>
+      <img className="still" src={poster('heel_raise_double')} alt="" />
+      <h1>Built on published research</h1>
+      <ul className="journals">
+        {JOURNALS.map((j) => (
+          <li key={j}>{j}</li>
+        ))}
+      </ul>
+    </Slide>
+  );
+}
+
+const WITHOUT = ['Random stretches from videos', 'Not sure what helps', 'Giving up after a week'] as const;
+const WITH = ['A plan for your feet', '5 minutes, from a chair', 'A reminder every morning'] as const;
+
+/** Without Walkito / With Walkito, as Flo's: two cards, the second raised. */
+export function Compare() {
+  return (
+    <Page progress={PROGRESS[STEP.compare]} backTo={STEP.research}>
+      <h2 className="center">With Walkito, you know what to do</h2>
+      <div className="versus">
+        <section className="without">
+          <h3>Without Walkito</h3>
+          <ul>
+            {WITHOUT.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        </section>
+        <section className="with">
+          <h3>With Walkito</h3>
+          <ul>
+            {WITH.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        </section>
       </div>
-      <p className="caption center">
-        When adults walked in flat, flexible shoes, their foot muscles grew stronger.{' '}
-        <a href="https://pubmed.ncbi.nlm.nih.gov/30113521/" target="_blank" rel="noopener noreferrer">
-          Ridge et al., Medicine &amp; Science in Sports &amp; Exercise, 2019
-        </a>
-      </p>
       <Cta>
-        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.fault }), go(STEP.path))}>
-          Continue
+        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.compare }), go(STEP.reviews))}>
+          Let’s do this!
         </button>
       </Cta>
     </Page>
@@ -147,71 +190,63 @@ export function Fault() {
 }
 
 /**
- * Real App Store reviews, word for word (App Store US, Nov 18, 2026). A
- * review is added here only from the store, never written or edited by us.
+ * Real App Store reviews, word for word (App Store US, Nov 18, 2026), each
+ * with the name it was posted under. Added only from the store, never written
+ * or edited by us. Both are 5 stars there.
  */
-const REVIEWS = [
+export const REVIEWS = [
   {
     author: 'Kolodi',
-    title: '👍👍👍',
     text: 'honestly didn’t expect much but it’s pretty nice. answered a few questions about my feet and it made me a daily plan, takes like a few min. gonna try it for a couple weeks and see',
   },
   {
     author: 'AhmetAZ',
-    title: 'Easy to use',
     text: 'Really liked this app. The interface is clean and easy to navigate, and programs are easy to follow. Helped with my heel pain. Would recommend',
   },
 ] as const;
 
-export function Path() {
-  const s = useFunnel();
-  const runner = kindOf(s.answers) === 'runner';
+/** Its own screen, as QUITTR's: who already uses it, in their words. No counts. */
+export function Reviews() {
   return (
-    <Page progress={PROGRESS[STEP.path]} backTo={STEP.fault}>
-      <div className="statement">
-        <img className="hero" src={url('/img/mascot-strength.png')} alt="" />
-        <h1>There is a path</h1>
-        <p className="lead">
-          Feet respond to small daily work. A few minutes a day, {runner ? 'before or after your run' : 'from your chair'}.
-        </p>
-      </div>
-      <section className="stack" aria-label="App Store reviews">
-        <span className="eyebrow center">From the App Store</span>
+    <Slide tone="night" next={() => (track('step_completed', { step: STEP.reviews }), go(STEP.goals))}>
+      <h1>Made for people like you</h1>
+      <div className="stack" style={{ width: '100%' }}>
         {REVIEWS.map((r) => (
-          <figure className="review card" key={r.author}>
-            <div className="stars" aria-label="5 stars">
-              ★★★★★
+          <figure className="review-dark" key={r.author}>
+            <div className="who">
+              <span className="avatar">{r.author[0]}</span>
+              <b>{r.author}</b>
+              <span className="stars" aria-label="5 stars on the App Store">
+                ★★★★★
+              </span>
             </div>
-            {/[a-z]/i.test(r.title) && <b>{r.title}</b>}
-            <blockquote>{r.text}</blockquote>
-            <figcaption className="caption">{r.author}</figcaption>
+            <blockquote>“{r.text}”</blockquote>
           </figure>
         ))}
-      </section>
-      <Cta>
-        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.path }), go(STEP.goals))}>
-          Continue
-        </button>
-      </Cta>
-    </Page>
+        <p className="caption-light">From the App Store</p>
+      </div>
+    </Slide>
   );
 }
 
-/** Her goals: the mirror of what she told us, already ticked, hers to change. */
+/** Her goals: coloured pills with a check, as QUITTR's. The mirror of what she told us, already ticked. */
 export function Goals() {
   const s = useFunnel();
   const [picked, setPicked] = useState<string[]>(s.answers.goals ?? suggestedGoals(s.answers));
-  const options = lifeFor(s.answers);
   const toggle = (goal: string) => setPicked((now) => (now.includes(goal) ? now.filter((g) => g !== goal) : [...now, goal]));
   return (
-    <Page progress={PROGRESS[STEP.goals]} backTo={STEP.path}>
-      <div className="stack gap-s">
-        <h2>What do you want back?</h2>
-        <p className="small">Pick your goals. Your plan keeps them in view.</p>
-      </div>
+    <Page progress={PROGRESS[STEP.goals]} backTo={STEP.reviews}>
+      <h2 className="center">What do you want back?</h2>
       <div className="stack">
-        {options.map((o) => (
-          <MultiChoice key={o.goal} icon={o.icon} checked={picked.includes(o.goal)} onToggle={() => toggle(o.goal)}>
+        {lifeFor(s.answers).map((o) => (
+          <MultiChoice
+            key={o.goal}
+            className="goal"
+            style={{ background: o.color }}
+            icon={o.icon}
+            checked={picked.includes(o.goal)}
+            onToggle={() => toggle(o.goal)}
+          >
             {o.goalLabel}
           </MultiChoice>
         ))}
@@ -234,45 +269,86 @@ export function Goals() {
   );
 }
 
-/** Where she is, where she wants to be, and the plan between: one screen, her own words. */
-export function Summary() {
+/** A promise to herself, signed with a finger (QUITTR). Nothing of the drawing is kept. */
+export function Sign() {
   const s = useFunnel();
-  const name = firstName(s);
-  const now = lifeLabels(s.answers);
-  const where = now.length > 0 ? now : [WHEN_LABEL[s.answers.when ?? 'varies']];
-  const goals = goalLabels(s.answers);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [drawn, setDrawn] = useState(false);
+  useEffect(() => {
+    const c = canvas.current;
+    if (c == null) return;
+    const ratio = window.devicePixelRatio || 1;
+    c.width = c.clientWidth * ratio;
+    c.height = c.clientHeight * ratio;
+    const ctx = c.getContext('2d')!;
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#111114';
+    let down = false;
+    const at = (e: PointerEvent) => {
+      const r = c.getBoundingClientRect();
+      return [e.clientX - r.left, e.clientY - r.top] as const;
+    };
+    const start = (e: PointerEvent) => {
+      down = true;
+      c.setPointerCapture(e.pointerId);
+      const [x, y] = at(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    };
+    const move = (e: PointerEvent) => {
+      if (!down) return;
+      const [x, y] = at(e);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      setDrawn(true);
+    };
+    const end = () => {
+      down = false;
+    };
+    c.addEventListener('pointerdown', start);
+    c.addEventListener('pointermove', move);
+    c.addEventListener('pointerup', end);
+    c.addEventListener('pointercancel', end);
+    return () => {
+      c.removeEventListener('pointerdown', start);
+      c.removeEventListener('pointermove', move);
+      c.removeEventListener('pointerup', end);
+      c.removeEventListener('pointercancel', end);
+    };
+  }, []);
+  const clear = () => {
+    const c = canvas.current;
+    c?.getContext('2d')?.clearRect(0, 0, c.width, c.height);
+    setDrawn(false);
+  };
   return (
-    <Page progress={PROGRESS[STEP.summary]} backTo={STEP.plan}>
-      <h2 className="center">{name != null ? `${name}, here’s your path` : 'Here’s your path'}</h2>
-      <section className="card stack gap-s">
-        <span className="eyebrow">Today</span>
-        <ul className="plain">
-          {where.slice(0, 3).map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      </section>
-      <div className="down" aria-hidden="true" />
-      <section className="card soft stack gap-s">
-        <span className="eyebrow">Your goals</span>
-        <ul className="ticks">
-          {goals.map((g) => (
-            <li key={g}>{g}</li>
-          ))}
-        </ul>
-      </section>
-      <div className="down" aria-hidden="true" />
-      <section className="card stack gap-s">
-        <span className="eyebrow">Your plan</span>
-        <h3>{PLAN_NAME[kindOf(s.answers)]}</h3>
-        <p className="small">{planLine(s.answers)}</p>
-      </section>
-      <Cta>
-        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.summary }), go(STEP.email))}>
-          Get my plan
-        </button>
-      </Cta>
-    </Page>
+    <main className="slide night">
+      <div className="slide-body sign">
+        <h2>Sign your commitment</h2>
+        <p>Promise yourself {s.answers.minutes ?? 5} minutes a day for your feet.</p>
+        <canvas ref={canvas} className="pad" aria-label="Sign here with your finger" />
+        <div className="pad-foot">
+          <button type="button" className="link-light" onClick={clear}>
+            Clear
+          </button>
+        </div>
+        <p className="caption-light">Draw on the open space above</p>
+      </div>
+      <button
+        className="btn"
+        type="button"
+        disabled={!drawn}
+        onClick={() => {
+          track('step_completed', { step: STEP.sign });
+          go(STEP.building);
+        }}
+      >
+        Finish
+      </button>
+    </main>
   );
 }
 

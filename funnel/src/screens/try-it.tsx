@@ -28,7 +28,7 @@ export function Before() {
         onClick={() => {
           update((x) => ({ tryIt: { ...x.tryIt, skipped: true } }));
           track('tryit_skipped');
-          go(STEP.building);
+          go(STEP.sign);
         }}
       >
         Skip, show my plan
@@ -120,7 +120,7 @@ export function After() {
   const s = useFunnel();
   const [now, setNow] = useState<number | undefined>(s.tryIt.after);
   const before = s.tryIt.before;
-  const next = offersBalance(s.answers) ? STEP.balance : STEP.building;
+  const next = offersBalance(s.answers) ? STEP.balance : STEP.sign;
   if (now == null)
     return (
       <Page progress={PROGRESS[STEP.after]} backTo={STEP.move}>
@@ -227,7 +227,7 @@ export function Balance() {
               onClick={() => {
                 update((x) => ({ tryIt: { ...x.tryIt, balance: 'skipped' } }));
                 track('balance_skipped');
-                go(STEP.building);
+                go(STEP.sign);
               }}
             >
               Skip this
@@ -259,7 +259,7 @@ export function Balance() {
             <p className="lead">A starting note for your plan. Not a medical test.</p>
           </div>
           <Cta>
-            <button className="btn" type="button" onClick={() => go(STEP.building)}>
+            <button className="btn" type="button" onClick={() => go(STEP.sign)}>
               Continue
             </button>
           </Cta>
@@ -269,7 +269,7 @@ export function Balance() {
   );
 }
 
-const LINE_MS = 650;
+const LINE_MS = 900;
 const R = 72;
 const TURN = 2 * Math.PI * R;
 
@@ -280,19 +280,11 @@ const TURN = 2 * Math.PI * R;
 export function Building() {
   const s = useFunnel();
   const a = s.answers;
-  const tried = (a.tried ?? []).filter((t) => t !== 'nothing');
   const goals = goalLabels(a);
-  const moved = s.tryIt.skipped !== true && (s.tryIt.seconds ?? 0) > 0;
   const lines = [
     `${FOCUS_LABEL[a.focus ?? 'heel']} · ${WHEN_LABEL[a.when ?? 'varies'].toLowerCase()}`,
-    a.since != null ? `For ${SINCE_LABEL[a.since].toLowerCase()}` : null,
-    a.day != null ? `${DAY_LABEL[a.day]}` : null,
-    tried.length > 0 ? `Tried before: ${tried.length} ${tried.length === 1 ? 'thing' : 'things'}, so new moves first` : 'First time with foot exercises',
-    a.start === 'standing' ? 'Standing, a hand on a counter' : a.start === 'bed' ? 'On the edge of the bed' : 'In a chair',
-    a.safety != null && a.safety !== 'none' ? 'A gentle, seated start' : null,
-    `${a.minutes ?? 5} minutes a day`,
-    moved ? 'Your first move: done' : null,
-    goals.length > 0 ? `Goals: ${goals.slice(0, 2).join(', ')}${goals.length > 2 ? ` +${goals.length - 2}` : ''}` : null,
+    a.day != null ? DAY_LABEL[a.day] : `${a.minutes ?? 5} minutes a day`,
+    goals[0] != null ? `Goal: ${goals[0]}` : null,
     `Your plan: ${PLAN_NAME[kindOf(a)]}`,
   ].filter((line): line is string => line != null);
   const total = lines.length * LINE_MS;

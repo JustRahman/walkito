@@ -10,7 +10,7 @@ import { Plan } from './screens/plan';
 import { Price } from './screens/price';
 import { Age, Day, Focus, Minutes, Safety, SafetyNote, Since, Start, Tried, When } from './screens/quiz';
 import { StartDay1 } from './screens/start';
-import { Card, Fault, Goals, Life, Path, Summary } from './screens/story';
+import { Card, Compare, Fault, Goals, Life, Path, Research, Reviews, Sign } from './screens/story';
 import { After, Balance, Before, Building, TryMove } from './screens/try-it';
 import { useFunnel } from './state';
 
@@ -30,6 +30,9 @@ const ROUTES: Readonly<Record<string, ComponentType>> = {
   [STEP.life]: Life,
   [STEP.fault]: Fault,
   [STEP.path]: Path,
+  [STEP.research]: Research,
+  [STEP.compare]: Compare,
+  [STEP.reviews]: Reviews,
   [STEP.goals]: Goals,
   [STEP.before]: Before,
   [STEP.move]: TryMove,
@@ -37,7 +40,7 @@ const ROUTES: Readonly<Record<string, ComponentType>> = {
   [STEP.balance]: Balance,
   [STEP.building]: Building,
   [STEP.plan]: Plan,
-  [STEP.summary]: Summary,
+  [STEP.sign]: Sign,
   [STEP.email]: Email,
   [STEP.code]: Code,
   [STEP.price]: Price,

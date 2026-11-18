@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 
 import { CARLA_PHOTO, url } from './config';
 import { appLink } from './flow';
@@ -71,6 +71,46 @@ export function Icon({ name, size }: { name: IconName; size?: number }) {
   );
 }
 
+/**
+ * A full-colour screen, as QUITTR's: the brand on top, one picture, one big
+ * line, at most one short line, the dots of its set and one white pill.
+ */
+export function Slide({
+  tone,
+  children,
+  dots,
+  next,
+  label = 'Next',
+}: {
+  tone: 'warm' | 'deep' | 'sky' | 'night';
+  children: ReactNode;
+  dots?: { at: number; of: number };
+  next: () => void;
+  label?: string;
+}) {
+  return (
+    <main className={`slide ${tone}`}>
+      <header className="slide-top">
+        <img src={url('/img/icon.webp')} alt="" width={26} height={26} />
+        Walkito
+      </header>
+      <div className="slide-body fade" key={typeof location !== 'undefined' ? location.pathname : ''}>
+        {children}
+      </div>
+      {dots != null && (
+        <div className="dots" aria-hidden="true">
+          {Array.from({ length: dots.of }, (_, i) => (
+            <i key={i} className={i === dots.at ? 'on' : undefined} />
+          ))}
+        </div>
+      )}
+      <button className="pill" type="button" onClick={next}>
+        {label} <Chevron right />
+      </button>
+    </main>
+  );
+}
+
 /** The screen's one action, kept at the bottom edge while the page scrolls. */
 export function Cta({ children }: { children: ReactNode }) {
   return <div className="cta">{children}</div>;
@@ -123,9 +163,23 @@ export function Choice({
   );
 }
 
-export function MultiChoice({ children, checked, onToggle, icon }: { children: ReactNode; checked: boolean; onToggle: () => void; icon?: IconName }) {
+export function MultiChoice({
+  children,
+  checked,
+  onToggle,
+  icon,
+  className,
+  style,
+}: {
+  children: ReactNode;
+  checked: boolean;
+  onToggle: () => void;
+  icon?: IconName;
+  className?: string;
+  style?: CSSProperties;
+}) {
   return (
-    <button className="choice" type="button" role="checkbox" aria-checked={checked} onClick={onToggle}>
+    <button className={className != null ? `choice ${className}` : 'choice'} style={style} type="button" role="checkbox" aria-checked={checked} onClick={onToggle}>
       {icon != null && <Icon name={icon} />}
       <span className="grow">{children}</span>
       <span className="tick">{checked && <Tick />}</span>
@@ -169,13 +223,14 @@ export function Check({ checked, onChange, children, className }: { checked: boo
  */
 export function Reviewer() {
   return (
-    <div className="person">
-      <img src={CARLA_PHOTO} alt="Dr. Carla Shayman" width={56} height={56} />
-      <div>
-        <div style={{ fontWeight: 800 }}>Dr. Carla Shayman, PT, DPT</div>
-        <div className="small">Physical therapist. She reviewed our heel pain and flat feet guides.</div>
-      </div>
-    </div>
+    <figure className="doctor">
+      <img src={CARLA_PHOTO.replace('.webp', '@2x.webp')} alt="Dr. Carla Shayman" />
+      <figcaption>
+        <b>Dr. Carla Shayman, PT, DPT</b>
+        <span>Physical therapist</span>
+        <span className="tint">Reviewed our heel pain and flat feet guides</span>
+      </figcaption>
+    </figure>
   );
 }
 

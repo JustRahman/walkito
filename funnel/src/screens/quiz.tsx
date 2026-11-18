@@ -70,24 +70,18 @@ export function Age() {
   };
   return (
     <Page footer>
-      <div className="stack center">
-        <img className="hero" src={url('/img/mascot-mobility.png')} alt="" />
+      <div className="stack gap-s center">
         <h1>Foot exercises made for your age</h1>
         <p className="lead">5 minutes a day. From a chair.</p>
       </div>
-      <div className="stack center">
-        <span className="eyebrow">2-minute quiz</span>
-        <h3>Select your age</h3>
-      </div>
+      <Reviewer />
+      <h3 className="center">Select your age</h3>
       <div className="grid2">
         {AGES.map((o) => (
           <Choice key={o.value} selected={s.answers.age === o.value} arrow onClick={() => pick(o.value)}>
             {o.label}
           </Choice>
         ))}
-      </div>
-      <div className="card">
-        <Reviewer />
       </div>
       <p className="caption center">
         By choosing your age you agree to our <a href={url('/terms')}>Terms</a> and <a href={url('/privacy')}>Privacy Policy</a>.

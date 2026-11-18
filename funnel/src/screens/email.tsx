@@ -95,7 +95,7 @@ export function Email() {
   };
 
   return (
-    <Page progress={PROGRESS[STEP.email]} backTo={STEP.summary}>
+    <Page progress={PROGRESS[STEP.email]} backTo={STEP.plan}>
       <div className="stack">
         <h2>Save your plan</h2>
         <p className="small">Your email keeps your plan and signs you in. We never sell it.</p>

@@ -8,7 +8,6 @@ REPO=..
 URL="${FUNNEL_SUPABASE_URL:-$(grep '^EXPO_PUBLIC_SUPABASE_URL=' "$REPO/.env.local" 2>/dev/null | cut -d= -f2-)}"
 mkdir -p public/clips public/posters public/img
 cp "$REPO/assets/icon-small.webp" public/img/icon.webp
-cp "$REPO/assets/program/mascot-balance.png" "$REPO/assets/program/mascot-mobility.png" "$REPO/assets/program/mascot-strength.png" public/img/
 cp "$REPO/assets/offer/phone-home.webp" public/img/
 for art in foot shield calendar star clipboard; do cp "$REPO/assets/onboarding/building/$art.webp" "public/img/art-$art.webp"; done
 ids=$(grep -oE "^  [a-z_]+: \{ file: '[^']+'" "$REPO/src/shared/config/clip-manifest.ts" | sed -E "s/^  ([a-z_]+): .*/\1/")

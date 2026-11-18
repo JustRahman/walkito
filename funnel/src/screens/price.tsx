@@ -13,13 +13,14 @@ import {
   SUPPORT_EMAIL,
   url,
 } from '../config';
-import { addDays, goalLabels, kindOf, PLAN_NAME, planLine, shortDate, STEP } from '../flow';
+import { addDays, kindOf, PLAN_NAME, planLine, shortDate, STEP } from '../flow';
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
 import { back, go } from '../router';
 import { update, useFunnel } from '../state';
-import { AppButton, Check, Choice, Page } from '../ui';
+import { AppButton, Check, Choice, Icon, Page } from '../ui';
+import { REVIEWS } from './story';
 import { TrustLines } from './trust';
 
 type PlanId = 'monthly' | 'yearly';
@@ -214,54 +215,39 @@ export function Price() {
     return result.message;
   };
 
-  const goals = goalLabels(s.answers);
   const retest = addDays(today, 14);
+  if (phase === 'gift')
+    return (
+      <Gift
+        onBuy={buyOffer}
+        onClose={() => {
+          track('exit_gift_declined', { offer: PRICE_OFFER.id });
+          setPhase('held-back');
+        }}
+      />
+    );
   const perDay = (total: number, days: number) => money(Math.round((total / days) * 100) / 100);
   const monthDays = Math.round((charge.getTime() - today.getTime()) / 86_400_000);
   const yearDays = Math.round((renewYear.getTime() - today.getTime()) / 86_400_000);
   return (
     <Page
-      backTo={STEP.summary}
-      onBack={phase === 'idle' ? () => (showGift('leave') ? setPhase('gift') : back(STEP.summary)) : undefined}
+      backTo={STEP.plan}
+      onBack={phase === 'idle' ? () => (showGift('leave') ? setPhase('gift') : back(STEP.plan)) : undefined}
       footer
     >
-      <div className="stack center">
-        <span className="eyebrow">Start your plan</span>
+      <div className="stack gap-s center">
         <h1>{PLAN_NAME[kindOf(s.answers)]}</h1>
         <p className="small">{planLine(s.answers)}</p>
       </div>
-      {goals.length > 0 && phase !== 'gift' && (
-        <section className="card soft stack gap-s" aria-label="Your goals">
-          <span className="eyebrow">For your goals</span>
-          <ul className="ticks">
-            {goals.slice(0, 3).map((g) => (
-              <li key={g}>{g}</li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <figure className="quote">
+        <div className="stars" aria-label="5 stars on the App Store">
+          ★★★★★
+        </div>
+        <blockquote>“The interface is clean and easy to navigate, and programs are easy to follow.”</blockquote>
+        <figcaption>{REVIEWS[1].author}, App Store</figcaption>
+      </figure>
 
-      {phase === 'gift' ? (
-        <section className="stack gift">
-          <div className="stack gap-s center">
-            <img className="hero s pop" src={url('/img/art-star.webp')} alt="" />
-            <span className="eyebrow">A one-time gift</span>
-            <h2>Your first year for {money(PRICE_OFFER.intro)}</h2>
-            <p className="lead">Then {money(PRICE_OFFER.price)} a year. Cancel any time.</p>
-          </div>
-          <OfferCard onBuy={buyOffer} headline={false} />
-          <button
-            className="btn quiet"
-            type="button"
-            onClick={() => {
-              track('exit_gift_declined', { offer: PRICE_OFFER.id });
-              setPhase('held-back');
-            }}
-          >
-            No, thanks
-          </button>
-        </section>
-      ) : phase === 'held-back' ? (
+      {phase === 'held-back' ? (
         <HeldBack
           picked={heldBack}
           offer={heldBack === 'price' && offerShownNow}
@@ -353,16 +339,6 @@ export function Price() {
                 </>
               )}
             </div>
-          </section>
-
-          <section className="card stack">
-            <h3>What you get</h3>
-            <ul className="ticks">
-              <li>Your plan, new every week</li>
-              <li>A video for every move</li>
-              <li>Exercises built on physical therapy guidelines</li>
-              <li>The Walkito app for iPhone and Android</li>
-            </ul>
           </section>
 
           <TrustLines />
@@ -551,5 +527,55 @@ function OfferCard({ onBuy, headline = true }: { onBuy: (consentText: string) =>
         {busy ? 'Opening checkout…' : `Start my year for ${money(PRICE_OFFER.intro)}`}
       </button>
     </div>
+  );
+}
+
+/**
+ * Flo's gift box: a closed box first, the offer when she opens it. Shown once,
+ * by the same triggers as before. No timer, nothing that runs out.
+ */
+function Gift({ onBuy, onClose }: { onBuy: (consentText: string) => Promise<string | null>; onClose: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <main className="page gift-page">
+      <header className="topbar">
+        <button className="back" type="button" onClick={onClose} aria-label="No, thanks">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          </svg>
+        </button>
+      </header>
+      <div className="fade stack gap-l" style={{ flex: 1, justifyContent: 'center' }}>
+        <div className={open ? 'box small' : 'box pop'} aria-hidden="true">
+          <Icon name="sparkles" size={34} />
+          <Icon name="gift" size={open ? 96 : 168} />
+          <Icon name="sparkles" size={26} />
+        </div>
+        {open ? (
+          <>
+            <div className="stack gap-s center">
+              <h1>Your first year {money(PRICE_OFFER.intro)}</h1>
+              <p className="lead">Then {money(PRICE_OFFER.price)} a year. Cancel any time.</p>
+            </div>
+            <OfferCard onBuy={onBuy} headline={false} />
+            <button className="btn quiet" type="button" onClick={onClose}>
+              No, thanks
+            </button>
+          </>
+        ) : (
+          <div className="stack gap-s center">
+            <h1>A gift just for you</h1>
+            <p className="lead">Open the box to see your offer.</p>
+          </div>
+        )}
+      </div>
+      {!open && (
+        <div className="cta">
+          <button className="btn gift-open" type="button" onClick={() => setOpen(true)}>
+            Open now
+          </button>
+        </div>
+      )}
+    </main>
   );
 }
