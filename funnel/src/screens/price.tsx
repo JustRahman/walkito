@@ -13,6 +13,7 @@ import {
   SITE,
   SUPPORT_EMAIL,
   url,
+  yearlySaving,
 } from '../config';
 import { addDays, clockLabel, kindOf, PLAN_NAME, planLine, shortDate, STEP, wakeOf } from '../flow';
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
@@ -218,9 +219,7 @@ export function Price() {
   };
 
   const retest = addDays(today, 14);
-  const perDay = (total: number, days: number) => money(Math.round((total / days) * 100) / 100);
-  const monthDays = Math.round((charge.getTime() - today.getTime()) / 86_400_000);
-  const yearDays = Math.round((renewYear.getTime() - today.getTime()) / 86_400_000);
+  const saving = yearlySaving(variant);
   return (
     <Page backTo={STEP.plan} footer>
       <div className="stack gap-s center">
@@ -277,17 +276,12 @@ export function Price() {
               aria-pressed={plan === 'monthly'}
               onClick={() => choose('monthly')}
             >
-              <span className="tag flag">Best to start</span>
+              <span className="tag flag">Lowest price today</span>
               <span className="radio" />
               <span className="grow">
-                <span className="name">First month</span>
-                <span className="hint">
-                  {money(m.intro)} today, then {money(m.price)} a month
-                </span>
-              </span>
-              <span className="perday">
-                <b>{perDay(m.intro, monthDays)}</b>
-                <span>per day</span>
+                <span className="name">Monthly</span>
+                <span className="today">{money(m.intro)} today</span>
+                <span className="hint">First month. Then {money(m.price)} a month.</span>
               </span>
             </button>
             {(yearly === true || (yearly === null && plan === 'yearly')) && (
@@ -302,11 +296,13 @@ export function Price() {
                 <span className="radio" />
                 <span className="grow">
                   <span className="name">1 year</span>
-                  <span className="hint">{money(y.price)} a year</span>
-                </span>
-                <span className="perday">
-                  <b>{perDay(y.price, yearDays)}</b>
-                  <span>per day</span>
+                  <span className="today">{money(y.price)} today</span>
+                  <span className="hint">Then {money(y.price)} a year.</span>
+                  {saving > 0 && (
+                    <span className="saving">
+                      {money(saving)} less than {y.months} months of monthly
+                    </span>
+                  )}
                 </span>
               </button>
             )}

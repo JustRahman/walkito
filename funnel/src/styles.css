@@ -314,17 +314,15 @@ b { font-weight: 800; }
 .timeline .t.now .dot { background: var(--primary); border-color: var(--primary); }
 .timeline .t .small { font-size: 0.95rem; }
 
-/* A plan: what it is on the left, what a day of it costs on the right. */
+/* A plan: what is charged today is its biggest line, then what it renews at. */
 .plans { display: flex; flex-direction: column; gap: 0.9rem; }
 .plan { position: relative; padding: 0.9rem 0.9rem 0.9rem 1rem; }
 .plan .radio { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #a3a3ad; display: grid; place-items: center; }
 .plan[aria-pressed='true'] .radio { border-color: var(--primary); }
 .plan[aria-pressed='true'] .radio::after { content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); }
-.plan .name { font-weight: 800; font-size: 1.1rem; }
-.plan .perday { flex: none; min-width: 84px; padding: 0.4rem 0.6rem; border-radius: 12px; background: var(--card-2); text-align: center; line-height: 1.1; }
-.plan[aria-pressed='true'] .perday { background: var(--primary); color: #fff; }
-.plan .perday b { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
-.plan .perday span { font-size: 0.75rem; font-weight: 700; }
+.plan .name { display: block; font-size: 1rem; color: var(--muted); }
+.plan .today { display: block; font-size: 1.6rem; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.plan .saving { display: block; margin-top: 0.2rem; font-size: 0.95rem; font-weight: 800; color: var(--primary-deep); }
 .plan .flag { position: absolute; top: -11px; left: 14px; }
 
 .pay { display: flex; align-items: center; justify-content: center; gap: 0.4rem; color: var(--caption); font-size: 0.9rem; font-weight: 700; }

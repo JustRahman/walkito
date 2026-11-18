@@ -37,6 +37,15 @@ export const PRICE_VARIANTS: Readonly<Record<string, PriceVariant>> = {
 export const DEFAULT_VARIANT = 'b';
 
 /**
+ * What the yearly plan costs less than the same twelve months paid monthly,
+ * the first of them at its intro price. Worked out here so the line on the
+ * price page follows the prices and is never typed.
+ */
+export function yearlySaving(v: PriceVariant): number {
+  return Math.round((v.monthly.intro + (v.yearly.months - 1) * v.monthly.price - v.yearly.price) * 100) / 100;
+}
+
+/**
  * The one-time offer after "What held you back?" -> "The price": the first
  * year for $29.99, then $49.99 a year. A NEW RevenueCat product with a paid
  * first period (one year at $29.99) that renews at $49.99; the live products
