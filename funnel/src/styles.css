@@ -83,7 +83,7 @@ b { font-weight: 700; }
   min-height: 3.25rem;
   padding-top: env(safe-area-inset-top);
 }
-.topbar .brand { grid-column: 2; justify-self: center; display: flex; align-items: center; gap: 0.45rem; font-weight: 700; font-size: 1.0625rem; color: inherit; text-decoration: none; }
+.topbar .brand { grid-column: 2; justify-self: center; display: flex; align-items: center; gap: 0.45rem; font-weight: 700; font-size: 1.0625rem; }
 .topbar .brand img { width: 26px; height: 26px; border-radius: 7px; }
 
 .back {
@@ -100,6 +100,8 @@ b { font-weight: 700; }
 }
 .back:active { background: var(--track); }
 
+/* Which part of the quiz this is, in two words, over the bar. */
+.section { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; color: var(--caption); }
 .progress { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin: 0.25rem 0 1.5rem; }
 .progress > div { height: 100%; background: var(--primary); border-radius: 3px; transition: width 400ms ease; }
 
@@ -278,6 +280,7 @@ b { font-weight: 700; }
 
 .video { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: #000; }
 .video video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.video .play { position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; padding: 0 0 0 4px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.92); color: var(--primary); display: grid; place-items: center; cursor: pointer; }
 
 .clock { font-size: 2.75rem; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; }
 .ring { width: 100%; height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
@@ -335,6 +338,7 @@ details[open] { padding-bottom: 1rem; }
 /* A screen arrives: a short fade and rise. Nothing loops, nothing bounces. */
 .fade { animation: enter 220ms var(--ease) both; }
 @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
 @keyframes nudge { 0%, 100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
 /* Trust lines under the plan and the price: small and calm. */
@@ -422,7 +426,12 @@ details[open] { padding-bottom: 1rem; }
 .tile.locked > * { z-index: 2; }
 .tile-lock { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, 0.92); color: var(--text); display: grid; place-items: center; }
 
+/* "Reduce motion": nothing moves, grows or fills; a screen only fades in. The clip waits for a tap (ui.tsx). */
 @media (prefers-reduced-motion: reduce) {
-  .fade, .check.nudge { animation: none; }
-  .progress > div, .ring > div, .dial .fg { transition: none; }
+  .fade { animation-name: appear; }
+  .check.nudge { animation: none; }
+  .choice, .choice .mark, .choice .mark svg, .btn, .progress > div, .ring > div { transition: none; }
+  .choice:active, .btn:active { transform: none; }
+  .choice .mark svg { transform: none; }
+  .dial .fg { display: none; }
 }

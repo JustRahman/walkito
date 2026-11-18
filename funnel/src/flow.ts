@@ -77,6 +77,22 @@ export const ORDER: readonly string[] = [
   STEP.price,
 ];
 
+/** The quiz in four parts, each named above the progress bar from its first step on. */
+const SECTIONS: ReadonlyArray<readonly [from: string, label: string]> = [
+  [STEP.age, 'About you'],
+  [STEP.life, 'Your goals'],
+  [STEP.move, 'Your first move'],
+  [STEP.sign, 'Your plan'],
+];
+
+/** Where she is, in words: "About you", "Your goals"… Null off the quiz. */
+export function sectionOf(path: string): string | null {
+  const at = ORDER.indexOf(path.replace(/\/note$/, ''));
+  let label: string | null = null;
+  for (const [from, name] of SECTIONS) if (at >= 0 && ORDER.indexOf(from) <= at) label = name;
+  return label;
+}
+
 /** Fast early, slower later: the bar moves most on the first answers. */
 export const PROGRESS: Readonly<Record<string, number>> = Object.fromEntries(
   ORDER.slice(0, -1).map((step, i, all) => [step, Math.round((0.1 + 0.88 * Math.sqrt((i + 1) / all.length)) * 100) / 100]),

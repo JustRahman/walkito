@@ -1,11 +1,11 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { CARLA_PHOTO, PREVIEW, url } from './config';
 import { PLACEHOLDER_CARLA_QUOTE } from './preview/placeholders';
-import { appLink } from './flow';
+import { appLink, sectionOf } from './flow';
 import { ICONS, type IconName } from './icons.gen';
 import { track } from './lib/analytics';
-import { back, go } from './router';
+import { back, usePath } from './router';
 
 export type { IconName };
 
@@ -23,6 +23,7 @@ export function Page({
   backTo?: string;
   footer?: boolean;
 }) {
+  const section = sectionOf(usePath());
   return (
     <main className="page">
       <header className="topbar">
@@ -31,15 +32,19 @@ export function Page({
             <Chevron />
           </button>
         )}
-        <a className="brand" href={url('/')} onClick={(e) => (e.preventDefault(), go('/'))}>
+        {/* Not a link: a tap on the name used to throw her back to the first screen. */}
+        <div className="brand">
           <img src={url('/img/icon.webp')} alt="" width={26} height={26} />
           Walkito
-        </a>
+        </div>
       </header>
       {progress != null && (
-        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
-          <div style={{ width: `${Math.round(progress * 100)}%` }} />
-        </div>
+        <>
+          {section != null && <div className="section">{section}</div>}
+          <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+            <div style={{ width: `${Math.round(progress * 100)}%` }} />
+          </div>
+        </>
       )}
       <div className="fade stack gap-l" style={{ flex: 1 }} key={typeof location !== 'undefined' ? location.pathname : ''}>
         {children}
@@ -204,18 +209,29 @@ export function Reviewer() {
   );
 }
 
-/** A real-feet clip: muted, inline, looping, with its poster until it plays. */
+/**
+ * A real-feet clip: muted, inline, looping, with its poster until it plays.
+ * With "reduce motion" on it waits on the poster until she asks for it.
+ */
 export function Clip({ src, poster, playing, label }: { src: string; poster: string; playing: boolean; label: string }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const [asked, setAsked] = useState(() => !matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
     const video = ref.current;
     if (video == null) return;
-    if (playing) void video.play().catch(() => undefined);
+    if (playing && asked) void video.play().catch(() => undefined);
     else video.pause();
-  }, [playing, src]);
+  }, [playing, asked, src]);
   return (
     <div className="video">
       <video ref={ref} src={src} poster={poster} muted playsInline loop preload="metadata" aria-label={label} />
+      {!asked && (
+        <button className="play" type="button" aria-label="Play the video" onClick={() => setAsked(true)}>
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
