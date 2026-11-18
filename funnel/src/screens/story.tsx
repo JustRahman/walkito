@@ -1,60 +1,45 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { PREVIEW, url } from '../config';
-import { kindOf, lifeFor, mentionedGoals, PROGRESS, shortDate, STEP } from '../flow';
+import { kindOf, lifeFor, mentionedGoals, PROGRESS, STEP } from '../flow';
 import { track } from '../lib/analytics';
 import { PLACEHOLDER_REVIEWS } from '../preview/placeholders';
 import { go } from '../router';
 import { answer, update, useFunnel } from '../state';
-import { Cta, MultiChoice, Page, Slide } from '../ui';
+import { ADVANCE_MS, Choice, Cta, MultiChoice, Page, Slide } from '../ui';
 
-/** Her Walkito card: she has joined something, on Day 0, under her own name. */
-export function Card() {
+/**
+ * Her first name, asked once the plan exists, for the plan's own headline.
+ * She can skip it. Kept in this browser only.
+ */
+export function Name() {
   const s = useFunnel();
   const [name, setName] = useState(s.name ?? '');
-  const since = useMemo(() => shortDate(new Date()), []);
   const next = () => {
     update({ name: name.trim().slice(0, 30) });
-    track('step_completed', { step: STEP.card });
-    go(STEP.focus);
+    track('step_completed', { step: STEP.name });
+    go(STEP.plan);
   };
   return (
-    <Page progress={PROGRESS[STEP.card]}>
-      <h1 className="center">Here’s your Walkito card</h1>
-      <div className="member" aria-label="Your Walkito card">
-        <div className="top">
-          <img src={url('/img/icon.webp')} alt="" width={40} height={40} />
-          <span>Walkito</span>
-        </div>
-        <div className="mid">
-          <span className="k">Day</span>
-          <b>0</b>
-        </div>
-        <div className="bottom">
-          <div>
-            <span className="k">Name</span>
-            <span className="v">{name.trim() === '' ? 'You' : name.trim()}</span>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <span className="k">Member since</span>
-            <span className="v">{since}</span>
-          </div>
-        </div>
-      </div>
+    <Page progress={PROGRESS[STEP.name]}>
+      <h2>Your plan is ready. Who is it for?</h2>
       <input
         className="field"
         type="text"
         autoComplete="given-name"
-        aria-label="Your first name"
+        aria-label="First name"
         maxLength={30}
-        placeholder="Your first name"
+        placeholder="First name"
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && next()}
       />
       <Cta>
         <button className="btn" type="button" onClick={next}>
-          {name.trim() === '' ? 'Continue' : `Let’s go, ${name.trim()}`}
+          See my plan
+        </button>
+        <button className="btn quiet" type="button" onClick={() => go(STEP.plan)}>
+          Skip
         </button>
       </Cta>
     </Page>
@@ -271,90 +256,26 @@ export function Goals() {
   );
 }
 
-/** A promise to herself, signed with a finger (QUITTR). Nothing of the drawing is kept. */
-export function Sign() {
+/** A small yes before the plan: one tap, and either answer goes on. Nothing is kept. */
+export function Commit() {
   const s = useFunnel();
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const [drawn, setDrawn] = useState(false);
-  useEffect(() => {
-    const c = canvas.current;
-    if (c == null) return;
-    const ratio = window.devicePixelRatio || 1;
-    c.width = c.clientWidth * ratio;
-    c.height = c.clientHeight * ratio;
-    const ctx = c.getContext('2d')!;
-    ctx.scale(ratio, ratio);
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#26221f';
-    let down = false;
-    const at = (e: PointerEvent) => {
-      const r = c.getBoundingClientRect();
-      return [e.clientX - r.left, e.clientY - r.top] as const;
-    };
-    const start = (e: PointerEvent) => {
-      down = true;
-      c.setPointerCapture(e.pointerId);
-      const [x, y] = at(e);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    };
-    const move = (e: PointerEvent) => {
-      if (!down) return;
-      const [x, y] = at(e);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      setDrawn(true);
-    };
-    const end = () => {
-      down = false;
-    };
-    c.addEventListener('pointerdown', start);
-    c.addEventListener('pointermove', move);
-    c.addEventListener('pointerup', end);
-    c.addEventListener('pointercancel', end);
-    return () => {
-      c.removeEventListener('pointerdown', start);
-      c.removeEventListener('pointermove', move);
-      c.removeEventListener('pointerup', end);
-      c.removeEventListener('pointercancel', end);
-    };
-  }, []);
-  const clear = () => {
-    const c = canvas.current;
-    c?.getContext('2d')?.clearRect(0, 0, c.width, c.height);
-    setDrawn(false);
+  const [picked, setPicked] = useState<string | null>(null);
+  const pick = (value: string) => {
+    setPicked(value);
+    track('step_completed', { step: STEP.commit });
+    setTimeout(() => go(STEP.building), ADVANCE_MS);
   };
   return (
-    <Page progress={PROGRESS[STEP.sign]}>
-      <div className="stack gap-s">
-        <h2>Sign your commitment</h2>
-        <p className="lead">Promise yourself {s.answers.minutes ?? 5} minutes a day for your feet.</p>
+    <Page progress={PROGRESS[STEP.commit]}>
+      <h2>Can you give your feet {s.answers.minutes ?? 5} minutes a day?</h2>
+      <div className="stack">
+        <Choice selected={picked === 'yes'} onClick={() => pick('yes')}>
+          Yes, I can
+        </Choice>
+        <Choice selected={picked === 'best'} onClick={() => pick('best')}>
+          I’ll do my best
+        </Choice>
       </div>
-      <div className="stack gap-s">
-        <canvas ref={canvas} className="pad" aria-label="Sign here with your finger" />
-        <div className="pad-foot">
-          <span className="caption">Draw in the box above</span>
-          <button type="button" className="btn quiet" onClick={clear}>
-            Clear
-          </button>
-        </div>
-      </div>
-      <Cta>
-        <button
-          className="btn"
-          type="button"
-          disabled={!drawn}
-          onClick={() => {
-            track('step_completed', { step: STEP.sign });
-            go(STEP.building);
-          }}
-        >
-          Finish
-        </button>
-      </Cta>
     </Page>
   );
 }
-

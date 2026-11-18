@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 
 import hero from '../assets/photos/hero-socks-morning.jpg';
 import { url } from '../config';
-import { PROGRESS, STEP, wakeOf } from '../flow';
+import { PROGRESS, STEP, WAKE_TIMES, wakeOf } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, useFunnel, type Answers } from '../state';
@@ -69,7 +69,7 @@ export function Age() {
   const pick = (value: NonNullable<Answers['age']>) => {
     answer({ age: value });
     track('step_completed', { step: STEP.age });
-    setTimeout(() => go(STEP.card), ADVANCE_MS);
+    setTimeout(() => go(STEP.focus), ADVANCE_MS);
   };
   return (
     <Page footer>
@@ -133,39 +133,60 @@ export function When() {
         { value: 'allday', label: 'All day', icon: 'sun' },
         { value: 'varies', label: 'It varies', icon: 'leafInWind' },
       ]}
-      next={STEP.wake}
+      next={STEP.since}
     />
   );
 }
 
-/** When she gets up: her first-step routine is set for then. */
+/**
+ * When she gets up, asked where it is used: right before the routine it sets.
+ * One tap on an hour, or an exact time for anyone who wants one.
+ */
 export function Wake() {
   const s = useFunnel();
+  const [picked, setPicked] = useState(s.answers.wake);
+  const [exact, setExact] = useState(false);
   const [time, setTime] = useState(wakeOf(s.answers));
+  const save = (wake: string) => {
+    setPicked(wake);
+    answer({ wake });
+    track('wake_time_set');
+    track('step_completed', { step: STEP.wake });
+  };
   return (
     <Page progress={PROGRESS[STEP.wake]}>
-      <h2>When do you usually get up?</h2>
-      <input
-        className="field time"
-        type="time"
-        aria-label="Usual wake-up time"
-        value={time}
-        onChange={(e) => e.target.value !== '' && setTime(e.target.value)}
-      />
-      <Cta>
-        <button
-          className="btn"
-          type="button"
-          onClick={() => {
-            answer({ wake: time });
-            track('wake_time_set');
-            track('step_completed', { step: STEP.wake });
-            go(STEP.since);
-          }}
-        >
-          Continue
-        </button>
-      </Cta>
+      <div className="stack gap-s">
+        <h2>What time do you usually get up?</h2>
+        <p className="small">Your plan has a 2-minute routine for before your first steps. We’ll set it for this time.</p>
+      </div>
+      {exact ? (
+        <>
+          <input
+            className="field time"
+            type="time"
+            aria-label="Usual wake-up time"
+            autoFocus
+            value={time}
+            onChange={(e) => e.target.value !== '' && setTime(e.target.value)}
+          />
+          <Cta>
+            <button className="btn" type="button" onClick={() => (save(time), go(STEP.routine))}>
+              Continue
+            </button>
+          </Cta>
+        </>
+      ) : (
+        <div className="stack">
+          {WAKE_TIMES.map((o) => (
+            <Choice key={o.value} selected={picked === o.value} onClick={() => (save(o.value), setTimeout(() => go(STEP.routine), ADVANCE_MS))}>
+              {o.label}
+            </Choice>
+          ))}
+          <button className="btn quiet" type="button" onClick={() => setExact(true)}>
+            Pick an exact time
+          </button>
+        </div>
+      )}
     </Page>
   );
 }

@@ -365,20 +365,9 @@ details[open] { padding-bottom: 1rem; }
 
 /*
  * The screens below keep their v5 contents until v6 reorders the quiz
- * (the card, the statements, with/without, the signature, the plan's tiles).
+ * (the statements, with/without, the plan's tiles).
  * They wear the same page, cards and button as everything else meanwhile.
  */
-
-/* Her Walkito card: Day 0, under her name. */
-.member { border-radius: 24px; overflow: hidden; color: #fff; background: var(--primary); display: flex; flex-direction: column; aspect-ratio: 1.6; }
-.member .top { display: flex; align-items: center; gap: 0.55rem; padding: 1.1rem 1.2rem 0; font-weight: 700; font-size: 1.125rem; }
-.member .top img { border-radius: 11px; }
-.member .mid { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 1.2rem 0.9rem; }
-.member .mid .k { font-size: 0.9375rem; font-weight: 600; }
-.member .mid b { font-family: var(--serif); font-weight: 560; font-size: 3rem; line-height: 1; }
-.member .bottom { display: flex; justify-content: space-between; gap: 1rem; padding: 0.8rem 1.2rem 1rem; background: var(--primary-press); }
-.member .bottom .k { display: block; font-size: 0.9375rem; font-weight: 600; }
-.member .bottom .v { display: block; font-size: 1.125rem; font-weight: 700; overflow-wrap: anywhere; }
 
 /* One picture, one line. */
 .statement { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1rem; }
@@ -399,11 +388,6 @@ details[open] { padding-bottom: 1rem; }
 .versus .with { background: var(--card); border: 1.5px solid var(--primary); font-weight: 600; }
 .versus .with h3 { color: var(--primary); }
 .versus .with li::before { background: var(--positive) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 12.5l4 4L18 8.5' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 14px no-repeat; }
-
-/* The signature. */
-.pad { width: 100%; height: 220px; border-radius: 18px; border: 1.5px dashed var(--control); background: var(--card); touch-action: none; cursor: crosshair; }
-.pad-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.pad-foot .btn { width: auto; padding: 0 0.75rem; }
 
 /* The plan's peek: her goals as chips, week 1 as a photo tile, what follows locked beside it. */
 .goal-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }

@@ -8,7 +8,7 @@ import type { Answers, FunnelState } from './state';
  */
 export const STEP = {
   age: '/s/1',
-  card: '/s/20',
+  name: '/s/20',
   focus: '/s/2',
   when: '/s/3',
   wake: '/s/34',
@@ -32,7 +32,7 @@ export const STEP = {
   routine: '/s/35',
   balance: '/s/13',
   building: '/s/14',
-  sign: '/s/31',
+  commit: '/s/31',
   plan: '/s/15',
   email: '/s/16',
   code: '/s/17',
@@ -45,10 +45,8 @@ export const STEP = {
 /** The funnel in order, up to the price. */
 export const ORDER: readonly string[] = [
   STEP.age,
-  STEP.card,
   STEP.focus,
   STEP.when,
-  STEP.wake,
   STEP.since,
   STEP.tried,
   STEP.day,
@@ -66,10 +64,12 @@ export const ORDER: readonly string[] = [
   STEP.after,
   STEP.felt,
   STEP.praise,
+  STEP.wake,
   STEP.routine,
   STEP.balance,
-  STEP.sign,
+  STEP.commit,
   STEP.building,
+  STEP.name,
   STEP.plan,
   STEP.email,
   STEP.code,
@@ -103,7 +103,7 @@ const SECTIONS: ReadonlyArray<readonly [from: string, label: string]> = [
   [STEP.age, 'About you'],
   [STEP.life, 'Your goals'],
   [STEP.move, 'Your first move'],
-  [STEP.sign, 'Your plan'],
+  [STEP.wake, 'Your plan'],
 ];
 
 /** Where she is, in words: "About you", "Your goals"… Null off the quiz. */
@@ -328,11 +328,14 @@ export function wakeOf(a: Answers): string {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(a.wake ?? '') ? a.wake! : DEFAULT_WAKE;
 }
 
-/** "07:00" -> "7:00 AM". */
-export function clockLabel(hhmm: string): string {
-  const [h, m] = hhmm.split(':').map(Number);
-  return `${((h! + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h! < 12 ? 'AM' : 'PM'}`;
-}
+/** When she gets up, as hours she can tap. Each is stored as the middle of its hour, in the same "HH:MM" an exact time is. */
+export const WAKE_TIMES: ReadonlyArray<{ value: string; label: string }> = [
+  { value: '05:30', label: 'Before 6 AM' },
+  { value: '06:30', label: '6–7 AM' },
+  { value: '07:30', label: '7–8 AM' },
+  { value: '08:30', label: '8–9 AM' },
+  { value: '09:30', label: 'After 9 AM' },
+];
 
 /**
  * The first-step routine: three moves done sitting up in bed or on its edge,

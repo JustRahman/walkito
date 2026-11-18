@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { moveOf } from '../engine/plan';
+import { APP_STORE_RATING } from '../config';
 import {
-  clockLabel,
   DAY_LABEL,
   FIRST_STEP_MOVES,
   FIRST_STEP_SOURCE,
@@ -15,7 +15,6 @@ import {
   PROGRESS,
   STEP,
   tryMove,
-  wakeOf,
   WHEN_LABEL,
 } from '../flow';
 import { track } from '../lib/analytics';
@@ -56,8 +55,9 @@ export function TryMove() {
   return (
     <Page progress={PROGRESS[STEP.move]}>
       <div className="stack gap-s">
-        <span className="eyebrow">Try it now · 60 seconds</span>
+        <span className="eyebrow">Your first move · 60 seconds</span>
         <h2>{move.title}</h2>
+        <p className="small">Before we build your plan, try the first move in it. You can do it sitting down.</p>
       </div>
       {move.clip != null && <Clip src={move.clip} poster={move.poster} playing={state !== 'paused'} label={`${move.title}: ${move.cue}`} />}
       <p className="card" aria-live="polite">
@@ -83,10 +83,10 @@ export function TryMove() {
               onClick={() => {
                 update((x) => ({ tryIt: { ...x.tryIt, skipped: true } }));
                 track('tryit_skipped');
-                go(STEP.sign);
+                go(STEP.wake);
               }}
             >
-              Skip, show my plan
+              Not now
             </button>
           </Cta>
         </>
@@ -188,7 +188,7 @@ export function Praise() {
     <Slide
       progress={PROGRESS[STEP.praise]}
       label="Continue"
-      next={() => (track('step_completed', { step: STEP.praise }), go(STEP.routine))}
+      next={() => (track('step_completed', { step: STEP.praise }), go(STEP.wake))}
     >
       <span className="done-mark">
         <Tick />
@@ -203,12 +203,11 @@ export function Praise() {
 }
 
 /**
- * Something she uses tomorrow: three moves in bed, about 2 minutes, at the
- * time she gets up. The study is a "why" link, never a promise.
+ * Something she uses tomorrow: three moves on the edge of the bed, about 2
+ * minutes, before her first step. The study is a "why" link, never a promise.
  */
 export function Routine() {
   const s = useFunnel();
-  const at = clockLabel(wakeOf(s.answers));
   const hero = s.answers.when === 'morning' || s.answers.life?.includes('mornings') === true;
   const moves = FIRST_STEP_MOVES.map((id) => moveOf({ id }));
   useEffect(() => {
@@ -218,8 +217,8 @@ export function Routine() {
     <Page progress={PROGRESS[STEP.routine]}>
       <div className="stack gap-s">
         <span className="eyebrow">{hero ? 'Your first-step routine' : 'A bonus for your mornings'}</span>
-        <h2>Tomorrow at {at}, before your first step</h2>
-        <p className="small">2 minutes in bed. 3 moves.</p>
+        <h2>Tomorrow morning, before your first step</h2>
+        <p className="small">2 minutes on the edge of the bed. 3 moves.</p>
       </div>
       <div className="stack">
         {moves.map((m, i) => (
@@ -247,9 +246,9 @@ export function Routine() {
         <button
           className="btn"
           type="button"
-          onClick={() => (track('step_completed', { step: STEP.routine }), go(offersBalance(s.answers) ? STEP.balance : STEP.sign))}
+          onClick={() => (track('step_completed', { step: STEP.routine }), go(offersBalance(s.answers) ? STEP.balance : STEP.commit))}
         >
-          Set it for {at}
+          Add it to my plan
         </button>
       </Cta>
     </Page>
@@ -310,7 +309,7 @@ export function Balance() {
               onClick={() => {
                 update((x) => ({ tryIt: { ...x.tryIt, balance: 'skipped' } }));
                 track('balance_skipped');
-                go(STEP.sign);
+                go(STEP.commit);
               }}
             >
               Skip this
@@ -342,7 +341,7 @@ export function Balance() {
             <p className="lead">A starting note for your plan. Not a medical test.</p>
           </div>
           <Cta>
-            <button className="btn" type="button" onClick={() => go(STEP.sign)}>
+            <button className="btn" type="button" onClick={() => go(STEP.commit)}>
               Continue
             </button>
           </Cta>
@@ -379,7 +378,7 @@ export function Building() {
       setDone(part);
       if (part >= 1) {
         clearInterval(timer);
-        setTimeout(() => go(STEP.plan, { replace: true }), 700);
+        setTimeout(() => go(STEP.name, { replace: true }), 700);
       }
     }, 60);
     return () => clearInterval(timer);
@@ -387,7 +386,7 @@ export function Building() {
   const shown = Math.min(lines.length, Math.floor(done * lines.length) + 1);
   return (
     <Page progress={PROGRESS[STEP.building]} backTo={null}>
-      <h2 className="center">Analyzing your answers</h2>
+      <h2 className="center">Putting your plan together</h2>
       <div className="dial" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(done * 100)}>
         <svg viewBox="0 0 168 168">
           <circle className="bg" cx="84" cy="84" r={R} />
@@ -395,6 +394,7 @@ export function Building() {
         </svg>
         <b>{Math.round(done * 100)}%</b>
       </div>
+      <p className="caption center">Rated {APP_STORE_RATING} ★ on the App Store</p>
       <div className="card">
         <ul className="ticks reading">
           {lines.slice(0, shown).map((line, i) => (
