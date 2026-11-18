@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { APP_STORE_RATING, CARLA_APPROVED, CARLA_PHOTO, PEOPLE_THRESHOLD, PREVIEW, PT_GUIDELINE_URL } from '../config';
+import { APP_STORE_RATING, CARLA_APPROVED, CARLA_PHOTO, PEOPLE_THRESHOLD, PREVIEW, PT_GUIDELINE_URL, SOURCES_URL } from '../config';
 import { peopleCount } from '../lib/people';
 import { PLACEHOLDER_CARLA_QUOTE, PLACEHOLDER_REVIEWS } from '../preview/placeholders';
 
@@ -30,6 +30,12 @@ export function TrustLines() {
     <section className="trust stack gap-s" aria-label="About Walkito">
       {people != null && people >= PEOPLE_THRESHOLD && <p className="small center">Used by 1,000+ people</p>}
       <p className="small center">Rated {APP_STORE_RATING} ★ on the App Store</p>
+      <p className="small center">
+        The exercises come from published physical therapy research.{' '}
+        <a href={SOURCES_URL} target="_blank" rel="noopener noreferrer">
+          See the sources
+        </a>
+      </p>
       {PT_GUIDELINE_URL !== '' && (
         <p className="small center">
           Exercise is what physical therapists recommend first for heel pain.{' '}
@@ -72,15 +78,16 @@ export const REVIEWS = [
 ] as const;
 
 /**
- * The reviews as cards, on the price page since the reviews screen went
- * (v6). The top of that page already quotes one (AhmetAZ's, or the first
- * placeholder in a preview build), so these are the others.
+ * The reviews as cards: one on the plan page, all of them on the price page.
+ * A preview build shows Rahim's placeholders in the same places and says
+ * nothing about where they are from; a production build shows only the real
+ * ones, and says they are from the App Store.
  */
-export function ReviewCards() {
-  const others = PREVIEW ? PLACEHOLDER_REVIEWS.slice(1) : REVIEWS.slice(0, 1);
+export function ReviewCards({ count }: { count?: number }) {
+  const shown = (PREVIEW ? PLACEHOLDER_REVIEWS : REVIEWS).slice(0, count);
   return (
     <section className="stack" aria-label="Reviews">
-      {others.map((r) => (
+      {shown.map((r) => (
         <figure className="review" key={r.author} data-placeholder={'mark' in r ? r.mark : undefined}>
           <div className="who">
             <span className="avatar">{r.author[0]}</span>
@@ -92,7 +99,7 @@ export function ReviewCards() {
           <blockquote>“{r.text}”</blockquote>
         </figure>
       ))}
-      {!PREVIEW && <p className="caption center">From the App Store</p>}
+      {!PREVIEW && <p className="caption center">{shown.length === 1 ? 'App Store review' : 'App Store reviews'}</p>}
     </section>
   );
 }

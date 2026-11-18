@@ -335,6 +335,12 @@ export function wakeOf(a: Answers): string {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(a.wake ?? '') ? a.wake! : DEFAULT_WAKE;
 }
 
+/** "07:30" -> "7:30 AM". */
+export function clockLabel(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${((h! + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h! < 12 ? 'AM' : 'PM'}`;
+}
+
 /** When she gets up, as hours she can tap. Each is stored as the middle of its hour, in the same "HH:MM" an exact time is. */
 export const WAKE_TIMES: ReadonlyArray<{ value: string; label: string }> = [
   { value: '05:30', label: 'Before 6 AM' },

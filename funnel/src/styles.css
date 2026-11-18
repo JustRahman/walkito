@@ -370,23 +370,16 @@ details[open] { padding-bottom: 1rem; }
 .facts dt { flex: none; font-size: 1rem; color: var(--muted); }
 .facts dd { margin: 0; font-weight: 600; text-align: right; }
 
-/* The plan's peek, as v5 left it until the plan page is rebuilt: her goals as chips, week 1 as a photo tile, what follows locked beside it. */
+/* Her first week: seven days from today. Today is filled, a rest day is only outlined. */
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.3rem; }
+.week .d { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; font-size: 0.9375rem; color: var(--caption); }
+.week .d i { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 1rem; font-weight: 700; background: var(--primary-soft); color: var(--primary); }
+.week .d.rest i { background: transparent; border: 1.5px dashed var(--control); color: var(--caption); font-weight: 450; }
+.week .d.today { color: var(--text); font-weight: 700; }
+.week .d.today i { background: var(--primary); color: #fff; }
+.move .done { margin-left: auto; flex: none; padding: 0.15rem 0.65rem; border-radius: 999px; background: var(--sage); font-size: 0.9375rem; font-weight: 700; }
 .goal-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .goal-chips span { padding: 0.3rem 0.8rem; border-radius: 999px; border: 1.5px solid var(--line); background: var(--card); font-size: 0.9375rem; font-weight: 600; }
-.tile { position: relative; border-radius: 16px; overflow: hidden; background-size: cover; background-position: center; color: #fff; }
-.tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(38, 34, 31, 0) 40%, rgba(38, 34, 31, 0.75) 100%); }
-.tile > * { position: relative; z-index: 1; }
-.tile.big { aspect-ratio: 2 / 1; display: flex; flex-direction: column; justify-content: space-between; padding: 0.7rem; }
-.tile-tag { align-self: flex-start; background: rgba(38, 34, 31, 0.6); border-radius: 8px; padding: 0.15rem 0.55rem; font-size: 0.9375rem; font-weight: 700; }
-.tile-foot { display: flex; flex-direction: column; gap: 0.35rem; }
-.tile-foot b { font-size: 1.125rem; }
-.tile-chips { display: flex; gap: 0.35rem; flex-wrap: wrap; }
-.tile-chips i { font-style: normal; font-size: 0.9375rem; font-weight: 600; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 6px; padding: 0.05rem 0.4rem; }
-.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
-.tile.locked { aspect-ratio: 1.6 / 1; }
-.tile.locked::before { content: ''; position: absolute; inset: 0; z-index: 1; backdrop-filter: blur(3px) saturate(0.6); -webkit-backdrop-filter: blur(3px) saturate(0.6); background: rgba(38, 34, 31, 0.3); }
-.tile.locked > * { z-index: 2; }
-.tile-lock { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, 0.92); color: var(--text); display: grid; place-items: center; }
 
 /* "Reduce motion": nothing moves, grows or fills; a screen only fades in. The clip waits for a tap (ui.tsx). */
 @media (prefers-reduced-motion: reduce) {
