@@ -433,6 +433,9 @@ details[open] { padding-bottom: 1rem; }
 .doctor figcaption b { color: var(--text); font-size: 1rem; }
 .doctor .tint { color: var(--primary); font-weight: 700; }
 
+.doc-quote { font-size: 1.35rem; font-weight: 800; line-height: 1.3; color: var(--text); }
+.doc-quote::first-line { color: var(--primary); }
+
 /* B: QUITTR's banner and warm checks. */
 .alert { background: #f2552c; color: #fff; font-weight: 800; font-size: 1.25rem; line-height: 1.25; padding: 1rem 1.15rem; border-radius: 20px; }
 .choice.warm { flex-direction: row-reverse; justify-content: flex-end; }

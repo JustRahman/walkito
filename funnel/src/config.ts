@@ -60,6 +60,14 @@ export const PRICE_OFFER: Offer = {
  */
 export const YEARLY_UPGRADE_ENABLED = false;
 
+/**
+ * A preview build shows Rahim's placeholder texts (src/preview/placeholders.ts).
+ * True only in `bun run dev` or a build with FUNNEL_PREVIEW=1; the deploy
+ * script never sets it, and it is a build-time constant, so production drops
+ * the placeholders entirely.
+ */
+export const PREVIEW = import.meta.env.MODE === 'development' || import.meta.env.FUNNEL_PREVIEW === '1';
+
 /** Days before the first full charge that the reminder email goes out. */
 export const REMINDER_DAYS_BEFORE = 2;
 

@@ -10,4 +10,6 @@ interface ImportMetaEnv {
   readonly FUNNEL_GOOGLE_CLIENT_ID?: string;
   readonly FUNNEL_SUPPORT_EMAIL?: string;
   readonly FUNNEL_POSTAL_ADDRESS?: string;
+  /** "1" builds a preview with Rahim's placeholder texts. Never set for walkito.site/go. */
+  readonly FUNNEL_PREVIEW?: string;
 }

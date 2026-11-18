@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 
-import { CARLA_PHOTO, url } from './config';
+import { CARLA_PHOTO, PREVIEW, url } from './config';
+import { PLACEHOLDER_CARLA_QUOTE } from './preview/placeholders';
 import { appLink } from './flow';
 import { ICONS, type IconName } from './icons.gen';
 import { track } from './lib/analytics';
@@ -223,14 +224,21 @@ export function Check({ checked, onChange, children, className }: { checked: boo
  */
 export function Reviewer() {
   return (
-    <figure className="doctor">
+    <>
+      {PREVIEW && (
+        <p className="doc-quote" data-placeholder={PLACEHOLDER_CARLA_QUOTE.mark}>
+          “{PLACEHOLDER_CARLA_QUOTE.text}”
+        </p>
+      )}
+      <figure className="doctor">
       <img src={CARLA_PHOTO.replace('.webp', '@2x.webp')} alt="Dr. Carla Shayman" />
       <figcaption>
         <b>Dr. Carla Shayman, PT, DPT</b>
         <span>Physical therapist</span>
         <span className="tint">Reviewed our heel pain and flat feet guides</span>
-      </figcaption>
-    </figure>
+        </figcaption>
+      </figure>
+    </>
   );
 }
 

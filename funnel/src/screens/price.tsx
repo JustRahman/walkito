@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   COMPANY_LINE,
+  PREVIEW,
   DEFAULT_VARIANT,
   DESCRIPTOR,
   GUARANTEE_DAYS,
@@ -20,6 +21,7 @@ import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
 import { back, go } from '../router';
 import { update, useFunnel } from '../state';
 import { AppButton, Check, Choice, Icon, Page } from '../ui';
+import { PLACEHOLDER_REVIEWS } from '../preview/placeholders';
 import { REVIEWS } from './story';
 import { TrustLines } from './trust';
 
@@ -243,8 +245,17 @@ export function Price() {
         <div className="stars" aria-label="5 stars on the App Store">
           ★★★★★
         </div>
-        <blockquote>“The interface is clean and easy to navigate, and programs are easy to follow.”</blockquote>
-        <figcaption>{REVIEWS[1].author}, App Store</figcaption>
+        {PREVIEW ? (
+          <>
+            <blockquote data-placeholder={PLACEHOLDER_REVIEWS[0].mark}>“{PLACEHOLDER_REVIEWS[0].text}”</blockquote>
+            <figcaption>{PLACEHOLDER_REVIEWS[0].author}</figcaption>
+          </>
+        ) : (
+          <>
+            <blockquote>“The interface is clean and easy to navigate, and programs are easy to follow.”</blockquote>
+            <figcaption>{REVIEWS[1].author}, App Store</figcaption>
+          </>
+        )}
       </figure>
 
       {phase === 'held-back' ? (

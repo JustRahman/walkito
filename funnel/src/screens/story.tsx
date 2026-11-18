@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { url } from '../config';
+import { PREVIEW, url } from '../config';
 import { kindOf, lifeFor, PROGRESS, shortDate, STEP, suggestedGoals } from '../flow';
 import { track } from '../lib/analytics';
+import { PLACEHOLDER_REVIEWS } from '../preview/placeholders';
 import { go } from '../router';
 import { answer, update, useFunnel } from '../state';
 import { Cta, MultiChoice, Page, Slide } from '../ui';
@@ -211,8 +212,8 @@ export function Reviews() {
     <Slide tone="night" next={() => (track('step_completed', { step: STEP.reviews }), go(STEP.goals))}>
       <h1>Made for people like you</h1>
       <div className="stack" style={{ width: '100%' }}>
-        {REVIEWS.map((r) => (
-          <figure className="review-dark" key={r.author}>
+        {(PREVIEW ? PLACEHOLDER_REVIEWS : REVIEWS).map((r) => (
+          <figure className="review-dark" key={r.author} data-placeholder={'mark' in r ? r.mark : undefined}>
             <div className="who">
               <span className="avatar">{r.author[0]}</span>
               <b>{r.author}</b>
@@ -223,7 +224,7 @@ export function Reviews() {
             <blockquote>“{r.text}”</blockquote>
           </figure>
         ))}
-        <p className="caption-light">From the App Store</p>
+        <p className="caption-light">{PREVIEW ? 'PREVIEW ONLY: placeholder reviews' : 'From the App Store'}</p>
       </div>
     </Slide>
   );
