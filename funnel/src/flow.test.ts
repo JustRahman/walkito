@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { ROUTES } from './App';
 import { PRICE_OFFER, PRICE_VARIANTS, yearlySaving } from './config';
-import { mentionedGoals, missingStep, ORDER, planLine, sectionOf, STEP } from './flow';
+import { lifeFor, mentionedGoals, missingStep, ORDER, planLine, prevOf, RETIRED, sectionOf, STEP } from './flow';
 import type { Answers, FunnelState } from './state';
 
 const ANSWERS: Answers = {
@@ -62,11 +62,48 @@ describe('the funnel’s paths', () => {
     for (const path of ORDER) expect(sectionOf(path), path).not.toBeNull();
     expect(sectionOf(STEP.focus)).toBe('About you');
     expect(sectionOf('/s/7/note')).toBe('About you');
+    expect(sectionOf(STEP.summary)).toBe('About you');
+    expect(sectionOf(STEP.life)).toBe('Your goals');
     expect(sectionOf(STEP.goals)).toBe('Your goals');
-    expect(sectionOf(STEP.after)).toBe('Your first move');
+    expect(sectionOf(STEP.move)).toBe('Your first move');
+    expect(sectionOf(STEP.felt)).toBe('Your first move');
+    expect(sectionOf(STEP.wake)).toBe('Your plan');
     expect(sectionOf(STEP.email)).toBe('Your plan');
     expect(sectionOf(STEP.me)).toBeNull();
     expect(sectionOf('/terms')).toBeNull();
+  });
+
+  test('a path the quiz no longer has sends its visitor to a step that exists, never to screen 1', () => {
+    for (const [old, to] of Object.entries(RETIRED)) {
+      expect(ROUTES[old], old).toBeUndefined();
+      expect(ORDER.includes(old), old).toBe(false);
+      expect(ORDER.includes(to), `${old} -> ${to}`).toBe(true);
+      expect(to, old).not.toBe(STEP.age);
+    }
+    // Every path v5 had is either still a screen or redirected.
+    for (const n of [1, 2, 3, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 28, 29, 30, 31, 32, 33, 34, 35]) {
+      const path = `/s/${n}`;
+      expect(ROUTES[path] != null || RETIRED[path] != null, path).toBe(true);
+    }
+  });
+
+  test('Back is the step before, never the loader, and nothing on the first screen', () => {
+    expect(prevOf(STEP.age)).toBeNull();
+    expect(prevOf(STEP.focus)).toBe(STEP.age);
+    expect(prevOf('/s/7/note')).toBe(STEP.safety);
+    expect(prevOf(STEP.wake)).toBe(STEP.felt);
+    expect(prevOf(STEP.name)).toBe(STEP.commit);
+    expect(prevOf(STEP.me)).toBeNull();
+    for (const path of ORDER.slice(1)) {
+      expect(ORDER.indexOf(prevOf(path)!), path).toBeLessThan(ORDER.indexOf(path));
+      expect(prevOf(path), path).not.toBe(STEP.building);
+    }
+  });
+
+  test('the order is the one the founders approved', () => {
+    expect(ORDER.join(' ')).toBe(
+      '/s/1 /s/2 /s/3 /s/36 /s/21 /s/5 /s/37 /s/22 /s/6 /s/7 /s/9 /s/38 /s/23 /s/28 /s/26 /s/11 /s/12 /s/32 /s/34 /s/35 /s/31 /s/14 /s/20 /s/15 /s/16 /s/17 /s/18',
+    );
   });
 
   test('the price needs her email, and the code where one was sent', () => {
@@ -80,6 +117,12 @@ describe('what the plan and the price say', () => {
   test('the plan has no length', () => {
     expect(planLine(ANSWERS)).toBe('5 min a day · seated');
     expect(planLine({ ...ANSWERS, start: 'standing', minutes: 10 })).toBe('10 min a day · standing');
+  });
+
+  test('running is only asked of a runner', () => {
+    expect(lifeFor(ANSWERS).some((o) => o.value === 'runs')).toBe(false);
+    expect(lifeFor({ ...ANSWERS, day: 'run_short' }).some((o) => o.value === 'runs')).toBe(true);
+    expect(lifeFor({ ...ANSWERS, day: 'run_long' }).some((o) => o.value === 'runs')).toBe(true);
   });
 
   test('her goals are listed from what she mentioned, and the list is empty when she mentioned nothing', () => {

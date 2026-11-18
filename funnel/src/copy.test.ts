@@ -44,6 +44,11 @@ const RETIRED = [
   'Helped with my heel pain',
   'A gift just for you',
   'per day',
+  'weakens your feet',
+  'not your fault',
+  'it can change',
+  'Day 1 of your plan is done',
+  'Member since',
 ];
 
 type Line = { where: string; text: string };
