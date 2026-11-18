@@ -46,6 +46,8 @@ export function StartDay1() {
   const [paused, setPaused] = useState(false);
   const leftRef = useRef(0);
 
+  /** She did the first move of today's session in the quiz, so what is here is the rest of it: Day 1 happens once. */
+  const begun = s.tryIt.skipped !== true && (s.tryIt.seconds ?? 0) > 0;
   const move = index >= 0 ? moves[index] : undefined;
   const total = moves.reduce((sum, m) => sum + Math.min(MOVE_CAP, m.seconds), 0);
 
@@ -89,9 +91,10 @@ export function StartDay1() {
           <AccessLine status={status} email={s.email} />
           <GetTheApp email={s.email} via={s.via} />
           <section className="stack">
-            <h2>Or start Day 1 right here</h2>
+            <h2>{begun ? 'Or finish today’s session here' : 'Or start today’s session here'}</h2>
             <p className="small">
-              {moves.length === 1 ? 'One move' : `${moves.length} moves`}, about {Math.max(1, Math.round(total / 60))}{' '}
+              {moves.length === 1 ? 'One move' : `${moves.length} moves`}
+              {begun ? ' left' : ''}, about {Math.max(1, Math.round(total / 60))}{' '}
               {Math.round(total / 60) > 1 ? 'minutes' : 'minute'}, in your browser. At your own pace.
             </p>
             {moves.map((m) => (
@@ -113,7 +116,7 @@ export function StartDay1() {
               begin(0);
             }}
           >
-            Start Day 1 in the browser
+            {begun ? 'Finish today’s session in the browser' : 'Start today’s session in the browser'}
           </button>
         </>
       ) : (
