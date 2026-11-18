@@ -8,29 +8,36 @@ import { Code, Email } from './screens/email';
 import { HealthData, Privacy, Terms } from './screens/legal';
 import { Plan } from './screens/plan';
 import { Price } from './screens/price';
-import { Age, Echo, Focus, Minutes, Safety, SafetyNote, Start, Tried, When, Who } from './screens/quiz';
+import { Age, Day, Focus, Minutes, Safety, SafetyNote, Since, Start, Tried, When } from './screens/quiz';
 import { StartDay1 } from './screens/start';
+import { Card, Fault, Goals, Life, Path, Summary } from './screens/story';
 import { After, Balance, Before, Building, TryMove } from './screens/try-it';
 import { useFunnel } from './state';
 
 const ROUTES: Readonly<Record<string, ComponentType>> = {
   '/': Age,
   [STEP.age]: Age,
+  [STEP.card]: Card,
   [STEP.focus]: Focus,
   [STEP.when]: When,
-  [STEP.echo]: Echo,
+  [STEP.since]: Since,
   [STEP.tried]: Tried,
+  [STEP.day]: Day,
   [STEP.start]: Start,
   [STEP.safety]: Safety,
   '/s/7/note': SafetyNote,
-  [STEP.who]: Who,
   [STEP.minutes]: Minutes,
+  [STEP.life]: Life,
+  [STEP.fault]: Fault,
+  [STEP.path]: Path,
+  [STEP.goals]: Goals,
   [STEP.before]: Before,
   [STEP.move]: TryMove,
   [STEP.after]: After,
   [STEP.balance]: Balance,
   [STEP.building]: Building,
   [STEP.plan]: Plan,
+  [STEP.summary]: Summary,
   [STEP.email]: Email,
   [STEP.code]: Code,
   [STEP.price]: Price,

@@ -43,9 +43,11 @@ type Events = {
   cancel_chosen: { choice: string };
   cancel_status: { status: string; matched_by: string };
   checkout_needs_sign_in: Record<string, never>;
-  offer_shown: { offer: string };
+  /** The one-time gift ($29.99 first year), shown once: after she closes checkout, leaves the price page, or answers "The price". */
+  exit_gift_shown: { offer: string; trigger: 'checkout_closed' | 'leave' | 'held_back' };
+  exit_gift_declined: { offer: string };
   offer_checkout_opened: { offer: string };
-  offer_bought: { offer: string };
+  exit_gift_purchased: { offer: string };
   offer_closed: { offer: string };
   offer_failed: { offer: string; code: string };
   plan_email_requested: Record<string, never>;

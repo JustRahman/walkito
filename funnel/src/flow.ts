@@ -1,6 +1,7 @@
 import { ONELINK } from './config';
 import { firstWeek, moveOf, todayOf, TRY_MOVE, type Focus, type Move, type PlanFacts } from './engine/plan';
 import type { Answers, FunnelState } from './state';
+import type { IconName } from './icons.gen';
 
 /**
  * The steps, by neutral path. A path says nothing about feet or health, so
@@ -8,20 +9,26 @@ import type { Answers, FunnelState } from './state';
  */
 export const STEP = {
   age: '/s/1',
+  card: '/s/20',
   focus: '/s/2',
   when: '/s/3',
-  echo: '/s/4',
+  since: '/s/21',
   tried: '/s/5',
+  day: '/s/22',
   start: '/s/6',
   safety: '/s/7',
-  who: '/s/8',
   minutes: '/s/9',
+  life: '/s/23',
+  fault: '/s/24',
+  path: '/s/25',
+  goals: '/s/26',
   before: '/s/10',
   move: '/s/11',
   after: '/s/12',
   balance: '/s/13',
   building: '/s/14',
   plan: '/s/15',
+  summary: '/s/27',
   email: '/s/16',
   code: '/s/17',
   price: '/s/18',
@@ -30,26 +37,38 @@ export const STEP = {
   cancel: '/s/cancel',
 } as const;
 
+/** The funnel in order, up to the price. */
+const ORDER: readonly string[] = [
+  STEP.age,
+  STEP.card,
+  STEP.focus,
+  STEP.when,
+  STEP.since,
+  STEP.tried,
+  STEP.day,
+  STEP.start,
+  STEP.safety,
+  STEP.minutes,
+  STEP.life,
+  STEP.fault,
+  STEP.path,
+  STEP.goals,
+  STEP.before,
+  STEP.move,
+  STEP.after,
+  STEP.balance,
+  STEP.building,
+  STEP.plan,
+  STEP.summary,
+  STEP.email,
+  STEP.code,
+  STEP.price,
+];
+
 /** Fast early, slower later: the bar moves most on the first answers. */
-export const PROGRESS: Readonly<Record<string, number>> = {
-  [STEP.age]: 0.12,
-  [STEP.focus]: 0.24,
-  [STEP.when]: 0.34,
-  [STEP.echo]: 0.41,
-  [STEP.tried]: 0.48,
-  [STEP.start]: 0.55,
-  [STEP.safety]: 0.62,
-  [STEP.who]: 0.68,
-  [STEP.minutes]: 0.74,
-  [STEP.before]: 0.79,
-  [STEP.move]: 0.83,
-  [STEP.after]: 0.87,
-  [STEP.balance]: 0.9,
-  [STEP.building]: 0.93,
-  [STEP.plan]: 0.95,
-  [STEP.email]: 0.97,
-  [STEP.code]: 0.98,
-};
+export const PROGRESS: Readonly<Record<string, number>> = Object.fromEntries(
+  ORDER.slice(0, -1).map((step, i, all) => [step, Math.round((0.1 + 0.88 * Math.sqrt((i + 1) / all.length)) * 100) / 100]),
+);
 
 export const FOCUS_LABEL: Readonly<Record<Focus, string>> = {
   heel: 'Heel and arch',
@@ -139,36 +158,21 @@ export function appLink(from: string): string {
 
 /** Where a visitor without the earlier answers should be sent instead. */
 export function missingStep(path: string, s: FunnelState): string | null {
-  const order: Array<[string, (s: FunnelState) => boolean]> = [
+  const required: Array<[string, (s: FunnelState) => boolean]> = [
     [STEP.age, (x) => x.answers.age != null],
     [STEP.focus, (x) => x.answers.focus != null],
     [STEP.when, (x) => x.answers.when != null],
+    [STEP.since, (x) => x.answers.since != null],
     [STEP.tried, (x) => x.answers.tried != null],
+    [STEP.day, (x) => x.answers.day != null],
     [STEP.start, (x) => x.answers.start != null],
     [STEP.safety, (x) => x.answers.safety != null],
     [STEP.minutes, (x) => x.answers.minutes != null],
+    [STEP.life, (x) => x.answers.life != null],
+    [STEP.goals, (x) => x.answers.goals != null],
   ];
-  const needs: Readonly<Record<string, number>> = {
-    [STEP.focus]: 1,
-    [STEP.when]: 2,
-    [STEP.echo]: 3,
-    [STEP.tried]: 3,
-    [STEP.start]: 4,
-    [STEP.safety]: 5,
-    [STEP.who]: 6,
-    [STEP.minutes]: 6,
-    [STEP.before]: 7,
-    [STEP.move]: 7,
-    [STEP.after]: 7,
-    [STEP.balance]: 7,
-    [STEP.building]: 7,
-    [STEP.plan]: 7,
-    [STEP.email]: 7,
-    [STEP.code]: 7,
-    [STEP.price]: 7,
-  };
-  const n = needs[path] ?? 0;
-  for (const [step, done] of order.slice(0, n)) if (!done(s)) return step;
+  const at = ORDER.indexOf(path);
+  if (at > 0) for (const [step, done] of required) if (ORDER.indexOf(step) < at && !done(s)) return step;
   if ((path === STEP.code || path === STEP.price) && s.email == null) return STEP.email;
   if (path === STEP.price && s.verified !== true) return STEP.code;
   return null;
@@ -186,4 +190,87 @@ export function shortDate(date: Date): string {
 
 export function longDate(date: Date): string {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+/** Who the plan is for, from her usual day. */
+export type Kind = 'desk' | 'runner' | 'feet';
+
+export function kindOf(a: Answers): Kind {
+  return a.day === 'run_short' || a.day === 'run_long' ? 'runner' : a.day === 'feet' ? 'feet' : 'desk';
+}
+
+export const PLAN_NAME: Readonly<Record<Kind, string>> = {
+  desk: 'Desk Feet Reset',
+  runner: 'Runner’s Feet',
+  feet: 'On-Your-Feet Reset',
+};
+
+/** The app's program runs twelve weeks. */
+export const PLAN_WEEKS = 12;
+
+/** "12 weeks · 5 min a day · seated" */
+export function planLine(a: Answers): string {
+  return `${PLAN_WEEKS} weeks · ${a.minutes ?? 5} min a day · ${a.start === 'standing' ? 'standing' : 'seated'}`;
+}
+
+export type LifeOption = { value: string; label: string; goal: string; goalLabel: string; icon: IconName };
+
+/** How her feet get in her way, each with its mirror: the goal she can pick back. */
+export const LIFE: readonly LifeOption[] = [
+  { value: 'mornings', label: 'I dread my first steps in the morning', goal: 'mornings', goalLabel: 'Enjoy my mornings again', icon: 'sunrise' },
+  { value: 'walks', label: 'I skip walks', goal: 'walk', goalLabel: 'Walk without thinking about my feet', icon: 'leg' },
+  { value: 'shift', label: 'I can’t stand through my shift', goal: 'shift', goalLabel: 'Stand through my day', icon: 'briefcase' },
+  { value: 'runs', label: 'I cut my runs short', goal: 'runs', goalLabel: 'Run longer', icon: 'runningShoe' },
+  { value: 'shoes', label: 'I can’t wear the shoes I like', goal: 'shoes', goalLabel: 'Wear the shoes I like', icon: 'sandal' },
+  { value: 'evening', label: 'My feet hurt by evening', goal: 'evenings', goalLabel: 'Enjoy my evenings on my feet', icon: 'moon' },
+];
+
+/** A runner sees running first. */
+export function lifeFor(a: Answers): readonly LifeOption[] {
+  if (kindOf(a) !== 'runner') return LIFE;
+  return [...LIFE.filter((o) => o.value === 'runs'), ...LIFE.filter((o) => o.value !== 'runs')];
+}
+
+export function lifeLabels(a: Answers): string[] {
+  return LIFE.filter((o) => a.life?.includes(o.value)).map((o) => o.label);
+}
+
+export function goalLabels(a: Answers): string[] {
+  return LIFE.filter((o) => a.goals?.includes(o.goal)).map((o) => o.goalLabel);
+}
+
+/** Her goals before she picks: the mirror of what she said, or simply walking. */
+export function suggestedGoals(a: Answers): string[] {
+  const mirror = LIFE.filter((o) => a.life?.includes(o.value)).map((o) => o.goal);
+  return mirror.length > 0 ? mirror : ['walk'];
+}
+
+export const WHEN_LABEL: Readonly<Record<NonNullable<Answers['when']>, string>> = {
+  morning: 'First steps in the morning',
+  sitting: 'Standing up after sitting',
+  evening: 'After work, by evening',
+  running: 'During or after runs',
+  allday: 'All day',
+  varies: 'It varies',
+};
+
+export const DAY_LABEL: Readonly<Record<NonNullable<Answers['day']>, string>> = {
+  sit8: 'Sitting 8+ hours a day',
+  sit4: 'Sitting 4–8 hours a day',
+  feet: 'On your feet most of the day',
+  run_short: 'Running under 10 miles a week',
+  run_long: 'Running 10+ miles a week',
+};
+
+export const SINCE_LABEL: Readonly<Record<NonNullable<Answers['since']>, string>> = {
+  new: 'Less than 3 months',
+  months: '3 to 12 months',
+  year: '1 to 3 years',
+  years: 'More than 3 years',
+};
+
+/** Her first name as she typed it, or null. */
+export function firstName(s: FunnelState): string | null {
+  const name = s.name?.trim() ?? '';
+  return name === '' ? null : name;
 }

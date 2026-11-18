@@ -359,6 +359,71 @@ details[open] { padding-bottom: 1rem; }
 .trust .reviewer { display: flex; gap: 0.6rem; align-items: center; justify-content: center; }
 .trust .reviewer img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: none; }
 
+/* Her Walkito card: Day 0, under her name. */
+.member {
+  border-radius: 24px;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(135deg, #a78bfa 0%, var(--primary) 45%, #f59e0b 130%);
+  box-shadow: 0 18px 40px -18px rgba(91, 33, 182, 0.55);
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 1.45;
+}
+.member .top { display: flex; align-items: center; gap: 0.55rem; padding: 1.1rem 1.2rem 0; font-weight: 800; font-size: 1.15rem; }
+.member .top img { border-radius: 11px; }
+.member .mid { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 1.2rem 0.9rem; }
+.member .mid .k { font-size: 0.95rem; font-weight: 700; opacity: 0.85; }
+.member .mid b { font-size: 3rem; line-height: 1; }
+.member .bottom { display: flex; justify-content: space-between; gap: 1rem; padding: 0.8rem 1.2rem 1rem; background: rgba(17, 17, 20, 0.82); }
+.member .bottom .k { display: block; font-size: 0.8rem; opacity: 0.7; font-weight: 700; }
+.member .bottom .v { display: block; font-size: 1.15rem; font-weight: 800; overflow-wrap: anywhere; }
+
+/* One big line and one picture. */
+.statement { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.9rem; padding: 1.5rem 0.5rem 0.5rem; }
+.statement .hero { height: 190px; }
+.statement h1 { font-size: 2.2rem; }
+
+.review { margin: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.review .stars { color: #f59e0b; letter-spacing: 0.1em; }
+.review blockquote { margin: 0; color: var(--muted); }
+
+.down { align-self: center; width: 2px; height: 22px; background: var(--primary-line); position: relative; margin: -0.6rem 0; }
+.down::after { content: ''; position: absolute; left: -5px; bottom: -2px; border: 6px solid transparent; border-top-color: var(--primary-line); }
+.plain { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; font-weight: 700; }
+
+/* Her plan, by name, as Runna shows one. */
+.named {
+  border-radius: 24px;
+  padding: 1.6rem 1.25rem 1.4rem;
+  color: #fff;
+  text-align: center;
+  background: radial-gradient(120% 90% at 50% 0%, #8b5cf6 0%, #4c1d95 70%, #2e1065 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.named .badge {
+  width: 96px;
+  height: 108px;
+  display: grid;
+  place-items: center;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.12);
+  border: 3px solid #f0abfc;
+  clip-path: polygon(50% 0, 100% 14%, 100% 62%, 50% 100%, 0 62%, 0 14%);
+}
+.named h1 { font-size: 2rem; }
+.named p { opacity: 0.9; font-weight: 700; }
+
+.done-mark { width: 72px; height: 72px; margin: 0 auto; border-radius: 50%; background: var(--positive); display: grid; place-items: center; }
+.done-mark svg { width: 40px; height: 40px; }
+.ticks.reading li.pending { opacity: 0.45; }
+.gift .lead { font-weight: 700; }
+
 @media (prefers-reduced-motion: reduce) {
   .fade, .pop, .check.nudge { animation: none; }
   .progress > div, .ring > div, .dial .fg { transition: none; }

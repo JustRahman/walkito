@@ -13,11 +13,11 @@ import {
   SUPPORT_EMAIL,
   url,
 } from '../config';
-import { addDays, PROGRAM, shortDate, STEP } from '../flow';
+import { addDays, goalLabels, kindOf, PLAN_NAME, planLine, shortDate, STEP } from '../flow';
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
-import { go } from '../router';
+import { back, go } from '../router';
 import { update, useFunnel } from '../state';
 import { AppButton, Check, Choice, Page } from '../ui';
 import { TrustLines } from './trust';
@@ -48,7 +48,7 @@ export function Price() {
   const [picked, setPlan] = useState<PlanId>(s.plan ?? 'monthly');
   const [agreed, setAgreed] = useState(false);
   const packages = useRef<Promise<Packages | null> | null>(null);
-  const [phase, setPhase] = useState<'idle' | 'opening' | 'open' | 'held-back'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'opening' | 'open' | 'gift' | 'held-back'>('idle');
   const [heldBack, setHeldBack] = useState<string | null>(null);
   /** The offer is on screen in this visit (it was not shown before). */
   const [offerShownNow, setOfferShownNow] = useState(false);
@@ -140,7 +140,7 @@ export function Price() {
     }
     if (result.status === 'cancelled') {
       track('checkout_closed', { plan });
-      setPhase('held-back');
+      setPhase(showGift('checkout_closed') ? 'gift' : 'held-back');
       return;
     }
     track('checkout_failed', { plan, code: result.code });
@@ -167,6 +167,20 @@ export function Price() {
     return false;
   };
 
+  /**
+   * The one-time gift, at most once per person: marked before it is seen, so
+   * a reload never brings it back. False when it was shown before, she has
+   * bought, or RevenueCat has no such product.
+   */
+  const showGift = (trigger: 'checkout_closed' | 'leave' | 'held_back'): boolean => {
+    if (!offerReady || s.offerShown === true || s.purchased === true) return false;
+    setOfferShownNow(trigger === 'held_back');
+    update({ offerShown: true });
+    void saveLead({ offer_shown_at: new Date().toISOString() });
+    track('exit_gift_shown', { offer: PRICE_OFFER.id, trigger });
+    return true;
+  };
+
   /** The one-time offer's checkout: the same consent, events and success page as the main plans. */
   const buyOffer = async (consentText: string): Promise<string | null> => {
     const user = await currentUser();
@@ -186,7 +200,7 @@ export function Price() {
     const result = await buy(user.id, pkg, s.email);
     if (result.status === 'bought') {
       update({ purchased: true, plan: 'yearly' });
-      track('offer_bought', { offer: PRICE_OFFER.id });
+      track('exit_gift_purchased', { offer: PRICE_OFFER.id });
       track('purchase_completed', { plan: 'yearly_offer' });
       meta('Purchase', `purchase-${user.id}`, { value: PRICE_OFFER.intro, currency: 'USD' });
       go(STEP.start1, { replace: true });
@@ -200,38 +214,61 @@ export function Price() {
     return result.message;
   };
 
-  const focus = s.answers.focus ?? 'heel';
+  const goals = goalLabels(s.answers);
+  const retest = addDays(today, 14);
   const perDay = (total: number, days: number) => money(Math.round((total / days) * 100) / 100);
   const monthDays = Math.round((charge.getTime() - today.getTime()) / 86_400_000);
   const yearDays = Math.round((renewYear.getTime() - today.getTime()) / 86_400_000);
   return (
-    <Page backTo={STEP.plan} footer>
+    <Page
+      backTo={STEP.summary}
+      onBack={phase === 'idle' ? () => (showGift('leave') ? setPhase('gift') : back(STEP.summary)) : undefined}
+      footer
+    >
       <div className="stack center">
-        <span className="chip" style={{ alignSelf: 'center' }}>
-          {PROGRAM[focus]}
-        </span>
-        <h1>Start your plan</h1>
-        <div className="chips" style={{ justifyContent: 'center' }}>
-          <span className="chip">{s.answers.start === 'standing' ? 'Standing' : 'Seated'}</span>
-          <span className="chip">{s.answers.minutes ?? 5} min a day</span>
-          <span className="chip">New every week</span>
-        </div>
+        <span className="eyebrow">Start your plan</span>
+        <h1>{PLAN_NAME[kindOf(s.answers)]}</h1>
+        <p className="small">{planLine(s.answers)}</p>
       </div>
+      {goals.length > 0 && phase !== 'gift' && (
+        <section className="card soft stack gap-s" aria-label="Your goals">
+          <span className="eyebrow">For your goals</span>
+          <ul className="ticks">
+            {goals.slice(0, 3).map((g) => (
+              <li key={g}>{g}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      {phase === 'held-back' ? (
+      {phase === 'gift' ? (
+        <section className="stack gift">
+          <div className="stack gap-s center">
+            <img className="hero s pop" src={url('/img/art-star.webp')} alt="" />
+            <span className="eyebrow">A one-time gift</span>
+            <h2>Your first year for {money(PRICE_OFFER.intro)}</h2>
+            <p className="lead">Then {money(PRICE_OFFER.price)} a year. Cancel any time.</p>
+          </div>
+          <OfferCard onBuy={buyOffer} headline={false} />
+          <button
+            className="btn quiet"
+            type="button"
+            onClick={() => {
+              track('exit_gift_declined', { offer: PRICE_OFFER.id });
+              setPhase('held-back');
+            }}
+          >
+            No, thanks
+          </button>
+        </section>
+      ) : phase === 'held-back' ? (
         <HeldBack
           picked={heldBack}
           offer={heldBack === 'price' && offerShownNow}
           onPick={(reason) => {
             setHeldBack(reason);
             track('held_back', { reason });
-            if (reason === 'price' && offerReady && s.offerShown !== true) {
-              // Once per person: marked before it is seen, so a reload never brings it back.
-              setOfferShownNow(true);
-              update({ offerShown: true });
-              void saveLead({ offer_shown_at: new Date().toISOString() });
-              track('offer_shown', { offer: PRICE_OFFER.id });
-            }
+            if (reason === 'price') showGift('held_back');
             if (reason === 'think') {
               void saveLead({ plan_email_requested_at: new Date().toISOString() });
               track('plan_email_requested');
@@ -303,12 +340,14 @@ export function Price() {
               {plan === 'monthly' ? (
                 <>
                   <TimelineRow now title="Today" text={`${money(m.intro)}. Your plan starts now.`} />
+                  <TimelineRow title={shortDate(retest)} text="Day 14: redo your first move and compare." />
                   <TimelineRow title={shortDate(addDays(charge, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
                   <TimelineRow title={shortDate(charge)} text={`${money(m.price)} a month. Cancel any time.`} />
                 </>
               ) : (
                 <>
                   <TimelineRow now title="Today" text={`${money(y.price)} for a year.`} />
+                  <TimelineRow title={shortDate(retest)} text="Day 14: redo your first move and compare." />
                   <TimelineRow title={yearDate(addDays(renewYear, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
                   <TimelineRow title={yearDate(renewYear)} text={`${money(y.price)} for the next year. Cancel any time.`} />
                 </>
@@ -473,7 +512,7 @@ function HeldBack({
  * year. The same unticked consent box as the main plans, with the exact
  * amounts and the renewal date.
  */
-function OfferCard({ onBuy }: { onBuy: (consentText: string) => Promise<string | null> }) {
+function OfferCard({ onBuy, headline = true }: { onBuy: (consentText: string) => Promise<string | null>; headline?: boolean }) {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -481,11 +520,13 @@ function OfferCard({ onBuy }: { onBuy: (consentText: string) => Promise<string |
   const consent = `I understand: ${money(PRICE_OFFER.intro)} today for my first year, then ${money(PRICE_OFFER.price)} every year from ${yearDate(renews)} until I cancel.`;
   return (
     <div className="card stack">
-      <p className="lead">
-        <b>
-          Your first year for {money(PRICE_OFFER.intro)}. Then {money(PRICE_OFFER.price)} a year. Cancel any time.
-        </b>
-      </p>
+      {headline && (
+        <p className="lead">
+          <b>
+            Your first year for {money(PRICE_OFFER.intro)}. Then {money(PRICE_OFFER.price)} a year. Cancel any time.
+          </b>
+        </p>
+      )}
       <Check checked={agreed} onChange={setAgreed}>
         {consent}
       </Check>

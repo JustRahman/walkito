@@ -5,8 +5,8 @@ import { peopleCount } from '../lib/people';
 
 /**
  * Small, calm lines under the plan and the price. Each one is true or hidden:
- * the guideline line waits for its source link, Dr. Shayman's line for her
- * written OK, and "1,000+" for a real count from the server. No number here
+ * the guideline line waits for its source link, Dr. Shayman's line says only
+ * what her contract covers, and "1,000+" waits for a real count from the server. No number here
  * is typed in by hand except the App Store rating.
  */
 export function TrustLines() {
@@ -37,7 +37,7 @@ export function TrustLines() {
       {CARLA_APPROVED && (
         <div className="reviewer">
           <img src={CARLA_PHOTO} alt="" width={40} height={40} />
-          <span className="small">Exercises reviewed by Dr. Carla Shayman, PT, DPT</span>
+          <span className="small">Dr. Carla Shayman, PT, DPT, reviewed our heel pain and flat feet guides</span>
         </div>
       )}
     </section>

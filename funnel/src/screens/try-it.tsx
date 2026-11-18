@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { FOCUS_LABEL, offersBalance, PROGRESS, STEP, tryMove } from '../flow';
+import { DAY_LABEL, FOCUS_LABEL, goalLabels, kindOf, offersBalance, PLAN_NAME, PROGRESS, SINCE_LABEL, STEP, tryMove, WHEN_LABEL } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel } from '../state';
-import { clock, Clip, Cta, Page, Scale } from '../ui';
+import { clock, Clip, Cta, Page, Scale, Tick } from '../ui';
 
 export function Before() {
   const s = useFunnel();
@@ -14,7 +14,7 @@ export function Before() {
     setTimeout(() => go(STEP.move), 220);
   };
   return (
-    <Page progress={PROGRESS[STEP.before]} backTo={STEP.minutes}>
+    <Page progress={PROGRESS[STEP.before]} backTo={STEP.goals}>
       <div className="stack gap-s">
         <span className="eyebrow">Try it now</span>
         <h2>One move. 60 seconds. Seated.</h2>
@@ -142,8 +142,11 @@ export function After() {
   return (
     <Page progress={PROGRESS[STEP.after]} backTo={STEP.move}>
       <div className="stack gap-s center">
+        <div className="done-mark pop" aria-hidden="true">
+          <Tick />
+        </div>
         <span className="eyebrow">Day 1, move 1</span>
-        <h2>That’s your first move done</h2>
+        <h1>You did your first move</h1>
       </div>
       <div className="card pop">
         <div className="row center">
@@ -266,35 +269,50 @@ export function Balance() {
   );
 }
 
-const BUILD_MS = 3600;
+const LINE_MS = 650;
 const R = 72;
 const TURN = 2 * Math.PI * R;
 
-/** The plan being put together: a dial that fills as her own answers tick off. */
+/**
+ * Her answers, read back one by one as the plan is put together. Every line
+ * is something she told us or did, so the work shown is the work done.
+ */
 export function Building() {
   const s = useFunnel();
+  const a = s.answers;
+  const tried = (a.tried ?? []).filter((t) => t !== 'nothing');
+  const goals = goalLabels(a);
+  const moved = s.tryIt.skipped !== true && (s.tryIt.seconds ?? 0) > 0;
   const lines = [
-    FOCUS_LABEL[s.answers.focus ?? 'heel'],
-    s.answers.start === 'standing' ? 'Standing, hand on a counter' : s.answers.start === 'bed' ? 'On the edge of the bed' : 'In a chair',
-    `${s.answers.minutes ?? 5} minutes a day`,
-    'Built on physical therapy guidelines',
-  ];
+    `${FOCUS_LABEL[a.focus ?? 'heel']} · ${WHEN_LABEL[a.when ?? 'varies'].toLowerCase()}`,
+    a.since != null ? `For ${SINCE_LABEL[a.since].toLowerCase()}` : null,
+    a.day != null ? `${DAY_LABEL[a.day]}` : null,
+    tried.length > 0 ? `Tried before: ${tried.length} ${tried.length === 1 ? 'thing' : 'things'}, so new moves first` : 'First time with foot exercises',
+    a.start === 'standing' ? 'Standing, a hand on a counter' : a.start === 'bed' ? 'On the edge of the bed' : 'In a chair',
+    a.safety != null && a.safety !== 'none' ? 'A gentle, seated start' : null,
+    `${a.minutes ?? 5} minutes a day`,
+    moved ? 'Your first move: done' : null,
+    goals.length > 0 ? `Goals: ${goals.slice(0, 2).join(', ')}${goals.length > 2 ? ` +${goals.length - 2}` : ''}` : null,
+    `Your plan: ${PLAN_NAME[kindOf(a)]}`,
+  ].filter((line): line is string => line != null);
+  const total = lines.length * LINE_MS;
   const [done, setDone] = useState(0);
   useEffect(() => {
     const started = Date.now();
     const timer = setInterval(() => {
-      const part = Math.min(1, (Date.now() - started) / BUILD_MS);
+      const part = Math.min(1, (Date.now() - started) / total);
       setDone(part);
       if (part >= 1) {
         clearInterval(timer);
-        setTimeout(() => go(STEP.plan, { replace: true }), 450);
+        setTimeout(() => go(STEP.plan, { replace: true }), 700);
       }
     }, 60);
     return () => clearInterval(timer);
-  }, []);
+  }, [total]);
+  const shown = Math.min(lines.length, Math.floor(done * lines.length) + 1);
   return (
     <Page progress={PROGRESS[STEP.building]}>
-      <h2 className="center">Building your plan…</h2>
+      <h2 className="center">Analyzing your answers</h2>
       <div className="dial" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(done * 100)}>
         <svg viewBox="0 0 168 168">
           <circle className="bg" cx="84" cy="84" r={R} />
@@ -303,9 +321,9 @@ export function Building() {
         <b>{Math.round(done * 100)}%</b>
       </div>
       <div className="card">
-        <ul className="ticks">
-          {lines.map((line, i) => (
-            <li key={line} style={{ opacity: done >= (i + 1) / (lines.length + 0.5) ? 1 : 0.25, transition: 'opacity 300ms ease' }}>
+        <ul className="ticks reading">
+          {lines.slice(0, shown).map((line, i) => (
+            <li key={line} className={i < shown - 1 || done >= 1 ? 'fade' : 'fade pending'}>
               {line}
             </li>
           ))}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
-import { url } from './config';
+import { CARLA_PHOTO, url } from './config';
 import { appLink } from './flow';
 import { ICONS, type IconName } from './icons.gen';
 import { track } from './lib/analytics';
@@ -12,18 +12,21 @@ export function Page({
   children,
   progress,
   backTo,
+  onBack,
   footer = false,
 }: {
   children: ReactNode;
   progress?: number;
   backTo?: string;
+  /** Replaces going back, once: the price page shows its one-time gift first. */
+  onBack?: () => void;
   footer?: boolean;
 }) {
   return (
     <main className="page">
       <header className="topbar">
         {backTo != null && (
-          <button className="back" type="button" onClick={() => back(backTo)} aria-label="Back">
+          <button className="back" type="button" onClick={() => (onBack != null ? onBack() : back(backTo))} aria-label="Back">
             <Chevron />
           </button>
         )}
@@ -158,14 +161,19 @@ export function Check({ checked, onChange, children, className }: { checked: boo
   );
 }
 
-/** Where the exercises come from. No person is named: we hold no consent to name one. */
-export function Guidelines({ line }: { line?: string }) {
+/**
+ * Dr. Carla Shayman, with exactly what we hold in writing: her Upwork
+ * contract (Oct 30, 2026) covers her review of our two English guides, heel
+ * pain and flat feet, and the use of her bio and photo. Never "reviewed every
+ * exercise" without her broader written consent.
+ */
+export function Reviewer() {
   return (
     <div className="person">
-      <img src={url('/img/art-shield.webp')} alt="" width={56} height={56} style={{ objectFit: 'contain' }} />
+      <img src={CARLA_PHOTO} alt="Dr. Carla Shayman" width={56} height={56} />
       <div>
-        <div style={{ fontWeight: 800 }}>Exercises built on physical therapy guidelines</div>
-        <div className="small">{line ?? 'Gentle, step by step, with a video for every move.'}</div>
+        <div style={{ fontWeight: 800 }}>Dr. Carla Shayman, PT, DPT</div>
+        <div className="small">Physical therapist. She reviewed our heel pain and flat feet guides.</div>
       </div>
     </div>
   );

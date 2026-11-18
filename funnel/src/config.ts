@@ -78,10 +78,12 @@ export const ONELINK = 'https://walkito.onelink.me/2L97/';
 export const PT_GUIDELINE_URL = '';
 
 /**
- * "Exercises reviewed by Dr. Carla Shayman, PT, DPT" with her photo. Hidden
- * until she has agreed in writing to be named in the funnel and its ads.
+ * Dr. Carla Shayman's name and photo, worded as her Upwork contract (Oct 30,
+ * 2026) covers: she reviewed our heel pain and flat feet guides, and we may
+ * use her bio. Rahim asked for her back on Nov 18. Not "reviewed every
+ * exercise": that needs her broader written consent.
  */
-export const CARLA_APPROVED = false;
+export const CARLA_APPROVED = true;
 
 /** Her photo, as walkito.site already serves it (the funnel runs under walkito.site/go). */
 export const CARLA_PHOTO = '/team/carla-shayman.webp';

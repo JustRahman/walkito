@@ -11,11 +11,18 @@ import type { Focus } from './engine/plan';
 export type Answers = {
   age?: '75+' | '65-74' | '55-64' | 'under55';
   focus?: Focus;
-  when?: 'morning' | 'sitting' | 'evening' | 'allday' | 'varies';
+  when?: 'morning' | 'sitting' | 'evening' | 'running' | 'allday' | 'varies';
+  since?: 'new' | 'months' | 'year' | 'years';
   tried?: string[];
+  /** Her usual day: it names her plan (Desk, Runner, On your feet). */
+  day?: 'sit8' | 'sit4' | 'feet' | 'run_short' | 'run_long';
   start?: 'chair' | 'bed' | 'standing';
   safety?: 'surgery' | 'numb' | 'dizzy' | 'aid' | 'none';
   minutes?: 3 | 5 | 10;
+  /** How her feet get in the way of her day, in her words (LIFE in flow.ts). */
+  life?: string[];
+  /** What she wants back, the mirror of `life` (GOALS in flow.ts). */
+  goals?: string[];
 };
 
 export type TryIt = {
@@ -28,6 +35,8 @@ export type TryIt = {
 
 export type FunnelState = {
   answers: Answers;
+  /** Her first name, for her card and her plan. Kept in this browser only, never sent with her answers. */
+  name?: string;
   tryIt: TryIt;
   email?: string;
   /** How the last code was sent: a new address on this browser's account, or a sign-in to an existing one. */

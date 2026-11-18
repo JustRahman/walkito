@@ -5,7 +5,7 @@ import { PROGRESS, STEP } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, useFunnel, type Answers } from '../state';
-import { Choice, Guidelines, Cta, MultiChoice, Page, type IconName } from '../ui';
+import { Choice, Cta, MultiChoice, Page, Reviewer, type IconName } from '../ui';
 
 type Option<V> = { value: V; label: string; icon?: IconName; hint?: string; tag?: string };
 
@@ -66,7 +66,7 @@ export function Age() {
   const pick = (value: NonNullable<Answers['age']>) => {
     answer({ age: value });
     track('step_completed', { step: STEP.age });
-    setTimeout(() => go(STEP.focus), 180);
+    setTimeout(() => go(STEP.card), 180);
   };
   return (
     <Page footer>
@@ -87,7 +87,7 @@ export function Age() {
         ))}
       </div>
       <div className="card">
-        <Guidelines />
+        <Reviewer />
       </div>
       <p className="caption center">
         By choosing your age you agree to our <a href={url('/terms')}>Terms</a> and <a href={url('/privacy')}>Privacy Policy</a>.
@@ -101,14 +101,14 @@ export function Focus() {
     <Single
       path={STEP.focus}
       field="focus"
-      backTo={STEP.age}
-      title="What do you want help with first?"
+      backTo={STEP.card}
+      title="What bothers your feet most?"
       options={[
-        { value: 'heel', label: 'Heel or arch', icon: 'foot' },
-        { value: 'steady', label: 'Feeling steadier on my feet', icon: 'balance' },
-        { value: 'flat', label: 'Flat feet', icon: 'sandal' },
-        { value: 'allday', label: 'On my feet all day', icon: 'briefcase' },
-        { value: 'moving', label: 'Keeping my feet moving', icon: 'runningShoe' },
+        { value: 'heel', label: 'My heel or arch', icon: 'foot' },
+        { value: 'flat', label: 'Flat, tired arches', icon: 'sandal' },
+        { value: 'allday', label: 'Sore after a day on my feet', icon: 'briefcase' },
+        { value: 'moving', label: 'Stiff feet or ankles', icon: 'runningShoe' },
+        { value: 'steady', label: 'Feeling unsteady on my feet', icon: 'balance' },
       ]}
       next={STEP.when}
     />
@@ -124,47 +124,39 @@ export function When() {
       title="When do you notice it most?"
       options={[
         { value: 'morning', label: 'First steps in the morning', icon: 'sunrise' },
-        { value: 'sitting', label: 'After sitting', icon: 'couch' },
-        { value: 'evening', label: 'At the end of the day', icon: 'moon' },
-        { value: 'allday', label: 'Most of the day', icon: 'sun' },
+        { value: 'sitting', label: 'Standing up after sitting', icon: 'couch' },
+        { value: 'evening', label: 'After work, by evening', icon: 'moon' },
+        { value: 'running', label: 'During or after runs', icon: 'runningShoe' },
+        { value: 'allday', label: 'All day', icon: 'sun' },
         { value: 'varies', label: 'It varies', icon: 'leafInWind' },
       ]}
-      next={STEP.echo}
+      next={STEP.since}
     />
   );
 }
 
-const ECHO: Readonly<Record<NonNullable<Answers['when']>, { title: string; plan: string }>> = {
-  morning: { title: 'We’ll plan around your mornings', plan: 'Moves you can do on the edge of the bed, before your first steps.' },
-  sitting: { title: 'We’ll plan around your chair', plan: 'Moves you can do sitting down, before you stand up.' },
-  evening: { title: 'We’ll plan around your evenings', plan: 'Short, easy moves to wind down at the end of the day.' },
-  allday: { title: 'We’ll keep it short', plan: 'Moves you can fit in anywhere, a few minutes at a time.' },
-  varies: { title: 'We’ll keep it flexible', plan: 'Short moves you can do whenever suits you that day.' },
-};
-
-export function Echo() {
-  const s = useFunnel();
-  const echo = ECHO[s.answers.when ?? 'varies'];
+export function Since() {
   return (
-    <Page progress={PROGRESS[STEP.echo]} backTo={STEP.when}>
-      <div className="stack center" style={{ marginTop: '1rem' }}>
-        <img className="hero pop" src={url('/img/mascot-balance.png')} alt="" />
-        <h2>{echo.title}</h2>
-        <p className="lead">{echo.plan}</p>
-      </div>
-      <Cta>
-        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.echo }), go(STEP.tried))}>
-          Continue
-        </button>
-      </Cta>
-    </Page>
+    <Single
+      path={STEP.since}
+      field="since"
+      backTo={STEP.when}
+      title="How long has this been going on?"
+      options={[
+        { value: 'new', label: 'Less than 3 months', icon: 'seedling' },
+        { value: 'months', label: '3 to 12 months', icon: 'calendar' },
+        { value: 'year', label: '1 to 3 years', icon: 'calendar' },
+        { value: 'years', label: 'More than 3 years', icon: 'calendar' },
+      ]}
+      next={STEP.tried}
+    />
   );
 }
 
 const TRIED: ReadonlyArray<Option<string>> = [
   { value: 'stretching', label: 'Stretching on my own', icon: 'leg' },
   { value: 'insoles', label: 'Insoles or new shoes', icon: 'runningShoe' },
-  { value: 'pt', label: 'Physical therapy', icon: 'healthWorker' },
+  { value: 'pt', label: 'A doctor or physical therapist', icon: 'healthWorker' },
   { value: 'roller', label: 'Massage or a foot roller', icon: 'softball' },
   { value: 'videos', label: 'Videos online', icon: 'bulb' },
   { value: 'nothing', label: 'Nothing yet', icon: 'seedling' },
@@ -180,7 +172,7 @@ export function Tried() {
       return rest.includes(value) ? rest.filter((v) => v !== value) : [...rest, value];
     });
   return (
-    <Page progress={PROGRESS[STEP.tried]} backTo={STEP.echo}>
+    <Page progress={PROGRESS[STEP.tried]} backTo={STEP.since}>
       <div className="stack gap-s">
         <h2>What have you tried?</h2>
         <p className="small">Choose all that apply.</p>
@@ -200,13 +192,32 @@ export function Tried() {
           onClick={() => {
             answer({ tried: picked });
             track('step_completed', { step: STEP.tried });
-            go(STEP.start);
+            go(STEP.day);
           }}
         >
           Continue
         </button>
       </Cta>
     </Page>
+  );
+}
+
+export function Day() {
+  return (
+    <Single
+      path={STEP.day}
+      field="day"
+      backTo={STEP.tried}
+      title="What does your usual day look like?"
+      options={[
+        { value: 'sit8', label: 'Sitting most of the day', hint: '8 hours or more', icon: 'couch' },
+        { value: 'sit4', label: 'Sitting part of the day', hint: '4 to 8 hours', icon: 'briefcase' },
+        { value: 'feet', label: 'On my feet most of the day', icon: 'leg' },
+        { value: 'run_short', label: 'I run', hint: 'Under 10 miles a week', icon: 'runningShoe' },
+        { value: 'run_long', label: 'I run a lot', hint: '10 miles a week or more', icon: 'strength' },
+      ]}
+      next={STEP.start}
+    />
   );
 }
 
@@ -220,7 +231,7 @@ export function Start() {
     <Single
       path={STEP.start}
       field="start"
-      backTo={STEP.tried}
+      backTo={STEP.day}
       title="Where would you like to start?"
       options={[
         { value: 'chair', label: 'In a chair', icon: 'couch' },
@@ -246,7 +257,7 @@ export function Safety() {
         { value: 'aid', label: 'I use a cane or walker', icon: 'crutch' },
         { value: 'none', label: 'None of these', icon: 'check' },
       ]}
-      next={(value) => (value === 'none' ? STEP.who : '/s/7/note')}
+      next={(value) => (value === 'none' ? STEP.minutes : '/s/7/note')}
     />
   );
 }
@@ -260,31 +271,7 @@ export function SafetyNote() {
         <p className="lead">We’ll keep your first week seated. Please check with your doctor or physical therapist before you start.</p>
       </div>
       <Cta>
-        <button className="btn" type="button" onClick={() => go(STEP.who)}>
-          Continue
-        </button>
-      </Cta>
-    </Page>
-  );
-}
-
-export function Who() {
-  return (
-    <Page progress={PROGRESS[STEP.who]} backTo={STEP.safety}>
-      <div className="stack center">
-        <span className="eyebrow">How your plan works</span>
-        <h2>A few short moves a day, picked from your answers</h2>
-      </div>
-      <div className="card stack gap-l pop">
-        <Guidelines line="Each move shows how to do it, how much, and what to do if it doesn’t feel right." />
-        <ul className="ticks">
-          <li>A video for every move</li>
-          <li>Seated or standing, as you choose</li>
-          <li>A new week every week: easier, the same, or a step up</li>
-        </ul>
-      </div>
-      <Cta>
-        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.who }), go(STEP.minutes))}>
+        <button className="btn" type="button" onClick={() => go(STEP.minutes)}>
           Continue
         </button>
       </Cta>
@@ -297,14 +284,14 @@ export function Minutes() {
     <Single
       path={STEP.minutes}
       field="minutes"
-      backTo={STEP.who}
+      backTo={STEP.safety}
       title="How much time each day?"
       options={[
         { value: 3, label: '3 minutes', hint: 'A gentle start', icon: 'feather' },
         { value: 5, label: '5 minutes', hint: 'What we suggest', icon: 'stopwatch', tag: 'Suggested' },
         { value: 10, label: '10 minutes', hint: 'A fuller session', icon: 'strength' },
       ]}
-      next={STEP.before}
+      next={STEP.life}
     />
   );
 }
