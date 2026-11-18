@@ -86,3 +86,32 @@ describe('the quiz’s copy', () => {
     expect(back).toEqual([]);
   });
 });
+
+/**
+ * Two rules of the look that a stylesheet can break without a word of copy
+ * changing: sentence case typed in a screen and set in capitals by CSS, and
+ * text too small for the people reading it.
+ */
+const CSS = linesOf('styles.css', withoutComments(readFileSync(join(SRC, 'styles.css'), 'utf8')));
+const MIN_PX = 15;
+
+describe('the quiz’s type', () => {
+  test('nothing is set in capitals', () => {
+    expect(CSS.filter((l) => /text-transform\s*:\s*uppercase|small-caps/i.test(l.text)).map((l) => `${l.where}: ${l.text}`)).toEqual([]);
+  });
+
+  test(`no text is under ${MIN_PX}px`, () => {
+    const sizes = CSS.flatMap((l) => [...l.text.matchAll(/font-size\s*:\s*([^;}]+)/g)].map((m) => ({ where: l.where, value: m[1]!.trim() })));
+    expect(sizes.length).toBeGreaterThan(30);
+    const small = sizes.filter(({ value }) => {
+      const m = value.match(/^([\d.]+)(rem|px)$/);
+      // Anything but rem or px (em, %, clamp) cannot be checked here, so it is not allowed.
+      return m == null || Number(m[1]) * (m[2] === 'rem' ? 16 : 1) < MIN_PX;
+    });
+    expect(small.map((s) => `${s.where}: ${s.value}`)).toEqual([]);
+  });
+
+  test('a size or a case is never set in a screen, where the two tests above cannot see it', () => {
+    expect(LINES.filter((l) => /fontSize|textTransform|fontVariant/.test(l.text)).map((l) => `${l.where}: ${l.text}`)).toEqual([]);
+  });
+});

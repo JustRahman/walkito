@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { ROUTES } from './App';
 import { PRICE_OFFER, PRICE_VARIANTS, yearlySaving } from './config';
-import { mentionedGoals, missingStep, ORDER, planLine, STEP } from './flow';
+import { mentionedGoals, missingStep, ORDER, planLine, sectionOf, STEP } from './flow';
 import type { Answers, FunnelState } from './state';
 
 const ANSWERS: Answers = {
@@ -56,6 +56,17 @@ describe('the funnel’s paths', () => {
         expect(ORDER.indexOf(to), `${path} -> ${to}`).toBeLessThan(ORDER.indexOf(path));
       }
     expect(sent).toBeGreaterThan(ORDER.length);
+  });
+
+  test('every step is in one of the four parts named over the progress bar', () => {
+    for (const path of ORDER) expect(sectionOf(path), path).not.toBeNull();
+    expect(sectionOf(STEP.focus)).toBe('About you');
+    expect(sectionOf('/s/7/note')).toBe('About you');
+    expect(sectionOf(STEP.goals)).toBe('Your goals');
+    expect(sectionOf(STEP.after)).toBe('Your first move');
+    expect(sectionOf(STEP.email)).toBe('Your plan');
+    expect(sectionOf(STEP.me)).toBeNull();
+    expect(sectionOf('/terms')).toBeNull();
   });
 
   test('the price needs her email, and the code where one was sent', () => {
