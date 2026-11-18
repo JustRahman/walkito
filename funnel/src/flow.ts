@@ -1,7 +1,6 @@
 import { ONELINK } from './config';
 import { firstWeek, moveOf, todayOf, TRY_MOVE, type Focus, type Move, type PlanFacts } from './engine/plan';
 import type { Answers, FunnelState } from './state';
-import type { IconName } from './icons.gen';
 
 /**
  * The steps, by neutral path. A path says nothing about feet or health, so
@@ -224,16 +223,16 @@ export function planLine(a: Answers): string {
   return `${a.minutes ?? 5} min a day · ${where}`;
 }
 
-export type LifeOption = { value: string; label: string; goal: string; goalLabel: string; icon: IconName; color: string };
+export type LifeOption = { value: string; label: string; goal: string; goalLabel: string };
 
 /** How her feet get in her way, each with its mirror: the goal she can pick back. */
 export const LIFE: readonly LifeOption[] = [
-  { value: 'mornings', label: 'I dread my first steps in the morning', goal: 'mornings', goalLabel: 'Enjoy my mornings again', icon: 'sunrise', color: '#f08a24' },
-  { value: 'walks', label: 'I skip walks', goal: 'walk', goalLabel: 'Walk without thinking about my feet', icon: 'leg', color: '#0f9f8f' },
-  { value: 'shift', label: 'I can’t stand through my shift', goal: 'shift', goalLabel: 'Stand through my day', icon: 'briefcase', color: '#2f6fe0' },
-  { value: 'runs', label: 'I cut my runs short', goal: 'runs', goalLabel: 'Run longer', icon: 'runningShoe', color: '#1f9d55' },
-  { value: 'shoes', label: 'I can’t wear the shoes I like', goal: 'shoes', goalLabel: 'Wear the shoes I like', icon: 'sandal', color: '#d9467f' },
-  { value: 'evening', label: 'My feet hurt by evening', goal: 'evenings', goalLabel: 'Enjoy my evenings on my feet', icon: 'moon', color: '#7c3aed' },
+  { value: 'mornings', label: 'I dread my first steps in the morning', goal: 'mornings', goalLabel: 'Enjoy my mornings again' },
+  { value: 'walks', label: 'I skip walks', goal: 'walk', goalLabel: 'Walk without thinking about my feet' },
+  { value: 'shift', label: 'I can’t stand through my shift', goal: 'shift', goalLabel: 'Stand through my day' },
+  { value: 'runs', label: 'I cut my runs short', goal: 'runs', goalLabel: 'Run longer' },
+  { value: 'shoes', label: 'I can’t wear the shoes I like', goal: 'shoes', goalLabel: 'Wear the shoes I like' },
+  { value: 'evening', label: 'My feet hurt by evening', goal: 'evenings', goalLabel: 'Enjoy my evenings on my feet' },
 ];
 
 /** A runner sees running first. */

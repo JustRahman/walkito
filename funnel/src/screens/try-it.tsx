@@ -21,7 +21,7 @@ import {
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel, type TryIt } from '../state';
-import { Choice, clock, Clip, Cta, Page, Slide, Tick } from '../ui';
+import { ADVANCE_MS, Choice, clock, Clip, Cta, Page, Slide, Tick } from '../ui';
 
 const LENGTH = 60;
 
@@ -124,15 +124,13 @@ const FELT: ReadonlyArray<{ value: NonNullable<TryIt['felt']>; label: string }> 
   { value: 'unsure', label: 'Not sure I did it right' },
 ];
 
-/** The move's still on a warm top, the question in words (Headspace's "How'd it go?"). */
+/** The move's still on top, the question in words (Headspace's "How'd it go?"). */
 function Felt({ children, backTo, progress }: { children: ReactNode; backTo: string; progress: string }) {
   const s = useFunnel();
   const move = tryMove(s.answers);
   return (
     <Page progress={PROGRESS[progress]} backTo={backTo}>
-      <div className="felt-top">
-        <img src={move.poster} alt="" />
-      </div>
+      <img className="still" src={move.poster} alt="" />
       {children}
     </Page>
   );
@@ -144,7 +142,7 @@ export function After() {
   const pick = (felt: NonNullable<TryIt['felt']>) => {
     update((x) => ({ tryIt: { ...x.tryIt, felt } }));
     track('step_completed', { step: STEP.after });
-    setTimeout(() => go(STEP.felt), 200);
+    setTimeout(() => go(STEP.felt), ADVANCE_MS);
   };
   return (
     <Felt backTo={STEP.move} progress={STEP.after}>
@@ -154,7 +152,7 @@ export function After() {
       </div>
       <div className="stack">
         {FELT.map((o) => (
-          <Choice key={o.value} className="soft-choice" selected={s.tryIt.felt === o.value} onClick={() => pick(o.value)}>
+          <Choice key={o.value} selected={s.tryIt.felt === o.value} onClick={() => pick(o.value)}>
             {o.label}
           </Choice>
         ))}
@@ -182,20 +180,24 @@ export function FeltAnswer() {
   );
 }
 
-/** Full colour, one line (pliability, QUITTR). */
+/** One line, on its own screen. */
 export function Praise() {
   const s = useFunnel();
   const name = firstName(s);
   return (
     <Slide
-      tone="praise"
+      progress={PROGRESS[STEP.praise]}
+      backTo={STEP.felt}
       label="Continue"
       next={() => (track('step_completed', { step: STEP.praise }), go(STEP.routine))}
     >
-      <h1 className="praise">
+      <span className="done-mark">
+        <Tick />
+      </span>
+      <h1>
         {name != null ? `Nice work, ${name}.` : 'Nice work.'}
         <br />
-        Day 1 of your plan is done <span className="praise-tick"><Tick /></span>
+        Day 1 of your plan is done
       </h1>
     </Slide>
   );
@@ -225,7 +227,7 @@ export function Routine() {
           <div className="card move" key={m.id}>
             <img src={m.poster} alt="" loading="lazy" />
             <div>
-              <div style={{ fontWeight: 800 }}>
+              <div style={{ fontWeight: 700 }}>
                 {i + 1}. {m.title}
               </div>
               <div className="caption">{m.cue}</div>

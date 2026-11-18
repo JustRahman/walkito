@@ -4,7 +4,7 @@ import { firstName, kindOf, LIFE, PLAN_NAME, planLine, planView, STEP } from '..
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
-import { Cta, Icon, Page } from '../ui';
+import { Cta, Page } from '../ui';
 
 function Lock() {
   return (
@@ -33,17 +33,16 @@ export function Plan() {
   }, []);
   return (
     <Page backTo={STEP.goals}>
-      <h1 className="peek-title">{name != null ? `${name}, here’s a peek at your plan:` : 'Here’s a peek at your plan:'}</h1>
-      <p className="peek-line">
-        <b>{title}:</b> {planLine(s.answers)}
-      </p>
+      <div className="stack gap-s">
+        <h1>{name != null ? `${name}, here’s a peek at your plan:` : 'Here’s a peek at your plan:'}</h1>
+        <p className="lead">
+          <b>{title}:</b> {planLine(s.answers)}
+        </p>
+      </div>
       {goals.length > 0 && (
-        <div className="goal-chips light">
+        <div className="goal-chips">
           {goals.map((g) => (
-            <span key={g.goal} style={{ borderColor: g.color }}>
-              <Icon name={g.icon} size={18} />
-              {g.goalLabel}
-            </span>
+            <span key={g.goal}>{g.goalLabel}</span>
           ))}
         </div>
       )}
@@ -72,7 +71,7 @@ export function Plan() {
       </div>
       <p className="small center">Your plan changes every week.</p>
       <Cta>
-        <button className="btn dark" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
+        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
           Get my plan
         </button>
       </Cta>

@@ -21,7 +21,7 @@ export function Card() {
   return (
     <Page progress={PROGRESS[STEP.card]} backTo={STEP.age}>
       <h1 className="center">Here’s your Walkito card</h1>
-      <div className="member pop" aria-label="Your Walkito card">
+      <div className="member" aria-label="Your Walkito card">
         <div className="top">
           <img src={url('/img/icon.webp')} alt="" width={40} height={40} />
           <span>Walkito</span>
@@ -61,7 +61,7 @@ export function Card() {
   );
 }
 
-/** How her feet get in the way, as a question she answers: nothing here tells her what she has. Warm checks, as QUITTR's symptoms screen. */
+/** How her feet get in the way, as a question she answers: nothing here tells her what she has. */
 export function Life() {
   const s = useFunnel();
   const [picked, setPicked] = useState<string[]>(s.answers.life ?? []);
@@ -79,17 +79,17 @@ export function Life() {
       </div>
       <div className="stack">
         {lifeFor(s.answers).map((o) => (
-          <MultiChoice key={o.value} className="warm" checked={picked.includes(o.value)} onToggle={() => toggle(o.value)}>
+          <MultiChoice key={o.value} checked={picked.includes(o.value)} onToggle={() => toggle(o.value)}>
             {o.label}
           </MultiChoice>
         ))}
-        <MultiChoice className="warm" checked={picked.includes('none')} onToggle={() => toggle('none')}>
+        <MultiChoice checked={picked.includes('none')} onToggle={() => toggle('none')}>
           None of these
         </MultiChoice>
       </div>
       <Cta>
         <button
-          className="btn warm"
+          className="btn"
           type="button"
           disabled={picked.length === 0}
           onClick={() => {
@@ -107,12 +107,12 @@ export function Life() {
 
 const poster = (id: string) => url(`/posters/${id}.webp`);
 
-/** Card 1 of 3: the problem, with no blame on her. */
+/** Statement 1 of 3: the problem, with no blame on her. */
 export function Fault() {
   const s = useFunnel();
   const runner = kindOf(s.answers) === 'runner';
   return (
-    <Slide tone="warm" dots={{ at: 0, of: 3 }} next={() => (track('step_completed', { step: STEP.fault }), go(STEP.path))}>
+    <Slide progress={PROGRESS[STEP.fault]} backTo={STEP.life} next={() => (track('step_completed', { step: STEP.fault }), go(STEP.path))}>
       <img className="still" src={poster('short_foot_seated')} alt="" />
       <h1>{runner ? 'Cushioned shoes leave your feet less to do.' : 'Sitting all day weakens your feet.'}</h1>
       <p>Chairs and soft shoes do your foot muscles’ job.</p>
@@ -120,10 +120,10 @@ export function Fault() {
   );
 }
 
-/** Card 2 of 3: it can change. */
+/** Statement 2 of 3: it can change. */
 export function Path() {
   return (
-    <Slide tone="deep" dots={{ at: 1, of: 3 }} next={() => (track('step_completed', { step: STEP.path }), go(STEP.research))}>
+    <Slide progress={PROGRESS[STEP.path]} backTo={STEP.fault} next={() => (track('step_completed', { step: STEP.path }), go(STEP.research))}>
       <img className="still" src={poster('big_toe_lift')} alt="" />
       <h1>It’s not your fault. And it can change.</h1>
       <p>Foot muscles respond to small daily work.</p>
@@ -142,10 +142,10 @@ const JOURNALS = [
   'Medicine & Science in Sports & Exercise',
 ] as const;
 
-/** Card 3 of 3: where the exercises come from. */
+/** Statement 3 of 3: where the exercises come from. */
 export function Research() {
   return (
-    <Slide tone="sky" dots={{ at: 2, of: 3 }} next={() => (track('step_completed', { step: STEP.research }), go(STEP.compare))}>
+    <Slide progress={PROGRESS[STEP.research]} backTo={STEP.path} next={() => (track('step_completed', { step: STEP.research }), go(STEP.compare))}>
       <img className="still" src={poster('heel_raise_double')} alt="" />
       <h1>Built on published research</h1>
       <ul className="journals">
@@ -160,7 +160,7 @@ export function Research() {
 const WITHOUT = ['Random stretches from videos', 'Not sure what helps', 'Giving up after a week'] as const;
 const WITH = ['A plan for your feet', '5 minutes, from a chair', 'A reminder every morning'] as const;
 
-/** Without Walkito / With Walkito, as Flo's: two cards, the second raised. */
+/** Without Walkito / With Walkito, as Flo's: two cards, the second marked. */
 export function Compare() {
   return (
     <Page progress={PROGRESS[STEP.compare]} backTo={STEP.research}>
@@ -210,14 +210,14 @@ export const REVIEWS = [
   },
 ] as const;
 
-/** Its own screen, as QUITTR's: who already uses it, in their words. No counts. */
+/** Its own screen: who already uses it, in their words. No counts. */
 export function Reviews() {
   return (
-    <Slide tone="night" next={() => (track('step_completed', { step: STEP.reviews }), go(STEP.goals))}>
+    <Slide progress={PROGRESS[STEP.reviews]} backTo={STEP.compare} next={() => (track('step_completed', { step: STEP.reviews }), go(STEP.goals))}>
       <h1>Made for people like you</h1>
       <div className="stack" style={{ width: '100%' }}>
         {(PREVIEW ? PLACEHOLDER_REVIEWS : REVIEWS).map((r) => (
-          <figure className="review-dark" key={r.author} data-placeholder={'mark' in r ? r.mark : undefined}>
+          <figure className="review" key={r.author} data-placeholder={'mark' in r ? r.mark : undefined}>
             <div className="who">
               <span className="avatar">{r.author[0]}</span>
               <b>{r.author}</b>
@@ -228,13 +228,13 @@ export function Reviews() {
             <blockquote>“{r.text}”</blockquote>
           </figure>
         ))}
-        {!PREVIEW && <p className="caption-light">From the App Store</p>}
+        {!PREVIEW && <p className="caption">From the App Store</p>}
       </div>
     </Slide>
   );
 }
 
-/** Her goals: coloured pills with a check, as QUITTR's. None is ticked for her: the mirror of what she told us comes first, and says so. */
+/** Her goals. None is ticked for her: the mirror of what she told us comes first, and says so. */
 export function Goals() {
   const s = useFunnel();
   const [picked, setPicked] = useState<string[]>(s.answers.goals ?? []);
@@ -247,14 +247,7 @@ export function Goals() {
       <h2 className="center">What do you want back?</h2>
       <div className="stack">
         {hersFirst.map((o) => (
-          <MultiChoice
-            key={o.goal}
-            className="goal"
-            style={{ background: o.color }}
-            icon={o.icon}
-            checked={picked.includes(o.goal)}
-            onToggle={() => toggle(o.goal)}
-          >
+          <MultiChoice key={o.goal} checked={picked.includes(o.goal)} onToggle={() => toggle(o.goal)}>
             {o.goalLabel}
             {mentioned.includes(o.goal) && <span className="hint">You mentioned this</span>}
           </MultiChoice>
@@ -294,7 +287,7 @@ export function Sign() {
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#111114';
+    ctx.strokeStyle = '#26221f';
     let down = false;
     const at = (e: PointerEvent) => {
       const r = c.getBoundingClientRect();
@@ -334,30 +327,34 @@ export function Sign() {
     setDrawn(false);
   };
   return (
-    <main className="slide night">
-      <div className="slide-body sign">
+    <Page progress={PROGRESS[STEP.sign]} backTo={STEP.routine}>
+      <div className="stack gap-s">
         <h2>Sign your commitment</h2>
-        <p>Promise yourself {s.answers.minutes ?? 5} minutes a day for your feet.</p>
+        <p className="lead">Promise yourself {s.answers.minutes ?? 5} minutes a day for your feet.</p>
+      </div>
+      <div className="stack gap-s">
         <canvas ref={canvas} className="pad" aria-label="Sign here with your finger" />
         <div className="pad-foot">
-          <button type="button" className="link-light" onClick={clear}>
+          <span className="caption">Draw in the box above</span>
+          <button type="button" className="btn quiet" onClick={clear}>
             Clear
           </button>
         </div>
-        <p className="caption-light">Draw on the open space above</p>
       </div>
-      <button
-        className="btn"
-        type="button"
-        disabled={!drawn}
-        onClick={() => {
-          track('step_completed', { step: STEP.sign });
-          go(STEP.building);
-        }}
-      >
-        Finish
-      </button>
-    </main>
+      <Cta>
+        <button
+          className="btn"
+          type="button"
+          disabled={!drawn}
+          onClick={() => {
+            track('step_completed', { step: STEP.sign });
+            go(STEP.building);
+          }}
+        >
+          Finish
+        </button>
+      </Cta>
+    </Page>
   );
 }
 

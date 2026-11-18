@@ -308,7 +308,7 @@ export function Price() {
             )}
           </div>
 
-          <div className="note ok" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+          <div className="panel" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
             <img src={url('/img/art-shield.webp')} alt="" width={44} height={44} style={{ objectFit: 'contain', flex: 'none' }} />
             <div>
               <b>{GUARANTEE_DAYS}-day money-back guarantee</b>
@@ -413,7 +413,7 @@ function TimelineRow({ title, text, now }: { title: string; text: string; now?: 
     <div className={now === true ? 't now' : 't'}>
       <span className="dot" />
       <div>
-        <div style={{ fontWeight: 800 }}>{title}</div>
+        <div style={{ fontWeight: 700 }}>{title}</div>
         <div className="small">{text}</div>
       </div>
     </div>

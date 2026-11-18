@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 import { CARLA_PHOTO, PREVIEW, url } from './config';
 import { PLACEHOLDER_CARLA_QUOTE } from './preview/placeholders';
@@ -8,6 +8,9 @@ import { track } from './lib/analytics';
 import { back, go } from './router';
 
 export type { IconName };
+
+/** A tapped answer shows its tick for this long before the next screen comes. */
+export const ADVANCE_MS = 350;
 
 export function Page({
   children,
@@ -46,10 +49,10 @@ export function Page({
   );
 }
 
-function Chevron({ right }: { right?: boolean }) {
+function Chevron() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d={right === true ? 'M9 5l7 7-7 7' : 'M15 5l-7 7 7 7'} stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -70,42 +73,31 @@ export function Icon({ name, size }: { name: IconName; size?: number }) {
 }
 
 /**
- * A full-colour screen, as QUITTR's: the brand on top, one picture, one big
- * line, at most one short line, the dots of its set and one white pill.
+ * A statement between questions: one picture, one line, one button, on the
+ * same page as every other screen (Back, progress, the same button).
  */
 export function Slide({
-  tone,
   children,
-  dots,
+  progress,
+  backTo,
   next,
   label = 'Next',
 }: {
-  tone: 'warm' | 'deep' | 'sky' | 'night' | 'praise';
   children: ReactNode;
-  dots?: { at: number; of: number };
+  progress?: number;
+  backTo: string;
   next: () => void;
   label?: string;
 }) {
   return (
-    <main className={`slide ${tone}`}>
-      <header className="slide-top">
-        <img src={url('/img/icon.webp')} alt="" width={26} height={26} />
-        Walkito
-      </header>
-      <div className="slide-body fade" key={typeof location !== 'undefined' ? location.pathname : ''}>
-        {children}
-      </div>
-      {dots != null && (
-        <div className="dots" aria-hidden="true">
-          {Array.from({ length: dots.of }, (_, i) => (
-            <i key={i} className={i === dots.at ? 'on' : undefined} />
-          ))}
-        </div>
-      )}
-      <button className="pill" type="button" onClick={next}>
-        {label} <Chevron right />
-      </button>
-    </main>
+    <Page progress={progress} backTo={backTo}>
+      <div className="statement">{children}</div>
+      <Cta>
+        <button className="btn" type="button" onClick={next}>
+          {label}
+        </button>
+      </Cta>
+    </Page>
   );
 }
 
@@ -132,8 +124,6 @@ export function Choice({
   icon,
   hint,
   tag,
-  arrow,
-  className,
 }: {
   children: ReactNode;
   selected?: boolean;
@@ -141,22 +131,18 @@ export function Choice({
   icon?: IconName;
   hint?: string;
   tag?: string;
-  arrow?: boolean;
-  className?: string;
 }) {
   return (
-    <button className={className != null ? `choice ${className}` : 'choice'} type="button" aria-pressed={selected === true} onClick={onClick}>
+    <button className="choice" type="button" aria-pressed={selected === true} onClick={onClick}>
       {icon != null && <Icon name={icon} />}
       <span className="grow">
         {children}
         {hint != null && <span className="hint">{hint}</span>}
       </span>
       {tag != null && <span className="tag">{tag}</span>}
-      {arrow === true && (
-        <span className="go">
-          <Chevron right />
-        </span>
-      )}
+      <span className="mark">
+        <Tick />
+      </span>
     </button>
   );
 }
@@ -166,21 +152,19 @@ export function MultiChoice({
   checked,
   onToggle,
   icon,
-  className,
-  style,
 }: {
   children: ReactNode;
   checked: boolean;
   onToggle: () => void;
   icon?: IconName;
-  className?: string;
-  style?: CSSProperties;
 }) {
   return (
-    <button className={className != null ? `choice ${className}` : 'choice'} style={style} type="button" role="checkbox" aria-checked={checked} onClick={onToggle}>
+    <button className="choice" type="button" role="checkbox" aria-checked={checked} onClick={onToggle}>
       {icon != null && <Icon name={icon} />}
       <span className="grow">{children}</span>
-      <span className="tick">{checked && <Tick />}</span>
+      <span className="mark box">
+        <Tick />
+      </span>
     </button>
   );
 }

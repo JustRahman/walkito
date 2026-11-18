@@ -5,7 +5,7 @@ import { PROGRESS, STEP, wakeOf } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, useFunnel, type Answers } from '../state';
-import { Choice, Cta, MultiChoice, Page, Reviewer, type IconName } from '../ui';
+import { ADVANCE_MS, Choice, Cta, MultiChoice, Page, Reviewer, type IconName } from '../ui';
 
 type Option<V> = { value: V; label: string; icon?: IconName; hint?: string; tag?: string };
 
@@ -34,7 +34,7 @@ function Single<K extends keyof Answers>({
     answer({ [field]: value } as Partial<Answers>);
     track('step_completed', { step: path });
     const target = typeof next === 'string' ? next : next(value);
-    if (target != null) setTimeout(() => go(target), 220);
+    if (target != null) setTimeout(() => go(target), ADVANCE_MS);
   };
   return (
     <Page progress={PROGRESS[path]} backTo={backTo}>
@@ -66,7 +66,7 @@ export function Age() {
   const pick = (value: NonNullable<Answers['age']>) => {
     answer({ age: value });
     track('step_completed', { step: STEP.age });
-    setTimeout(() => go(STEP.card), 180);
+    setTimeout(() => go(STEP.card), ADVANCE_MS);
   };
   return (
     <Page footer>
@@ -78,7 +78,7 @@ export function Age() {
       <h3 className="center">Select your age</h3>
       <div className="grid2">
         {AGES.map((o) => (
-          <Choice key={o.value} selected={s.answers.age === o.value} arrow onClick={() => pick(o.value)}>
+          <Choice key={o.value} selected={s.answers.age === o.value} onClick={() => pick(o.value)}>
             {o.label}
           </Choice>
         ))}
@@ -169,10 +169,10 @@ export function Since() {
       backTo={STEP.wake}
       title="How long has this been going on?"
       options={[
-        { value: 'new', label: 'Less than 3 months', icon: 'seedling' },
-        { value: 'months', label: '3 to 12 months', icon: 'calendar' },
-        { value: 'year', label: '1 to 3 years', icon: 'calendar' },
-        { value: 'years', label: 'More than 3 years', icon: 'calendar' },
+        { value: 'new', label: 'Less than 3 months' },
+        { value: 'months', label: '3 to 12 months' },
+        { value: 'year', label: '1 to 3 years' },
+        { value: 'years', label: 'More than 3 years' },
       ]}
       next={STEP.tried}
     />
@@ -180,12 +180,12 @@ export function Since() {
 }
 
 const TRIED: ReadonlyArray<Option<string>> = [
-  { value: 'stretching', label: 'Stretching on my own', icon: 'leg' },
-  { value: 'insoles', label: 'Insoles or new shoes', icon: 'runningShoe' },
-  { value: 'pt', label: 'A doctor or physical therapist', icon: 'healthWorker' },
-  { value: 'roller', label: 'Massage or a foot roller', icon: 'softball' },
-  { value: 'videos', label: 'Videos online', icon: 'bulb' },
-  { value: 'nothing', label: 'Nothing yet', icon: 'seedling' },
+  { value: 'stretching', label: 'Stretching on my own' },
+  { value: 'insoles', label: 'Insoles or new shoes' },
+  { value: 'pt', label: 'A doctor or physical therapist' },
+  { value: 'roller', label: 'Massage or a foot roller' },
+  { value: 'videos', label: 'Videos online' },
+  { value: 'nothing', label: 'Nothing yet' },
 ];
 
 export function Tried() {
@@ -205,7 +205,7 @@ export function Tried() {
       </div>
       <div className="stack">
         {TRIED.map((o) => (
-          <MultiChoice key={o.value} icon={o.icon} checked={picked.includes(o.value)} onToggle={() => toggle(o.value)}>
+          <MultiChoice key={o.value} checked={picked.includes(o.value)} onToggle={() => toggle(o.value)}>
             {o.label}
           </MultiChoice>
         ))}
@@ -277,11 +277,11 @@ export function Safety() {
       backTo={STEP.start}
       title="Anything we should plan around?"
       options={[
-        { value: 'surgery', label: 'Recent surgery or injury', icon: 'bandage' },
-        { value: 'numb', label: 'Numbness or swelling', icon: 'feather' },
-        { value: 'dizzy', label: 'Dizziness or a fall this year', icon: 'leafInWind' },
-        { value: 'aid', label: 'I use a cane or walker', icon: 'crutch' },
-        { value: 'none', label: 'None of these', icon: 'check' },
+        { value: 'surgery', label: 'Recent surgery or injury' },
+        { value: 'numb', label: 'Numbness or swelling' },
+        { value: 'dizzy', label: 'Dizziness or a fall this year' },
+        { value: 'aid', label: 'I use a cane or walker' },
+        { value: 'none', label: 'None of these' },
       ]}
       next={(value) => (value === 'none' ? STEP.minutes : '/s/7/note')}
     />
@@ -291,10 +291,9 @@ export function Safety() {
 export function SafetyNote() {
   return (
     <Page progress={PROGRESS[STEP.safety]} backTo={STEP.safety}>
-      <div className="stack center" style={{ marginTop: '1rem' }}>
-        <img className="hero s pop" src={url('/img/art-shield.webp')} alt="" />
+      <div className="panel stack">
         <h2>Thanks for telling us</h2>
-        <p className="lead">We’ll keep your first week seated. Please check with your doctor or physical therapist before you start.</p>
+        <p>We’ll keep your first week seated. Please check with your doctor or physical therapist before you start.</p>
       </div>
       <Cta>
         <button className="btn" type="button" onClick={() => go(STEP.minutes)}>
