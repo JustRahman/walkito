@@ -54,7 +54,7 @@ export function TryMove() {
   return (
     <Page progress={PROGRESS[STEP.move]}>
       <div className="stack gap-s">
-        <span className="eyebrow">Your first move · 60 seconds</span>
+        <span className="eyebrow">60 seconds</span>
         <h2>{move.title}</h2>
         <p className="small">Before we build your plan, try the first move in it. You can do it sitting down.</p>
       </div>

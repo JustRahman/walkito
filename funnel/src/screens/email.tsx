@@ -97,8 +97,8 @@ export function Email() {
   return (
     <Page progress={PROGRESS[STEP.email]} backTo={STEP.plan}>
       <div className="stack">
-        <h2>Save your plan</h2>
-        <p className="small">Your email keeps your plan and signs you in. We never sell it.</p>
+        <h2>Where should we send your plan?</h2>
+        <p className="small">It’s saved to this email, and it’s how you sign in to the app. No password. We never sell it.</p>
       </div>
       {google && (
         <div className="stack">
@@ -131,10 +131,10 @@ export function Email() {
             Did you mean {hint.slice(hint.indexOf('@') + 1)}?
           </button>
         )}
-        <Check className="plain" checked={health} onChange={setHealth}>
+        <Check checked={health} onChange={setHealth}>
           {CONSENT_HEALTH}
         </Check>
-        <Check className="plain" checked={marketing} onChange={setMarketing}>
+        <Check checked={marketing} onChange={setMarketing}>
           {CONSENT_MARKETING}
         </Check>
         {error != null && (
@@ -145,7 +145,7 @@ export function Email() {
         <button className="btn" type="submit" disabled={busy || email.trim().length < 5}>
           {busy ? 'Saving…' : 'Continue'}
         </button>
-        <p className="caption center">No password. You sign in to the app with this email.</p>
+        <p className="caption center">Next: your price. No payment on this step.</p>
       </form>
     </Page>
   );
