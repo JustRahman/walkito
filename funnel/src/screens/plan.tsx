@@ -17,8 +17,8 @@ function Lock() {
 
 /**
  * Centr's "here's a peek at your plan": week 1 as a photo tile from her own
- * first-week moves, the later weeks locked beside it, and her goals as chips.
- * No date for a result.
+ * first-week moves, what comes after locked beside it, and her goals as chips.
+ * No length for the plan and no date for a result.
  */
 export function Plan() {
   const s = useFunnel();
@@ -60,20 +60,17 @@ export function Plan() {
         </div>
       )}
       <div className="tiles">
-        {[
-          { m: second, label: 'Week 2' },
-          { m: third, label: 'Weeks 3–12' },
-        ].map(({ m, label }) =>
+        {[second, third].map((m, i) =>
           m == null ? null : (
-            <div key={label} className="tile locked" style={{ backgroundImage: `url(${m.poster})` }}>
+            <div key={i} className="tile locked" style={{ backgroundImage: `url(${m.poster})` }}>
               <span className="tile-lock">
                 <Lock />
               </span>
-              <b>{label}</b>
             </div>
           ),
         )}
       </div>
+      <p className="small center">Your plan changes every week.</p>
       <Cta>
         <button className="btn dark" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
           Get my plan

@@ -516,7 +516,7 @@ h1.praise { font-size: 2.3rem; font-weight: 600; line-height: 1.2; text-align: l
 .tile.locked { aspect-ratio: 1.6 / 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 0.7rem; }
 .tile.locked::before { content: ''; position: absolute; inset: 0; z-index: 1; backdrop-filter: blur(3px) saturate(0.6); -webkit-backdrop-filter: blur(3px) saturate(0.6); background: rgba(80, 60, 140, 0.35); }
 .tile.locked > * { z-index: 2; }
-.tile-lock { position: absolute !important; top: 50%; left: 50%; transform: translate(-50%, -70%); width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, 0.9); color: #111114; display: grid; place-items: center; }
+.tile-lock { position: absolute !important; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, 0.9); color: #111114; display: grid; place-items: center; }
 .goal-chips.light span { background: var(--card); color: var(--text); }
 .btn.dark { background: #111114; box-shadow: 0 4px 0 #000; }
 

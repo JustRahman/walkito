@@ -218,13 +218,10 @@ export const PLAN_NAME: Readonly<Record<Kind, string>> = {
   feet: 'On-Your-Feet Reset',
 };
 
-/** The app's program runs twelve weeks. */
-export const PLAN_WEEKS = 12;
-
-/** "12 weeks · 5 min a day · seated" */
+/** "5 min a day · seated". No length: the plan is open-ended, as it is in the app. */
 export function planLine(a: Answers): string {
   const where = kindOf(a) === 'runner' ? 'before or after your runs' : a.start === 'standing' ? 'standing' : 'seated';
-  return `${PLAN_WEEKS} weeks · ${a.minutes ?? 5} min a day · ${where}`;
+  return `${a.minutes ?? 5} min a day · ${where}`;
 }
 
 export type LifeOption = { value: string; label: string; goal: string; goalLabel: string; icon: IconName; color: string };
