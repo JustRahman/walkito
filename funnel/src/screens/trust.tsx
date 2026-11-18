@@ -23,8 +23,7 @@ export function TrustLines() {
 
   return (
     <section className="trust stack gap-s" aria-label="About Walkito">
-      <p className="small center">Join women across the US doing 5 minutes a day.</p>
-      {people != null && people >= PEOPLE_THRESHOLD && <p className="small center">Used by 1,000+ women</p>}
+      {people != null && people >= PEOPLE_THRESHOLD && <p className="small center">Used by 1,000+ people</p>}
       <p className="small center">Rated {APP_STORE_RATING} ★ on the App Store</p>
       {PT_GUIDELINE_URL !== '' && (
         <p className="small center">

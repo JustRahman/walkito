@@ -116,11 +116,12 @@ export function TryMove() {
   );
 }
 
+/** The stored values are older than the labels: the words no longer lead her to report a change. */
 const FELT: ReadonlyArray<{ value: NonNullable<TryIt['felt']>; label: string }> = [
-  { value: 'lighter', label: 'Lighter, looser' },
-  { value: 'better', label: 'A little better' },
-  { value: 'same', label: 'About the same' },
-  { value: 'unsure', label: 'Hard to tell' },
+  { value: 'lighter', label: 'Good' },
+  { value: 'better', label: 'Fine' },
+  { value: 'same', label: 'Didn’t feel much' },
+  { value: 'unsure', label: 'Not sure I did it right' },
 ];
 
 /** The move's still on a warm top, the question in words (Headspace's "How'd it go?"). */
@@ -162,22 +163,15 @@ export function After() {
   );
 }
 
-/** Her answer, given back as what it means for her own goal (Headspace, Liven). Never a dead end. */
+/** Her answer, given back as what she did, never as what it did to her feet. Never a dead end. */
 export function FeltAnswer() {
   const s = useFunnel();
-  const goal = goalLabels(s.answers)[0] ?? 'Walk without thinking about my feet';
   const good = s.tryIt.felt === 'lighter' || s.tryIt.felt === 'better';
   return (
     <Felt backTo={STEP.after} progress={STEP.felt}>
       <div className="stack gap-s center">
-        <h2>{good ? 'That’s your feet waking up.' : 'That’s normal on day 1.'}</h2>
-        {good ? (
-          <p className="lead">
-            Do this daily and you’re working toward: <b className="goal-word">{goal}</b>
-          </p>
-        ) : (
-          <p className="lead">Feet change with daily practice, not one move. Tomorrow’s move is ready.</p>
-        )}
+        <h2>{good ? 'Nice work. That’s the first move of your plan.' : 'That’s normal on day 1.'}</h2>
+        {!good && <p className="lead">Feet change with daily practice, not one move. Tomorrow’s move is ready.</p>}
       </div>
       <Cta>
         <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.felt }), go(STEP.praise))}>

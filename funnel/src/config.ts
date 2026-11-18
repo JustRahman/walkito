@@ -108,7 +108,7 @@ export const CARLA_PHOTO = '/team/carla-shayman.webp';
 /** The App Store rating the line quotes. Change it if the rating changes. */
 export const APP_STORE_RATING = '5.0';
 
-/** "Used by 1,000+ women" shows only once the server's real count passes this. */
+/** "Used by 1,000+ people" shows only once the server's real count passes this. The server counts people, not women. */
 export const PEOPLE_THRESHOLD = 1000;
 
 /**

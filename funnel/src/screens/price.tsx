@@ -322,14 +322,14 @@ export function Price() {
               {plan === 'monthly' ? (
                 <>
                   <TimelineRow now title="Today" text={`${money(m.intro)}. Your plan starts now.`} />
-                  <TimelineRow title={shortDate(retest)} text="Day 14: redo your first move and compare." />
+                  <TimelineRow title={shortDate(retest)} text="Day 14: your first progress check in the app." />
                   <TimelineRow title={shortDate(addDays(charge, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
                   <TimelineRow title={shortDate(charge)} text={`${money(m.price)} a month. Cancel any time.`} />
                 </>
               ) : (
                 <>
                   <TimelineRow now title="Today" text={`${money(y.price)} for a year.`} />
-                  <TimelineRow title={shortDate(retest)} text="Day 14: redo your first move and compare." />
+                  <TimelineRow title={shortDate(retest)} text="Day 14: your first progress check in the app." />
                   <TimelineRow title={yearDate(addDays(renewYear, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
                   <TimelineRow title={yearDate(renewYear)} text={`${money(y.price)} for the next year. Cancel any time.`} />
                 </>

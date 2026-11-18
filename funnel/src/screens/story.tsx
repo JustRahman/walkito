@@ -61,7 +61,7 @@ export function Card() {
   );
 }
 
-/** How her feet get in the way: a warm banner on top, her day underneath (QUITTR's symptoms screen). */
+/** How her feet get in the way, as a question she answers: nothing here tells her what she has. Warm checks, as QUITTR's symptoms screen. */
 export function Life() {
   const s = useFunnel();
   const [picked, setPicked] = useState<string[]>(s.answers.life ?? []);
@@ -73,8 +73,10 @@ export function Life() {
     });
   return (
     <Page progress={PROGRESS[STEP.life]} backTo={STEP.minutes}>
-      <p className="alert">Foot pain changes your whole day.</p>
-      <h3>Choose all that apply:</h3>
+      <div className="stack gap-s">
+        <h2>Does any of this sound familiar?</h2>
+        <p className="small">Choose all that apply.</p>
+      </div>
       <div className="stack">
         {lifeFor(s.answers).map((o) => (
           <MultiChoice key={o.value} className="warm" checked={picked.includes(o.value)} onToggle={() => toggle(o.value)}>
@@ -193,7 +195,9 @@ export function Compare() {
 /**
  * Real App Store reviews, word for word (App Store US, Nov 18, 2026), each
  * with the name it was posted under. Added only from the store, never written
- * or edited by us. Both are 5 stars there.
+ * or edited by us. Both are 5 stars there. AhmetAZ's is its first two
+ * sentences: the third says what the app did for a symptom, which is a
+ * result claim wherever we print it.
  */
 export const REVIEWS = [
   {
@@ -202,7 +206,7 @@ export const REVIEWS = [
   },
   {
     author: 'AhmetAZ',
-    text: 'Really liked this app. The interface is clean and easy to navigate, and programs are easy to follow. Helped with my heel pain. Would recommend',
+    text: 'Really liked this app. The interface is clean and easy to navigate, and programs are easy to follow.',
   },
 ] as const;
 
