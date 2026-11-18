@@ -23,8 +23,7 @@ import { go } from '../router';
 import { update, useFunnel } from '../state';
 import { AppButton, Check, Choice, Page } from '../ui';
 import { PLACEHOLDER_REVIEWS } from '../preview/placeholders';
-import { REVIEWS } from './story';
-import { TrustLines } from './trust';
+import { ReviewCards, REVIEWS, TrustLines } from './trust';
 
 type PlanId = 'monthly' | 'yearly';
 
@@ -374,6 +373,8 @@ export function Price() {
           </p>
         </>
       )}
+
+      <ReviewCards />
 
       <section className="stack" aria-label="Questions">
         <details>

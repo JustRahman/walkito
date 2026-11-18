@@ -6,7 +6,8 @@ import { getState } from '../state';
 /**
  * Every funnel event, declared once. Names and properties say that something
  * happened, never what she told us: no age, no focus, no safety answer, no
- * rating, no balance seconds. Health data never leaves the quiz for analytics.
+ * rating, and not which reaction card an answer showed her. Health data never
+ * leaves the quiz for analytics.
  */
 type Events = {
   funnel_landed: { source: string | null; campaign: string | null; webview: string | null };
@@ -15,8 +16,6 @@ type Events = {
   tryit_started: Record<string, never>;
   tryit_finished: { stopped_early: boolean };
   tryit_skipped: Record<string, never>;
-  balance_started: Record<string, never>;
-  balance_skipped: Record<string, never>;
   plan_viewed: Record<string, never>;
   wake_time_set: Record<string, never>;
   first_step_routine_shown: Record<string, never>;

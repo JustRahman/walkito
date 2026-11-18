@@ -1,12 +1,15 @@
 import { useState } from 'react';
 
-import { PREVIEW, url } from '../config';
-import { kindOf, lifeFor, mentionedGoals, PROGRESS, STEP } from '../flow';
+import bedMorning from '../assets/photos/bed-morning.jpg';
+import chairWindow from '../assets/photos/chair-window.jpg';
+import cozyEvening from '../assets/photos/cozy-evening.jpg';
+import socksRug from '../assets/photos/socks-rug.jpg';
+import { SOURCES_URL, url } from '../config';
+import { factsOf, FOCUS_LABEL, lifeFor, mentionedGoals, PROGRESS, START_LABEL, STEP, WHEN_LABEL } from '../flow';
 import { track } from '../lib/analytics';
-import { PLACEHOLDER_REVIEWS } from '../preview/placeholders';
 import { go } from '../router';
 import { answer, update, useFunnel } from '../state';
-import { ADVANCE_MS, Choice, Cta, MultiChoice, Page, Slide } from '../ui';
+import { ADVANCE_MS, Choice, Cta, MultiChoice, Page, Reaction } from '../ui';
 
 /**
  * Her first name, asked once the plan exists, for the plan's own headline.
@@ -80,7 +83,7 @@ export function Life() {
           onClick={() => {
             answer({ life: picked });
             track('step_completed', { step: STEP.life });
-            go(STEP.fault);
+            go(STEP.proof);
           }}
         >
           Continue
@@ -90,87 +93,81 @@ export function Life() {
   );
 }
 
-const poster = (id: string) => url(`/posters/${id}.webp`);
+/** The four photographs (assets/photos/SOURCES.md), each with the part that stays in a 16:10 frame: her feet. */
+const PHOTO = {
+  bed: { src: bedMorning, at: '50% 92%' },
+  chair: { src: chairWindow, at: '50% 78%' },
+  rug: { src: socksRug, at: '50% 68%' },
+  evening: { src: cozyEvening, at: '50% 62%' },
+} as const;
 
-/** Statement 1 of 3: the problem, with no blame on her. */
-export function Fault() {
-  const s = useFunnel();
-  const runner = kindOf(s.answers) === 'runner';
+/** After "When do you notice it most?": her answer, and what the plan has for it. */
+export function HeardWhen() {
+  const when = useFunnel().answers.when;
+  const said =
+    when === 'morning'
+      ? {
+          photo: PHOTO.bed,
+          title: 'Many people notice their feet most with the first steps of the day.',
+          text: 'So your plan includes a 2-minute routine you can do on the edge of the bed.',
+        }
+      : when === 'sitting'
+        ? { photo: PHOTO.chair, title: 'Got it.', text: 'Your plan has short moves you can do in the chair before you stand up.' }
+        : when === 'evening'
+          ? { photo: PHOTO.evening, title: 'Got it.', text: 'Sessions are short, so there’s one that fits after a long day.' }
+          : { photo: PHOTO.rug, title: 'Got it.', text: 'One short session a day, at whatever time suits you.' };
   return (
-    <Slide progress={PROGRESS[STEP.fault]} next={() => (track('step_completed', { step: STEP.fault }), go(STEP.path))}>
-      <img className="still" src={poster('short_foot_seated')} alt="" />
-      <h1>{runner ? 'Cushioned shoes leave your feet less to do.' : 'Sitting all day weakens your feet.'}</h1>
-      <p>Chairs and soft shoes do your foot muscles’ job.</p>
-    </Slide>
+    <Reaction step={STEP.heardWhen} photo={said.photo} title={said.title} next={STEP.since}>
+      <p>{said.text}</p>
+    </Reaction>
   );
 }
 
-/** Statement 2 of 3: it can change. */
-export function Path() {
+/** After "What have you already tried?": the effort was hers, and Walkito's part is only the plan. */
+export function HeardTried() {
+  const a = useFunnel().answers;
+  const tried = a.tried ?? [];
+  const said = tried.includes('pt')
+    ? {
+        title: 'Good.',
+        text: 'Walkito doesn’t replace your doctor or physical therapist. It gives you a short routine for the days in between.',
+      }
+    : tried.length === 0 || tried.includes('nothing')
+      ? { title: 'A good place to start.', text: 'Your first week is kept gentle.' }
+      : { title: 'You’ve already put effort in.', text: 'Walkito’s part is the plan: which moves, in what order, for how long.' };
+  // Never the photograph she saw two screens ago.
   return (
-    <Slide progress={PROGRESS[STEP.path]} next={() => (track('step_completed', { step: STEP.path }), go(STEP.research))}>
-      <img className="still" src={poster('big_toe_lift')} alt="" />
-      <h1>It’s not your fault. And it can change.</h1>
-      <p>Foot muscles respond to small daily work.</p>
-    </Slide>
+    <Reaction step={STEP.heardTried} photo={a.when === 'evening' ? PHOTO.rug : PHOTO.evening} title={said.title} next={STEP.day}>
+      <p>{said.text}</p>
+    </Reaction>
   );
 }
 
-/**
- * The journals the exercises come from: only ones walkito.site cites
- * (site/lib/citations.ts), as text, like QUITTR's press row.
- */
-const JOURNALS = [
-  'British Journal of Sports Medicine',
-  'Journal of Orthopaedic & Sports Physical Therapy',
-  'American Journal of Sports Medicine',
-  'Medicine & Science in Sports & Exercise',
-] as const;
-
-/** Statement 3 of 3: where the exercises come from. */
-export function Research() {
+/** Half-way: her own answers in rows, to confirm or go back and change. No score, nothing we concluded. */
+export function Summary() {
+  const a = useFunnel().answers;
+  const rows: Array<[string, string]> = [
+    ['Focus', FOCUS_LABEL[a.focus ?? 'heel']],
+    ['Noticed most', WHEN_LABEL[a.when ?? 'varies']],
+    ['Where', START_LABEL[a.start ?? 'chair']],
+    ['Time each day', `${a.minutes ?? 5} minutes`],
+    ...(factsOf(a).safetyFlag ? [['First week', 'Seated'] as [string, string]] : []),
+  ];
   return (
-    <Slide progress={PROGRESS[STEP.research]} next={() => (track('step_completed', { step: STEP.research }), go(STEP.compare))}>
-      <img className="still" src={poster('heel_raise_double')} alt="" />
-      <h1>Built on published research</h1>
-      <ul className="journals">
-        {JOURNALS.map((j) => (
-          <li key={j}>{j}</li>
+    <Page progress={PROGRESS[STEP.summary]}>
+      <h2>Here’s what we have so far</h2>
+      <dl className="card facts">
+        {rows.map(([k, v]) => (
+          <div key={k}>
+            <dt>{k}</dt>
+            <dd>{v}</dd>
+          </div>
         ))}
-      </ul>
-    </Slide>
-  );
-}
-
-const WITHOUT = ['Random stretches from videos', 'Not sure what helps', 'Giving up after a week'] as const;
-const WITH = ['A plan for your feet', '5 minutes, from a chair', 'A reminder every morning'] as const;
-
-/** Without Walkito / With Walkito, as Flo's: two cards, the second marked. */
-export function Compare() {
-  return (
-    <Page progress={PROGRESS[STEP.compare]}>
-      <h2 className="center">With Walkito, you know what to do</h2>
-      <div className="versus">
-        <section className="without">
-          <h3>Without Walkito</h3>
-          <ul>
-            {WITHOUT.map((t) => (
-              <li key={t}>{t}</li>
-            ))}
-          </ul>
-        </section>
-        <section className="with">
-          <h3>With Walkito</h3>
-          <ul>
-            {WITH.map((t) => (
-              <li key={t}>{t}</li>
-            ))}
-          </ul>
-        </section>
-      </div>
+      </dl>
+      <p className="caption">To change an answer, go back.</p>
       <Cta>
-        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.compare }), go(STEP.reviews))}>
-          Let’s do this!
+        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.summary }), go(STEP.life))}>
+          That’s right
         </button>
       </Cta>
     </Page>
@@ -178,44 +175,22 @@ export function Compare() {
 }
 
 /**
- * Real App Store reviews, word for word (App Store US, Nov 18, 2026), each
- * with the name it was posted under. Added only from the store, never written
- * or edited by us. Both are 5 stars there. AhmetAZ's is its first two
- * sentences: the third says what the app did for a symptom, which is a
- * result claim wherever we print it.
+ * The one proof card: where the exercises come from, with the sources a tap
+ * away. It says what the physical therapists' heel pain guideline includes
+ * (Koc et al., JOSPT 2023, in the site's citations), never what Walkito does
+ * for anyone: Walkito itself has not been tested in a trial.
  */
-export const REVIEWS = [
-  {
-    author: 'Kolodi',
-    text: 'honestly didn’t expect much but it’s pretty nice. answered a few questions about my feet and it made me a daily plan, takes like a few min. gonna try it for a couple weeks and see',
-  },
-  {
-    author: 'AhmetAZ',
-    text: 'Really liked this app. The interface is clean and easy to navigate, and programs are easy to follow.',
-  },
-] as const;
-
-/** Its own screen: who already uses it, in their words. No counts. */
-export function Reviews() {
+export function Proof() {
   return (
-    <Slide progress={PROGRESS[STEP.reviews]} next={() => (track('step_completed', { step: STEP.reviews }), go(STEP.goals))}>
-      <h1>Made for people like you</h1>
-      <div className="stack" style={{ width: '100%' }}>
-        {(PREVIEW ? PLACEHOLDER_REVIEWS : REVIEWS).map((r) => (
-          <figure className="review" key={r.author} data-placeholder={'mark' in r ? r.mark : undefined}>
-            <div className="who">
-              <span className="avatar">{r.author[0]}</span>
-              <b>{r.author}</b>
-              <span className="stars" aria-label="5 stars on the App Store">
-                ★★★★★
-              </span>
-            </div>
-            <blockquote>“{r.text}”</blockquote>
-          </figure>
-        ))}
-        {!PREVIEW && <p className="caption">From the App Store</p>}
-      </div>
-    </Slide>
+    <Reaction step={STEP.proof} photo={{ src: url('/posters/heel_raise_double.webp') }} title="Built on published research" next={STEP.goals}>
+      <p>Walkito’s exercises are chosen from published physical therapy research.</p>
+      <p>For heel pain, for example, the physical therapists’ guideline includes stretching and foot-strengthening exercises.</p>
+      <p>
+        <a href={SOURCES_URL} target="_blank" rel="noopener noreferrer">
+          See the sources
+        </a>
+      </p>
+    </Reaction>
   );
 }
 

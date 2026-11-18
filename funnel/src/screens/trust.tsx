@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { APP_STORE_RATING, CARLA_APPROVED, CARLA_PHOTO, PEOPLE_THRESHOLD, PREVIEW, PT_GUIDELINE_URL } from '../config';
 import { peopleCount } from '../lib/people';
-import { PLACEHOLDER_CARLA_QUOTE } from '../preview/placeholders';
+import { PLACEHOLDER_CARLA_QUOTE, PLACEHOLDER_REVIEWS } from '../preview/placeholders';
 
 /**
  * Small, calm lines under the plan and the price. Each one is true or hidden:
@@ -49,6 +49,50 @@ export function TrustLines() {
           <span className="small">Dr. Carla Shayman, PT, DPT, reviewed our heel pain and flat feet guides</span>
         </div>
       )}
+    </section>
+  );
+}
+
+/**
+ * Real App Store reviews, word for word (App Store US, Nov 18, 2026), each
+ * with the name it was posted under. Added only from the store, never written
+ * or edited by us. Both are 5 stars there. AhmetAZ's is its first two
+ * sentences: the third says what the app did for a symptom, which is a
+ * result claim wherever we print it.
+ */
+export const REVIEWS = [
+  {
+    author: 'Kolodi',
+    text: 'honestly didn’t expect much but it’s pretty nice. answered a few questions about my feet and it made me a daily plan, takes like a few min. gonna try it for a couple weeks and see',
+  },
+  {
+    author: 'AhmetAZ',
+    text: 'Really liked this app. The interface is clean and easy to navigate, and programs are easy to follow.',
+  },
+] as const;
+
+/**
+ * The reviews as cards, on the price page since the reviews screen went
+ * (v6). The top of that page already quotes one (AhmetAZ's, or the first
+ * placeholder in a preview build), so these are the others.
+ */
+export function ReviewCards() {
+  const others = PREVIEW ? PLACEHOLDER_REVIEWS.slice(1) : REVIEWS.slice(0, 1);
+  return (
+    <section className="stack" aria-label="Reviews">
+      {others.map((r) => (
+        <figure className="review" key={r.author} data-placeholder={'mark' in r ? r.mark : undefined}>
+          <div className="who">
+            <span className="avatar">{r.author[0]}</span>
+            <b>{r.author}</b>
+            <span className="stars" aria-label="5 stars on the App Store">
+              ★★★★★
+            </span>
+          </div>
+          <blockquote>“{r.text}”</blockquote>
+        </figure>
+      ))}
+      {!PREVIEW && <p className="caption center">From the App Store</p>}
     </section>
   );
 }

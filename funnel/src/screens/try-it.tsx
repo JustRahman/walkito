@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { moveOf } from '../engine/plan';
 import { APP_STORE_RATING } from '../config';
@@ -6,13 +6,12 @@ import {
   DAY_LABEL,
   FIRST_STEP_MOVES,
   FIRST_STEP_SOURCE,
-  firstName,
   FOCUS_LABEL,
   goalLabels,
   kindOf,
-  offersBalance,
   PLAN_NAME,
   PROGRESS,
+  sessionOne,
   STEP,
   tryMove,
   WHEN_LABEL,
@@ -20,7 +19,7 @@ import {
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel, type TryIt } from '../state';
-import { ADVANCE_MS, Choice, clock, Clip, Cta, Page, Slide, Tick } from '../ui';
+import { ADVANCE_MS, Choice, clock, Clip, Cta, Page, Reaction } from '../ui';
 
 const LENGTH = 60;
 
@@ -124,19 +123,7 @@ const FELT: ReadonlyArray<{ value: NonNullable<TryIt['felt']>; label: string }> 
   { value: 'unsure', label: 'Not sure I did it right' },
 ];
 
-/** The move's still on top, the question in words (Headspace's "How'd it go?"). */
-function Felt({ children, progress }: { children: ReactNode; progress: string }) {
-  const s = useFunnel();
-  const move = tryMove(s.answers);
-  return (
-    <Page progress={PROGRESS[progress]}>
-      <img className="still" src={move.poster} alt="" />
-      {children}
-    </Page>
-  );
-}
-
-/** "How did that feel?", answered in words. No scale, no number. */
+/** "How did that feel?", answered in words, under the move's still. No scale, no number. */
 export function After() {
   const s = useFunnel();
   const pick = (felt: NonNullable<TryIt['felt']>) => {
@@ -145,7 +132,8 @@ export function After() {
     setTimeout(() => go(STEP.felt), ADVANCE_MS);
   };
   return (
-    <Felt progress={STEP.after}>
+    <Page progress={PROGRESS[STEP.after]}>
+      <img className="still" src={tryMove(s.answers).poster} alt="" />
       <div className="stack gap-s center">
         <h2>How did that feel?</h2>
         <p className="small">Take a moment to notice.</p>
@@ -157,48 +145,31 @@ export function After() {
           </Choice>
         ))}
       </div>
-    </Felt>
+    </Page>
   );
 }
 
-/** Her answer, given back as what she did, never as what it did to her feet. Never a dead end. */
+/**
+ * Her answer, given back as what she did, never as what it did to her feet.
+ * How many moves are left today is counted from her plan, never typed.
+ */
 export function FeltAnswer() {
   const s = useFunnel();
   const good = s.tryIt.felt === 'lighter' || s.tryIt.felt === 'better';
+  const left = sessionOne(s).length;
   return (
-    <Felt progress={STEP.felt}>
-      <div className="stack gap-s center">
-        <h2>{good ? 'Nice work. That’s the first move of your plan.' : 'That’s normal on day 1.'}</h2>
-        {!good && <p className="lead">Feet change with daily practice, not one move. Tomorrow’s move is ready.</p>}
-      </div>
-      <Cta>
-        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.felt }), go(STEP.praise))}>
-          Next
-        </button>
-      </Cta>
-    </Felt>
-  );
-}
-
-/** One line, on its own screen. */
-export function Praise() {
-  const s = useFunnel();
-  const name = firstName(s);
-  return (
-    <Slide
-      progress={PROGRESS[STEP.praise]}
-      label="Continue"
-      next={() => (track('step_completed', { step: STEP.praise }), go(STEP.wake))}
+    <Reaction
+      step={STEP.felt}
+      photo={{ src: tryMove(s.answers).poster }}
+      title={good ? 'Nice work. That’s the first move of your plan.' : 'That’s common the first time.'}
+      next={STEP.wake}
     >
-      <span className="done-mark">
-        <Tick />
-      </span>
-      <h1>
-        {name != null ? `Nice work, ${name}.` : 'Nice work.'}
-        <br />
-        Day 1 of your plan is done
-      </h1>
-    </Slide>
+      {good ? (
+        left > 0 && <p>Today’s session has {left === 1 ? 'one more' : 'two more'} like it.</p>
+      ) : (
+        <p>New moves often feel awkward at first. In the app, every move has a video you can follow.</p>
+      )}
+    </Reaction>
   );
 }
 
@@ -246,107 +217,11 @@ export function Routine() {
         <button
           className="btn"
           type="button"
-          onClick={() => (track('step_completed', { step: STEP.routine }), go(offersBalance(s.answers) ? STEP.balance : STEP.commit))}
+          onClick={() => (track('step_completed', { step: STEP.routine }), go(STEP.commit))}
         >
           Add it to my plan
         </button>
       </Cta>
-    </Page>
-  );
-}
-
-const HOLD = 10;
-
-export function Balance() {
-  const [phase, setPhase] = useState<'intro' | 'holding' | 'done'>('intro');
-  const [held, setHeld] = useState(0);
-  const started = useRef(0);
-
-  useEffect(() => {
-    if (phase !== 'holding') return;
-    const timer = setInterval(() => {
-      const seconds = Math.min(HOLD, Math.floor((Date.now() - started.current) / 1000));
-      setHeld(seconds);
-      if (seconds >= HOLD) stop(HOLD);
-    }, 200);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-
-  const stop = (seconds: number) => {
-    setHeld(seconds);
-    setPhase('done');
-    update((x) => ({ tryIt: { ...x.tryIt, balance: seconds } }));
-  };
-
-  return (
-    <Page progress={PROGRESS[STEP.balance]}>
-      {phase === 'intro' && (
-        <>
-          <div className="stack gap-s">
-            <span className="eyebrow">Optional</span>
-            <h2>A 10-second balance check</h2>
-          </div>
-          <div className="card stack">
-            <p>Stand by a counter, one hand just above it. Lift one foot a little. We count to 10.</p>
-            <p className="small">Put your foot down or hold on any time. That is not failing.</p>
-          </div>
-          <Cta>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                started.current = Date.now();
-                track('balance_started');
-                setPhase('holding');
-              }}
-            >
-              Start
-            </button>
-            <button
-              className="btn quiet"
-              type="button"
-              onClick={() => {
-                update((x) => ({ tryIt: { ...x.tryIt, balance: 'skipped' } }));
-                track('balance_skipped');
-                go(STEP.commit);
-              }}
-            >
-              Skip this
-            </button>
-          </Cta>
-        </>
-      )}
-      {phase === 'holding' && (
-        <>
-          <div className="clock" aria-live="polite">
-            {held} s
-          </div>
-          <div className="ring">
-            <div style={{ width: `${(held / HOLD) * 100}%` }} />
-          </div>
-          <Cta>
-            <button className="btn" type="button" style={{ minHeight: 96 }} onClick={() => stop(Math.min(HOLD, Math.floor((Date.now() - started.current) / 1000)))}>
-              Foot down
-            </button>
-          </Cta>
-        </>
-      )}
-      {phase === 'done' && (
-        <>
-          <div className="stack gap-s center">
-            <h2>
-              You held {held} {held === 1 ? 'second' : 'seconds'}
-            </h2>
-            <p className="lead">A starting note for your plan. Not a medical test.</p>
-          </div>
-          <Cta>
-            <button className="btn" type="button" onClick={() => go(STEP.commit)}>
-              Continue
-            </button>
-          </Cta>
-        </>
-      )}
     </Page>
   );
 }

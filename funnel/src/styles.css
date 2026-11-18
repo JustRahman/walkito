@@ -363,33 +363,14 @@ details[open] { padding-bottom: 1rem; }
 /* A preview build only: the placeholder quote over Dr. Shayman's line. */
 .doc-quote { font-family: var(--serif); font-size: 1.25rem; line-height: 1.3; }
 
-/*
- * The screens below keep their v5 contents until v6 reorders the quiz
- * (the statements, with/without, the plan's tiles).
- * They wear the same page, cards and button as everything else meanwhile.
- */
+/* Her answers, read back in rows. */
+.facts { margin: 0; padding: 0.3rem 1.15rem; }
+.facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 0.8rem 0; }
+.facts > div + div { border-top: 1.5px solid var(--line); }
+.facts dt { flex: none; font-size: 1rem; color: var(--muted); }
+.facts dd { margin: 0; font-weight: 600; text-align: right; }
 
-/* One picture, one line. */
-.statement { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1rem; }
-.statement p { color: var(--muted); }
-.journals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; font-family: var(--serif); font-style: italic; color: var(--muted); }
-.done-mark { width: 64px; height: 64px; border-radius: 50%; background: var(--positive); display: grid; place-items: center; }
-.done-mark svg { width: 34px; height: 34px; }
-
-/* Without / With: two cards, the second marked. */
-.versus { display: flex; flex-direction: column; gap: 0.75rem; }
-.versus section { border-radius: 18px; padding: 1.1rem 1.15rem; }
-.versus h3 { margin-bottom: 0.7rem; }
-.versus ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
-.versus li { display: flex; gap: 0.6rem; }
-.versus li::before { content: ''; flex: none; width: 20px; height: 20px; margin-top: 4px; border-radius: 50%; }
-.versus .without { background: var(--track); color: var(--muted); }
-.versus .without li::before { border: 2px solid var(--control); background: linear-gradient(var(--control), var(--control)) center / 8px 2px no-repeat; }
-.versus .with { background: var(--card); border: 1.5px solid var(--primary); font-weight: 600; }
-.versus .with h3 { color: var(--primary); }
-.versus .with li::before { background: var(--positive) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 12.5l4 4L18 8.5' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 14px no-repeat; }
-
-/* The plan's peek: her goals as chips, week 1 as a photo tile, what follows locked beside it. */
+/* The plan's peek, as v5 left it until the plan page is rebuilt: her goals as chips, week 1 as a photo tile, what follows locked beside it. */
 .goal-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .goal-chips span { padding: 0.3rem 0.8rem; border-radius: 999px; border: 1.5px solid var(--line); background: var(--card); font-size: 0.9375rem; font-weight: 600; }
 .tile { position: relative; border-radius: 16px; overflow: hidden; background-size: cover; background-position: center; color: #fff; }

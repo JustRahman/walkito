@@ -133,7 +133,7 @@ export function When() {
         { value: 'allday', label: 'All day', icon: 'sun' },
         { value: 'varies', label: 'It varies', icon: 'leafInWind' },
       ]}
-      next={STEP.since}
+      next={STEP.heardWhen}
     />
   );
 }
@@ -247,7 +247,7 @@ export function Tried() {
           onClick={() => {
             answer({ tried: picked });
             track('step_completed', { step: STEP.tried });
-            go(STEP.day);
+            go(STEP.heardTried);
           }}
         >
           Continue
@@ -341,7 +341,7 @@ export function Minutes() {
         { value: 5, label: '5 minutes', hint: 'What we suggest', icon: 'stopwatch', tag: 'Suggested' },
         { value: 10, label: '10 minutes', hint: 'A fuller session', icon: 'strength' },
       ]}
-      next={STEP.life}
+      next={STEP.summary}
     />
   );
 }

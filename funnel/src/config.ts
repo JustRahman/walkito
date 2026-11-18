@@ -94,6 +94,9 @@ export const ONELINK = 'https://walkito.onelink.me/2L97/';
  */
 export const PT_GUIDELINE_URL = '';
 
+/** The site's own list of the papers and guidelines its guides cite (site/lib/citations.ts), each with a DOI or PubMed id. */
+export const SOURCES_URL = 'https://walkito.site/science/';
+
 /**
  * Dr. Carla Shayman's name and photo, worded as her Upwork contract (Oct 30,
  * 2026) covers: she reviewed our heel pain and flat feet guides, and we may

@@ -8,31 +8,28 @@ import type { Answers, FunnelState } from './state';
  */
 export const STEP = {
   age: '/s/1',
-  name: '/s/20',
   focus: '/s/2',
   when: '/s/3',
-  wake: '/s/34',
+  heardWhen: '/s/36',
   since: '/s/21',
   tried: '/s/5',
+  heardTried: '/s/37',
   day: '/s/22',
   start: '/s/6',
   safety: '/s/7',
   minutes: '/s/9',
+  summary: '/s/38',
   life: '/s/23',
-  fault: '/s/24',
-  path: '/s/25',
-  research: '/s/28',
-  compare: '/s/29',
-  reviews: '/s/30',
+  proof: '/s/28',
   goals: '/s/26',
   move: '/s/11',
   after: '/s/12',
   felt: '/s/32',
-  praise: '/s/33',
+  wake: '/s/34',
   routine: '/s/35',
-  balance: '/s/13',
-  building: '/s/14',
   commit: '/s/31',
+  building: '/s/14',
+  name: '/s/20',
   plan: '/s/15',
   email: '/s/16',
   code: '/s/17',
@@ -47,26 +44,23 @@ export const ORDER: readonly string[] = [
   STEP.age,
   STEP.focus,
   STEP.when,
+  STEP.heardWhen,
   STEP.since,
   STEP.tried,
+  STEP.heardTried,
   STEP.day,
   STEP.start,
   STEP.safety,
   STEP.minutes,
+  STEP.summary,
   STEP.life,
-  STEP.fault,
-  STEP.path,
-  STEP.research,
-  STEP.compare,
-  STEP.reviews,
+  STEP.proof,
   STEP.goals,
   STEP.move,
   STEP.after,
   STEP.felt,
-  STEP.praise,
   STEP.wake,
   STEP.routine,
-  STEP.balance,
   STEP.commit,
   STEP.building,
   STEP.name,
@@ -82,6 +76,14 @@ export const ORDER: readonly string[] = [
  * would otherwise land on the first screen.
  */
 export const RETIRED: Readonly<Record<string, string>> = {
+  // v6 (Nov 2026): the statements, with/without, the reviews screen, "Day 1 is done" and the balance check.
+  '/s/24': STEP.proof,
+  '/s/25': STEP.proof,
+  '/s/29': STEP.goals,
+  '/s/30': STEP.goals,
+  '/s/33': STEP.wake,
+  '/s/13': STEP.commit,
+  // Earlier: the 0-10 rating before the try-it move.
   '/s/10': STEP.move,
 };
 
@@ -144,11 +146,6 @@ export function factsOf(a: Answers): PlanFacts {
     seated: a.start !== 'standing',
     minutes: a.minutes ?? 5,
   };
-}
-
-/** Only for "steadier", with nothing to plan around, starting standing. */
-export function offersBalance(a: Answers): boolean {
-  return a.focus === 'steady' && a.safety === 'none' && a.start === 'standing';
 }
 
 export function tryMove(a: Answers): Move {
@@ -306,6 +303,12 @@ export const DAY_LABEL: Readonly<Record<NonNullable<Answers['day']>, string>> = 
   feet: 'On your feet most of the day',
   run_short: 'Running under 10 miles a week',
   run_long: 'Running 10+ miles a week',
+};
+
+export const START_LABEL: Readonly<Record<NonNullable<Answers['start']>, string>> = {
+  chair: 'In a chair',
+  bed: 'On the edge of the bed',
+  standing: 'Standing, with a hand on a counter',
 };
 
 export const SINCE_LABEL: Readonly<Record<NonNullable<Answers['since']>, string>> = {

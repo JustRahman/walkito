@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { url } from './config';
-import { appLink, prevOf, sectionOf } from './flow';
+import { appLink, prevOf, PROGRESS, sectionOf } from './flow';
 import { ICONS, type IconName } from './icons.gen';
 import { track } from './lib/analytics';
-import { back, usePath } from './router';
+import { back, go, usePath } from './router';
 
 export type { IconName };
 
@@ -80,26 +80,34 @@ export function Icon({ name, size }: { name: IconName; size?: number }) {
 }
 
 /**
- * A statement between questions: one picture, one line, one button, on the
- * same page as every other screen (Back, progress, the same button).
+ * Something said back to her between questions: a sage panel with an optional
+ * photograph, one line and a sentence or two. It says what she did or what the
+ * plan does, never what it will do for her feet, and it waits for her tap.
  */
-export function Slide({
+export function Reaction({
+  step,
+  photo,
+  title,
   children,
-  progress,
   next,
-  label = 'Next',
 }: {
-  children: ReactNode;
-  progress?: number;
-  next: () => void;
-  label?: string;
+  step: string;
+  /** `at` is the part of the photograph to keep in the 16:10 frame, as an object-position. */
+  photo?: { src: string; at?: string };
+  title: string;
+  children?: ReactNode;
+  next: string;
 }) {
   return (
-    <Page progress={progress}>
-      <div className="statement">{children}</div>
+    <Page progress={PROGRESS[step]}>
+      <div className="panel stack">
+        {photo != null && <img className="still" src={photo.src} alt="" style={{ objectPosition: photo.at }} />}
+        <h2>{title}</h2>
+        {children}
+      </div>
       <Cta>
-        <button className="btn" type="button" onClick={next}>
-          {label}
+        <button className="btn" type="button" onClick={() => (track('step_completed', { step }), go(next))}>
+          Continue
         </button>
       </Cta>
     </Page>
