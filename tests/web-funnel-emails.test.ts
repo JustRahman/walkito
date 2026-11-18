@@ -6,6 +6,7 @@ import {
   GUARANTEE,
   abandon1Email,
   abandon2Email,
+  appUrl,
   cancelUrl,
   day3Email,
   emailFor,
@@ -162,6 +163,10 @@ describe('web_renewal_notice', () => {
 
 describe('the others', () => {
   test('day 2 is one line and a button to today', () => {
+    const first = morningEmail({ base: BASE, firstStep: true });
+    expect(first.subject).toBe('Before your first step');
+    expect(first.button?.url).toBe(appUrl('web_morning'));
+    expect(JSON.stringify(first)).not.toMatch(/pain-free|cure|heal|relieve|fix/i);
     const e = morningEmail({ base: BASE });
     expect(e.paragraphs).toHaveLength(1);
     expect(e.button?.url).toBe(planUrl(BASE, 'web_morning'));
@@ -261,6 +266,7 @@ describe('samples', () => {
       'web_welcome',
       'web_welcome_quarter',
       'web_morning',
+      'web_morning_first_step',
       'web_day3',
       'web_renewal_notice',
       'web_renewal_notice_quarter',

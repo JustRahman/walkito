@@ -14,7 +14,7 @@ import {
   SUPPORT_EMAIL,
   url,
 } from '../config';
-import { addDays, kindOf, PLAN_NAME, planLine, shortDate, STEP } from '../flow';
+import { addDays, clockLabel, kindOf, PLAN_NAME, planLine, shortDate, STEP, wakeOf } from '../flow';
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
@@ -79,7 +79,7 @@ export function Price() {
     track('price_viewed');
     // The deepest step Meta still receives on this site: the health category blocks checkout and purchase.
     meta('ViewContent', `price-${crypto.randomUUID()}`);
-    void saveLead({ price_viewed_at: new Date().toISOString() });
+    void saveLead({ price_viewed_at: new Date().toISOString(), wake_time: wakeOf(s.answers) });
     if (!billingReady()) return setYearly(false);
     packages.current = currentUser().then(async (user) => {
       if (user == null) return (setYearly(false), null);
@@ -240,6 +240,9 @@ export function Price() {
       <div className="stack gap-s center">
         <h1>{PLAN_NAME[kindOf(s.answers)]}</h1>
         <p className="small">{planLine(s.answers)}</p>
+        <p className="small">
+          <b>Your first-step routine starts tomorrow at {clockLabel(wakeOf(s.answers))}</b>
+        </p>
       </div>
       <figure className="quote">
         <div className="stars" aria-label="5 stars on the App Store">

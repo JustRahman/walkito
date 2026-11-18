@@ -150,7 +150,7 @@ async function people(ids: string[]): Promise<WebPerson[]> {
       everyRow('leads', (a, b) =>
         db
           .from('web_leads')
-          .select('user_id, email, utm, checkout_opened_at, price_viewed_at, plan_email_requested_at, unsubscribed_at')
+          .select('user_id, email, utm, wake_time, checkout_opened_at, price_viewed_at, plan_email_requested_at, unsubscribed_at')
           .in('user_id', part)
           .range(a, b),
       ),
@@ -190,6 +190,7 @@ async function people(ids: string[]): Promise<WebPerson[]> {
         checkoutOpenedAt: (lead?.checkout_opened_at as string | null | undefined) ?? null,
         priceViewedAt: (lead?.price_viewed_at as string | null | undefined) ?? null,
         planEmailRequestedAt: (lead?.plan_email_requested_at as string | null | undefined) ?? null,
+        wakeTime: (lead?.wake_time as string | null | undefined) ?? null,
         plan: planFrom(planOf.get(userId)?.plan),
         customer,
         log: logs

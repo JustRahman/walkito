@@ -12,6 +12,7 @@ export const STEP = {
   card: '/s/20',
   focus: '/s/2',
   when: '/s/3',
+  wake: '/s/34',
   since: '/s/21',
   tried: '/s/5',
   day: '/s/22',
@@ -30,6 +31,7 @@ export const STEP = {
   after: '/s/12',
   felt: '/s/32',
   praise: '/s/33',
+  routine: '/s/35',
   balance: '/s/13',
   building: '/s/14',
   sign: '/s/31',
@@ -48,6 +50,7 @@ const ORDER: readonly string[] = [
   STEP.card,
   STEP.focus,
   STEP.when,
+  STEP.wake,
   STEP.since,
   STEP.tried,
   STEP.day,
@@ -65,6 +68,7 @@ const ORDER: readonly string[] = [
   STEP.after,
   STEP.felt,
   STEP.praise,
+  STEP.routine,
   STEP.balance,
   STEP.sign,
   STEP.building,
@@ -284,3 +288,28 @@ export function firstName(s: FunnelState): string | null {
   const name = s.name?.trim() ?? '';
   return name === '' ? null : name;
 }
+
+/** Her wake time, "HH:MM": 7:00 until she says otherwise. */
+export const DEFAULT_WAKE = '07:00';
+
+export function wakeOf(a: Answers): string {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(a.wake ?? '') ? a.wake! : DEFAULT_WAKE;
+}
+
+/** "07:00" -> "7:00 AM". */
+export function clockLabel(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${((h! + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h! < 12 ? 'AM' : 'PM'}`;
+}
+
+/**
+ * The first-step routine: three moves done sitting up in bed or on its edge,
+ * about 2 minutes, before her first step in the morning. The plantar fascia
+ * stretch leads: DiGiovanni et al. (2003) had it done before the first step.
+ */
+export const FIRST_STEP_MOVES = ['fascia_stretch', 'big_toe_lift', 'short_foot_seated'] as const;
+
+export const FIRST_STEP_SOURCE = {
+  label: 'DiGiovanni et al., Journal of Bone and Joint Surgery, 2003',
+  url: 'https://pubmed.ncbi.nlm.nih.gov/12837927/',
+} as const;

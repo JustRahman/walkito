@@ -18,6 +18,7 @@ export function sampleWebEmails(now: Date, base: string, zone: string = DEFAULT_
     { name: 'web_welcome', email: welcomeEmail({ product: monthly, nextChargeAt: inDays(7), zone, base }) },
     { name: 'web_welcome_quarter', email: welcomeEmail({ product: quarter, nextChargeAt: inDays(91), zone, base }) },
     { name: 'web_morning', email: morningEmail({ base }) },
+    { name: 'web_morning_first_step', email: morningEmail({ base, firstStep: true }) },
     { name: 'web_day3', email: day3Email({ base }) },
     { name: 'web_renewal_notice', email: renewalNoticeEmail({ product: monthly, renewalAt: inDays(2), zone, base }) },
     { name: 'web_renewal_notice_quarter', email: renewalNoticeEmail({ product: quarter, renewalAt: inDays(2), zone, base }) },

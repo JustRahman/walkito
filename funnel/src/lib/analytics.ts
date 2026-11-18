@@ -18,6 +18,8 @@ type Events = {
   balance_started: Record<string, never>;
   balance_skipped: Record<string, never>;
   plan_viewed: Record<string, never>;
+  wake_time_set: Record<string, never>;
+  first_step_routine_shown: Record<string, never>;
   email_submitted: Record<string, never>;
   email_code_failed: { reason: string };
   email_verified: { existing: boolean };

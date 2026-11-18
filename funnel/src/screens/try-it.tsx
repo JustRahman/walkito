@@ -1,6 +1,23 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { DAY_LABEL, firstName, FOCUS_LABEL, goalLabels, kindOf, offersBalance, PLAN_NAME, PROGRESS, STEP, tryMove, WHEN_LABEL } from '../flow';
+import { moveOf } from '../engine/plan';
+import {
+  clockLabel,
+  DAY_LABEL,
+  FIRST_STEP_MOVES,
+  FIRST_STEP_SOURCE,
+  firstName,
+  FOCUS_LABEL,
+  goalLabels,
+  kindOf,
+  offersBalance,
+  PLAN_NAME,
+  PROGRESS,
+  STEP,
+  tryMove,
+  wakeOf,
+  WHEN_LABEL,
+} from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel, type TryIt } from '../state';
@@ -179,7 +196,7 @@ export function Praise() {
     <Slide
       tone="praise"
       label="Continue"
-      next={() => (track('step_completed', { step: STEP.praise }), go(offersBalance(s.answers) ? STEP.balance : STEP.sign))}
+      next={() => (track('step_completed', { step: STEP.praise }), go(STEP.routine))}
     >
       <h1 className="praise">
         {name != null ? `Nice work, ${name}.` : 'Nice work.'}
@@ -187,6 +204,60 @@ export function Praise() {
         Day 1 of your plan is done <span className="praise-tick"><Tick /></span>
       </h1>
     </Slide>
+  );
+}
+
+/**
+ * Something she uses tomorrow: three moves in bed, about 2 minutes, at the
+ * time she gets up. The study is a "why" link, never a promise.
+ */
+export function Routine() {
+  const s = useFunnel();
+  const at = clockLabel(wakeOf(s.answers));
+  const hero = s.answers.when === 'morning' || s.answers.life?.includes('mornings') === true;
+  const moves = FIRST_STEP_MOVES.map((id) => moveOf({ id }));
+  useEffect(() => {
+    track('first_step_routine_shown');
+  }, []);
+  return (
+    <Page progress={PROGRESS[STEP.routine]} backTo={STEP.praise}>
+      <div className="stack gap-s">
+        <span className="eyebrow">{hero ? 'Your first-step routine' : 'A bonus for your mornings'}</span>
+        <h2>Tomorrow at {at}, before your first step</h2>
+        <p className="small">2 minutes in bed. 3 moves.</p>
+      </div>
+      <div className="stack">
+        {moves.map((m, i) => (
+          <div className="card move" key={m.id}>
+            <img src={m.poster} alt="" loading="lazy" />
+            <div>
+              <div style={{ fontWeight: 800 }}>
+                {i + 1}. {m.title}
+              </div>
+              <div className="caption">{m.cue}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <details>
+        <summary>Why before your first step?</summary>
+        <p className="small">
+          Stretching the sole of the foot before the first steps of the day is how a well-known study set up its stretching program.{' '}
+          <a href={FIRST_STEP_SOURCE.url} target="_blank" rel="noopener noreferrer">
+            {FIRST_STEP_SOURCE.label}
+          </a>
+        </p>
+      </details>
+      <Cta>
+        <button
+          className="btn"
+          type="button"
+          onClick={() => (track('step_completed', { step: STEP.routine }), go(offersBalance(s.answers) ? STEP.balance : STEP.sign))}
+        >
+          Set it for {at}
+        </button>
+      </Cta>
+    </Page>
   );
 }
 
@@ -215,7 +286,7 @@ export function Balance() {
   };
 
   return (
-    <Page progress={PROGRESS[STEP.balance]} backTo={STEP.praise}>
+    <Page progress={PROGRESS[STEP.balance]} backTo={STEP.routine}>
       {phase === 'intro' && (
         <>
           <div className="stack gap-s">

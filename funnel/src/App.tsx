@@ -8,10 +8,10 @@ import { Code, Email } from './screens/email';
 import { HealthData, Privacy, Terms } from './screens/legal';
 import { Plan } from './screens/plan';
 import { Price } from './screens/price';
-import { Age, Day, Focus, Minutes, Safety, SafetyNote, Since, Start, Tried, When } from './screens/quiz';
+import { Age, Day, Focus, Minutes, Safety, SafetyNote, Since, Start, Tried, Wake, When } from './screens/quiz';
 import { StartDay1 } from './screens/start';
 import { Card, Compare, Fault, Goals, Life, Path, Research, Reviews, Sign } from './screens/story';
-import { After, Balance, Building, FeltAnswer, Praise, TryMove } from './screens/try-it';
+import { After, Balance, Building, FeltAnswer, Praise, Routine, TryMove } from './screens/try-it';
 import { useFunnel } from './state';
 
 const ROUTES: Readonly<Record<string, ComponentType>> = {
@@ -20,6 +20,7 @@ const ROUTES: Readonly<Record<string, ComponentType>> = {
   [STEP.card]: Card,
   [STEP.focus]: Focus,
   [STEP.when]: When,
+  [STEP.wake]: Wake,
   [STEP.since]: Since,
   [STEP.tried]: Tried,
   [STEP.day]: Day,
@@ -39,6 +40,7 @@ const ROUTES: Readonly<Record<string, ComponentType>> = {
   [STEP.after]: After,
   [STEP.felt]: FeltAnswer,
   [STEP.praise]: Praise,
+  [STEP.routine]: Routine,
   [STEP.balance]: Balance,
   [STEP.building]: Building,
   [STEP.plan]: Plan,

@@ -10,6 +10,7 @@ export type LocalTime = {
   /** `YYYY-MM-DD` in the user's zone. */
   date: string;
   hour: number;
+  minute: number;
   /** 0 = Sunday … 6 = Saturday. */
   weekday: number;
 };
@@ -26,6 +27,7 @@ function formatter(zone: string): Intl.DateTimeFormat {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
+        minute: '2-digit',
         hourCycle: 'h23',
         weekday: 'short',
       });
@@ -45,6 +47,7 @@ export function localTime(now: Date, zone: string): LocalTime {
   return {
     date: `${parts.year}-${parts.month}-${parts.day}`,
     hour: Number(parts.hour) % 24,
+    minute: Number(parts.minute),
     weekday: WEEKDAYS[parts.weekday] ?? 0,
   };
 }

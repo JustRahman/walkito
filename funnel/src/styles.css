@@ -498,6 +498,7 @@ details[open] { padding-bottom: 1rem; }
 .choice.soft-choice { justify-content: center; text-align: center; border-radius: 999px; min-height: 56px; background: #f6f3ee; border-color: #ece6dc; box-shadow: none; }
 .choice.soft-choice .grow { flex: none; }
 .goal-word { color: var(--primary); }
+.field.time { font-size: 2.4rem; font-weight: 800; text-align: center; min-height: 84px; font-variant-numeric: tabular-nums; }
 .slide.praise { --slide: linear-gradient(180deg, #0b0b2a 0%, #1b1b6e 55%, #3b2fd6 100%); }
 h1.praise { font-size: 2.3rem; font-weight: 600; line-height: 1.2; text-align: left; align-self: stretch; }
 .praise-tick { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #fff; vertical-align: middle; }

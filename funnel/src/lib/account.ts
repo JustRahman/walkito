@@ -204,6 +204,8 @@ export type Lead = {
   price_viewed_at?: string;
   /** "I want to think about it": the plan emails go to her. */
   plan_email_requested_at?: string;
+  /** When she usually gets up, "HH:MM": the morning email goes then. */
+  wake_time?: string;
   /** The one-time price offer was shown (never again after this). */
   offer_shown_at?: string;
 };

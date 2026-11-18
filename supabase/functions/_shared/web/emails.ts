@@ -1,5 +1,5 @@
 import { firstCharge, money, webProduct, type WebProduct } from './products.ts';
-import type { WebDecision, WebEmailKey, WebPerson } from './sequence.ts';
+import { wakeMinutes, type WebDecision, type WebEmailKey, type WebPerson } from './sequence.ts';
 
 /**
  * The words of every funnel email, in English.
@@ -150,8 +150,27 @@ export function welcomeEmail(input: { product: WebProduct; nextChargeAt: string 
   };
 }
 
-/** Day 2, the next morning. */
-export function morningEmail(input: { base: string }): WebEmail {
+/**
+ * Day 2, the next morning. With her wake time it goes then, and it is her
+ * first-step routine: three moves sitting up in bed, before her first step.
+ */
+export function morningEmail(input: { base: string; firstStep?: boolean }): WebEmail {
+  if (input.firstStep === true)
+    return {
+      kind: 'web_morning',
+      subject: 'Before your first step',
+      preheader: '2 minutes in bed, 3 moves.',
+      greeting: null,
+      paragraphs: [
+        'Good morning. Before you get out of bed, your first-step routine is ready.',
+        'Three moves, about 2 minutes, sitting up in bed or on its edge.',
+      ],
+      button: { label: 'Open my first-step routine', url: appUrl('web_morning') },
+      after: [`No app yet? [Open your plan in your browser](${planUrl(input.base, 'web_morning')}).`],
+      ps: null,
+      personal: false,
+      footerWhy: buyerFooter(input.base, false),
+    };
   return {
     kind: 'web_morning',
     subject: 'Good morning. Day 2 is ready.',
@@ -324,7 +343,7 @@ export function emailFor(decision: WebDecision, person: WebPerson, base: string)
       return renewalNoticeEmail({ product, renewalAt: decision.renewalAt, zone: person.zone, base });
     }
     case 'web_morning':
-      return morningEmail({ base });
+      return morningEmail({ base, firstStep: wakeMinutes(person.wakeTime) != null });
     case 'web_day3':
       return day3Email({ base });
     case 'web_abandon_1':

@@ -15,9 +15,11 @@ import { webProduct, type WebProduct } from './products.ts';
  *
  * - `web_welcome`: the receipt, right after the first purchase (the webhook
  *   asks for it at once; a run catches one it missed, for a day).
- * - `web_morning`: the next local morning, 08:00 to 12:00. A purchase made
- *   before 04:00 belongs to the evening before it, so a 01:30 buyer hears
- *   from us at 08:00 that same day, not 30 hours later.
+ * - `web_morning`: the next local morning, 08:00 to 12:00, or, when the funnel
+ *   has her wake time (`web_leads.wake_time`), from that time to two hours
+ *   after it: her first-step routine, before she gets out of bed. A purchase
+ *   made before 04:00 belongs to the evening before it, so a 01:30 buyer
+ *   hears from us that same morning, not 30 hours later.
  * - `web_day3`: two days after that day, 10:00 to 14:00, from two people.
  * - `web_renewal_notice`: on the local day two days before the charge,
  *   09:00 to 21:00 (or the day after, if a run missed it, while the charge is
@@ -65,8 +67,11 @@ const HOUR_MS = 3_600_000;
 /** Before this local hour, an instant belongs to the day before it. */
 const NIGHT_ENDS = 4;
 const WELCOME_WITHIN_HOURS = 24;
-const MORNING = { from: 8, to: 12 };
-const DAY3 = { from: 10, to: 14 };
+/** Windows are minutes of the local day. */
+const MORNING = { from: 8 * 60, to: 12 * 60 };
+const DAY3 = { from: 10 * 60, to: 14 * 60 };
+/** The first-step email: from her wake time to two hours after it. */
+const WAKE_WINDOW_MINUTES = 120;
 const NOTICE = { from: 9, to: 21 };
 /** A notice that cannot reach the buyer this long before the charge is no notice. */
 const NOTICE_MIN_HOURS_BEFORE = 12;
@@ -98,6 +103,8 @@ export type WebPerson = {
   priceViewedAt?: string | null;
   /** "I want to think about it" on the price page. */
   planEmailRequestedAt?: string | null;
+  /** When she usually gets up, "HH:MM" in her zone; the morning email goes then. */
+  wakeTime?: string | null;
   /** Her plan, as the funnel saved it (only with her consent to keep her answers). */
   plan?: { focus: string | null; minutes: number | null } | null;
   customer: WebCustomer | null;
@@ -150,6 +157,13 @@ export function renewalOf(customer: WebCustomer): { at: string; product: WebProd
 
 const hoursSince = (iso: string, now: Date) => (now.getTime() - Date.parse(iso)) / HOUR_MS;
 const within = (hour: number, w: { from: number; to: number }) => hour >= w.from && hour < w.to;
+const clock = (minutes: number) => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
+
+/** Her wake time as minutes of the day, or null when there is none or it is not "HH:MM". */
+export function wakeMinutes(wake: string | null | undefined): number | null {
+  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(wake ?? '');
+  return m == null ? null : Number(m[1]) * 60 + Number(m[2]);
+}
 
 export function nextWebEmail(p: WebPerson, now: Date): WebEvaluation {
   const skipped: WebEvaluation['skipped'] = [];
@@ -170,11 +184,12 @@ export function nextWebEmail(p: WebPerson, now: Date): WebEvaluation {
   );
 
   /** The checks every non-billing email shares; a reason when it may not go now. */
-  const held = (kind: WebEmailKey, day: string, hours: { from: number; to: number }): string | null => {
+  const minuteOfDay = local.hour * 60 + local.minute;
+  const held = (kind: WebEmailKey, day: string, window: { from: number; to: number }): string | null => {
     if (logged.has(kind)) return 'already sent';
     if (p.unsubscribed) return 'unsubscribed';
     if (local.date !== day) return local.date < day ? 'not yet' : 'its day has passed';
-    if (!within(local.hour, hours)) return `outside ${hours.from}:00-${hours.to}:00 local`;
+    if (!within(minuteOfDay, window)) return `outside ${clock(window.from)}-${clock(window.to)} local`;
     if (emailedToday) return 'already emailed today';
     if (lastSentHours < GAP_HOURS) return 'another email went out less than 3 hours ago';
     return null;
@@ -211,7 +226,9 @@ export function nextWebEmail(p: WebPerson, now: Date): WebEvaluation {
       return none();
     }
     const day1 = dayOf(c.firstPurchaseAt, p.zone);
-    const morning = held('web_morning', addDays(day1, 1), MORNING);
+    const wake = wakeMinutes(p.wakeTime);
+    const morningWindow = wake == null ? MORNING : { from: wake, to: Math.min(wake + WAKE_WINDOW_MINUTES, 24 * 60) };
+    const morning = held('web_morning', addDays(day1, 1), morningWindow);
     if (morning == null) return decide('web_morning');
     skipped.push({ kind: 'web_morning', reason: morning });
     const day3 = held('web_day3', addDays(day1, 2), DAY3);

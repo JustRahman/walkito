@@ -155,6 +155,20 @@ describe('web_morning', () => {
     const p = person({ log: [...welcomed, sent('web_abandon_2', ny('2026-11-17', 8, 1))] });
     expect(why(p, ny('2026-11-17', 11, 30), 'web_morning')).toBe('already emailed today');
   });
+
+  test('with her wake time: from that minute to two hours after, before her first step', () => {
+    const p = person({ log: welcomed, wakeTime: '06:45' });
+    expect(why(p, ny('2026-11-17', 6, 30), 'web_morning')).toBe('outside 6:45-8:45 local');
+    expect(pick(p, ny('2026-11-17', 6, 45))).toBe('web_morning');
+    expect(pick(p, ny('2026-11-17', 8, 44))).toBe('web_morning');
+    expect(pick(p, ny('2026-11-17', 8, 45))).toBeNull();
+  });
+
+  test('a wake time that is not HH:MM is ignored: 08:00 to 12:00 as before', () => {
+    const p = person({ log: welcomed, wakeTime: '7am' });
+    expect(pick(p, ny('2026-11-17', 7))).toBeNull();
+    expect(pick(p, ny('2026-11-17', 8))).toBe('web_morning');
+  });
 });
 
 describe('web_day3', () => {

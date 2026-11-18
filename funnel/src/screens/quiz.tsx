@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 
 import { url } from '../config';
-import { PROGRESS, STEP } from '../flow';
+import { PROGRESS, STEP, wakeOf } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, useFunnel, type Answers } from '../state';
@@ -124,8 +124,40 @@ export function When() {
         { value: 'allday', label: 'All day', icon: 'sun' },
         { value: 'varies', label: 'It varies', icon: 'leafInWind' },
       ]}
-      next={STEP.since}
+      next={STEP.wake}
     />
+  );
+}
+
+/** When she gets up: her first-step routine is set for then. */
+export function Wake() {
+  const s = useFunnel();
+  const [time, setTime] = useState(wakeOf(s.answers));
+  return (
+    <Page progress={PROGRESS[STEP.wake]} backTo={STEP.when}>
+      <h2>When do you usually get up?</h2>
+      <input
+        className="field time"
+        type="time"
+        aria-label="Usual wake-up time"
+        value={time}
+        onChange={(e) => e.target.value !== '' && setTime(e.target.value)}
+      />
+      <Cta>
+        <button
+          className="btn"
+          type="button"
+          onClick={() => {
+            answer({ wake: time });
+            track('wake_time_set');
+            track('step_completed', { step: STEP.wake });
+            go(STEP.since);
+          }}
+        >
+          Continue
+        </button>
+      </Cta>
+    </Page>
   );
 }
 
@@ -134,7 +166,7 @@ export function Since() {
     <Single
       path={STEP.since}
       field="since"
-      backTo={STEP.when}
+      backTo={STEP.wake}
       title="How long has this been going on?"
       options={[
         { value: 'new', label: 'Less than 3 months', icon: 'seedling' },

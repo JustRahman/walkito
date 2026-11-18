@@ -23,6 +23,8 @@ export type Answers = {
   life?: string[];
   /** What she wants back, the mirror of `life` (GOALS in flow.ts). */
   goals?: string[];
+  /** When she usually gets up, "HH:MM", 24-hour: her first-step routine's time. */
+  wake?: string;
 };
 
 export type TryIt = {
