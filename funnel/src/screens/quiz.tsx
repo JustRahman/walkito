@@ -108,8 +108,8 @@ export function Focus() {
       field="focus"
       title="What bothers your feet most?"
       options={[
-        { value: 'heel', label: 'My heel or arch', icon: 'foot' },
-        { value: 'flat', label: 'Flat, tired arches', icon: 'sandal' },
+        { value: 'heel', label: 'My heel or the bottom of my foot', icon: 'foot' },
+        { value: 'flat', label: 'Flat or tired arches', icon: 'sandal' },
         { value: 'allday', label: 'Sore after a day on my feet', icon: 'briefcase' },
         { value: 'moving', label: 'Stiff feet or ankles', icon: 'runningShoe' },
         { value: 'steady', label: 'Feeling unsteady on my feet', icon: 'balance' },
@@ -128,8 +128,8 @@ export function When() {
       options={[
         { value: 'morning', label: 'First steps in the morning', icon: 'sunrise' },
         { value: 'sitting', label: 'Standing up after sitting', icon: 'couch' },
-        { value: 'evening', label: 'After work, by evening', icon: 'moon' },
-        { value: 'running', label: 'During or after runs', icon: 'runningShoe' },
+        { value: 'evening', label: 'By the evening', icon: 'moon' },
+        { value: 'running', label: 'During or after a walk or run', icon: 'runningShoe' },
         { value: 'allday', label: 'All day', icon: 'sun' },
         { value: 'varies', label: 'It varies', icon: 'leafInWind' },
       ]}
@@ -229,7 +229,7 @@ export function Tried() {
   return (
     <Page progress={PROGRESS[STEP.tried]}>
       <div className="stack gap-s">
-        <h2>What have you tried?</h2>
+        <h2>What have you already tried?</h2>
         <p className="small">Choose all that apply.</p>
       </div>
       <div className="stack">
@@ -262,13 +262,12 @@ export function Day() {
     <Single
       path={STEP.day}
       field="day"
-      title="What does your usual day look like?"
+      title="What does a usual day look like?"
       options={[
-        { value: 'sit8', label: 'Sitting most of the day', hint: '8 hours or more', icon: 'couch' },
-        { value: 'sit4', label: 'Sitting part of the day', hint: '4 to 8 hours', icon: 'briefcase' },
+        { value: 'sit8', label: 'Mostly sitting', icon: 'couch' },
+        { value: 'sit4', label: 'Some sitting, some standing', icon: 'briefcase' },
         { value: 'feet', label: 'On my feet most of the day', icon: 'leg' },
-        { value: 'run_short', label: 'I run', hint: 'Under 10 miles a week', icon: 'runningShoe' },
-        { value: 'run_long', label: 'I run a lot', hint: '10 miles a week or more', icon: 'strength' },
+        { value: 'run_short', label: 'I run regularly', icon: 'runningShoe' },
       ]}
       next={STEP.start}
     />
@@ -285,11 +284,11 @@ export function Start() {
     <Single
       path={STEP.start}
       field="start"
-      title="Where would you like to start?"
+      title="Where would you like to do your exercises?"
       options={[
         { value: 'chair', label: 'In a chair', icon: 'couch' },
         { value: 'bed', label: 'On the edge of the bed', icon: 'bed' },
-        ...(seatedAd ? [] : [{ value: 'standing' as const, label: 'Standing', hint: 'With a hand on a counter', icon: 'balance' as const }]),
+        ...(seatedAd ? [] : [{ value: 'standing' as const, label: 'Standing, with a hand on a counter', icon: 'balance' as const }]),
       ]}
       next={STEP.safety}
     />
@@ -302,6 +301,7 @@ export function Safety() {
       path={STEP.safety}
       field="safety"
       title="Anything we should plan around?"
+      sub="We ask so your first week is safe for you. Choose the one that matters most."
       options={[
         { value: 'surgery', label: 'Recent surgery or injury' },
         { value: 'numb', label: 'Numbness or swelling' },
@@ -335,10 +335,10 @@ export function Minutes() {
     <Single
       path={STEP.minutes}
       field="minutes"
-      title="How much time each day?"
+      title="How much time can you give your feet each day?"
       options={[
         { value: 3, label: '3 minutes', hint: 'A gentle start', icon: 'feather' },
-        { value: 5, label: '5 minutes', hint: 'What we suggest', icon: 'stopwatch', tag: 'Suggested' },
+        { value: 5, label: '5 minutes', icon: 'stopwatch', tag: 'Suggested' },
         { value: 10, label: '10 minutes', hint: 'A fuller session', icon: 'strength' },
       ]}
       next={STEP.summary}

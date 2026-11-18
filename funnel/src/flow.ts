@@ -259,20 +259,23 @@ export function planLine(a: Answers): string {
 
 export type LifeOption = { value: string; label: string; goal: string; goalLabel: string };
 
-/** How her feet get in her way, each with its mirror: the goal she can pick back. */
+/**
+ * How her feet get in her way, each with its mirror: the goal she can pick
+ * back. The values are stored; the words are v6's, hers for what she wants
+ * and never a promise of ours.
+ */
 export const LIFE: readonly LifeOption[] = [
-  { value: 'mornings', label: 'I dread my first steps in the morning', goal: 'mornings', goalLabel: 'Enjoy my mornings again' },
-  { value: 'walks', label: 'I skip walks', goal: 'walk', goalLabel: 'Walk without thinking about my feet' },
-  { value: 'shift', label: 'I can’t stand through my shift', goal: 'shift', goalLabel: 'Stand through my day' },
-  { value: 'runs', label: 'I cut my runs short', goal: 'runs', goalLabel: 'Run longer' },
-  { value: 'shoes', label: 'I can’t wear the shoes I like', goal: 'shoes', goalLabel: 'Wear the shoes I like' },
-  { value: 'evening', label: 'My feet hurt by evening', goal: 'evenings', goalLabel: 'Enjoy my evenings on my feet' },
+  { value: 'mornings', label: 'I dread my first steps in the morning', goal: 'mornings', goalLabel: 'Easier mornings on my feet' },
+  { value: 'walks', label: 'I skip walks', goal: 'walk', goalLabel: 'Walking without thinking about my feet' },
+  { value: 'shift', label: 'I can’t stand for long', goal: 'shift', goalLabel: 'Standing for longer' },
+  { value: 'shoes', label: 'I can’t wear the shoes I like', goal: 'shoes', goalLabel: 'Wearing the shoes I like' },
+  { value: 'evening', label: 'My feet are sore by evening', goal: 'evenings', goalLabel: 'Evenings on my feet' },
+  { value: 'runs', label: 'I cut my runs short', goal: 'runs', goalLabel: 'Running longer' },
 ];
 
-/** A runner sees running first. */
+/** Running is only asked of a runner. */
 export function lifeFor(a: Answers): readonly LifeOption[] {
-  if (kindOf(a) !== 'runner') return LIFE;
-  return [...LIFE.filter((o) => o.value === 'runs'), ...LIFE.filter((o) => o.value !== 'runs')];
+  return kindOf(a) === 'runner' ? LIFE : LIFE.filter((o) => o.value !== 'runs');
 }
 
 export function lifeLabels(a: Answers): string[] {
@@ -291,18 +294,19 @@ export function mentionedGoals(a: Answers): string[] {
 export const WHEN_LABEL: Readonly<Record<NonNullable<Answers['when']>, string>> = {
   morning: 'First steps in the morning',
   sitting: 'Standing up after sitting',
-  evening: 'After work, by evening',
-  running: 'During or after runs',
+  evening: 'By the evening',
+  running: 'During or after a walk or run',
   allday: 'All day',
   varies: 'It varies',
 };
 
 export const DAY_LABEL: Readonly<Record<NonNullable<Answers['day']>, string>> = {
-  sit8: 'Sitting 8+ hours a day',
-  sit4: 'Sitting 4–8 hours a day',
+  sit8: 'Mostly sitting',
+  sit4: 'Some sitting, some standing',
   feet: 'On your feet most of the day',
-  run_short: 'Running under 10 miles a week',
-  run_long: 'Running 10+ miles a week',
+  run_short: 'Running regularly',
+  // No longer asked (v6 has one answer for runners); kept for a visitor who chose it before.
+  run_long: 'Running regularly',
 };
 
 export const START_LABEL: Readonly<Record<NonNullable<Answers['start']>, string>> = {

@@ -204,7 +204,7 @@ export function Goals() {
   const hersFirst = [...options.filter((o) => mentioned.includes(o.goal)), ...options.filter((o) => !mentioned.includes(o.goal))];
   return (
     <Page progress={PROGRESS[STEP.goals]}>
-      <h2 className="center">What do you want back?</h2>
+      <h2>What would you like to get back to?</h2>
       <div className="stack">
         {hersFirst.map((o) => (
           <MultiChoice key={o.goal} checked={picked.includes(o.goal)} onToggle={() => toggle(o.goal)}>
@@ -224,7 +224,7 @@ export function Goals() {
             go(STEP.move);
           }}
         >
-          These are my goals
+          Continue
         </button>
       </Cta>
     </Page>
