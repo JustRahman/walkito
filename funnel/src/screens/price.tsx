@@ -348,15 +348,12 @@ export function Price() {
 
           <section className="card stack" aria-label="What you get">
             <h3>What you get</h3>
-            <div className="gets">
-              <img src={url('/img/phone-home.webp')} alt="The Walkito app" />
-              <ul className="ticks">
-                <li>A short session most days</li>
-                <li>A video for every move</li>
-                <li>A plan that changes each week</li>
-                <li>A morning reminder</li>
-              </ul>
-            </div>
+            <ul className="ticks">
+              <li>A short session most days</li>
+              <li>A video for every move</li>
+              <li>A plan that changes each week</li>
+              <li>A morning reminder</li>
+            </ul>
           </section>
         </>
       )}

@@ -365,10 +365,6 @@ details[open] { padding-bottom: 1rem; }
 .facts dt { flex: none; font-size: 1rem; color: var(--muted); }
 .facts dd { margin: 0; font-weight: 600; text-align: right; }
 
-/* What she gets: the app's own screen beside four plain lines. */
-.gets { display: grid; grid-template-columns: 104px 1fr; gap: 1rem; align-items: center; }
-.gets img { width: 100%; height: auto; }
-
 /* Her first week: seven days from today. Today is filled, a rest day is only outlined. */
 .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.3rem; }
 .week .d { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; font-size: 0.9375rem; color: var(--caption); }
