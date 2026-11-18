@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   COMPANY_LINE,
-  PREVIEW,
   DEFAULT_VARIANT,
   DESCRIPTOR,
   GUARANTEE_DAYS,
@@ -15,15 +14,14 @@ import {
   url,
   yearlySaving,
 } from '../config';
-import { addDays, kindOf, PLAN_NAME, planLine, shortDate, STEP, wakeOf } from '../flow';
+import { addDays, firstName, kindOf, PLAN_NAME, planLine, shortDate, STEP, wakeOf } from '../flow';
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
 import { go } from '../router';
 import { update, useFunnel } from '../state';
-import { AppButton, Check, Choice, Page } from '../ui';
-import { PLACEHOLDER_REVIEWS } from '../preview/placeholders';
-import { ReviewCards, REVIEWS, TrustLines } from './trust';
+import { AppButton, Check, Choice, Cta, Page } from '../ui';
+import { ReviewCards, TrustLines } from './trust';
 
 type PlanId = 'monthly' | 'yearly';
 
@@ -219,31 +217,19 @@ export function Price() {
 
   const retest = addDays(today, 14);
   const saving = yearlySaving(variant);
+  const name = firstName(s);
   return (
     <Page backTo={STEP.plan} footer>
-      <div className="stack gap-s center">
-        <h1>{PLAN_NAME[kindOf(s.answers)]}</h1>
-        <p className="small">{planLine(s.answers)}</p>
-        <p className="small">
-          <b>Your first-step routine starts tomorrow morning.</b>
+      <div className="stack gap-s">
+        <h1>
+          {name != null ? `${name}, start your plan ` : 'Start your plan '}
+          <em>today</em>
+        </h1>
+        <p className="lead">
+          {PLAN_NAME[kindOf(s.answers)]} · {planLine(s.answers)}
         </p>
+        <p className="small">Your first-step routine starts tomorrow morning.</p>
       </div>
-      <figure className="quote">
-        <div className="stars" aria-label="5 stars on the App Store">
-          ★★★★★
-        </div>
-        {PREVIEW ? (
-          <>
-            <blockquote data-placeholder={PLACEHOLDER_REVIEWS[0].mark}>“{PLACEHOLDER_REVIEWS[0].text}”</blockquote>
-            <figcaption>{PLACEHOLDER_REVIEWS[0].author}</figcaption>
-          </>
-        ) : (
-          <>
-            <blockquote>“The interface is clean and easy to navigate, and programs are easy to follow.”</blockquote>
-            <figcaption>{REVIEWS[1].author}, App Store</figcaption>
-          </>
-        )}
-      </figure>
 
       {phase === 'held-back' ? (
         <HeldBack
@@ -307,6 +293,30 @@ export function Price() {
             )}
           </div>
 
+          <div className="stack gap-s">
+            <div ref={consentBox}>
+              <Check
+                className={nudge ? 'nudge' : undefined}
+                checked={agreed}
+                onChange={(v) => {
+                  setAgreed(v);
+                  if (v) track('consent_given', { kind: 'auto_renew_box' });
+                }}
+              >
+                {consent}
+              </Check>
+            </div>
+            {nudge && <p className="small center">Tick the box above to continue.</p>}
+            {error != null && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <p className="caption center">
+              By paying you agree to the <a href={url('/terms')}>Terms</a>. Charges appear as {DESCRIPTOR}.
+            </p>
+          </div>
+
           <div className="panel" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
             <img src={url('/img/art-shield.webp')} alt="" width={44} height={44} style={{ objectFit: 'contain', flex: 'none' }} />
             <div>
@@ -316,7 +326,7 @@ export function Price() {
           </div>
 
           <section className="card stack" aria-label="What happens and when">
-            <h3>How it works</h3>
+            <h3>What happens next</h3>
             <div className="timeline">
               {plan === 'monthly' ? (
                 <>
@@ -336,45 +346,23 @@ export function Price() {
             </div>
           </section>
 
-          <TrustLines />
-
-          <div ref={consentBox}>
-            <Check
-              className={nudge ? 'nudge' : undefined}
-              checked={agreed}
-              onChange={(v) => {
-                setAgreed(v);
-                if (v) track('consent_given', { kind: 'auto_renew_box' });
-              }}
-            >
-              {consent}
-            </Check>
-          </div>
-          {nudge && <p className="small center">Tick the box above to continue.</p>}
-
-          {error != null && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
-
-          <button className="btn" type="button" disabled={phase !== 'idle'} onClick={() => void checkout()}>
-            {phase === 'opening' ? 'Opening checkout…' : 'Get my plan'}
-          </button>
-          <div className="pay">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor" />
-              <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="2.2" />
-            </svg>
-            Secure checkout · Cancel any time
-          </div>
-          <p className="caption center">
-            By paying you agree to the <a href={url('/terms')}>Terms</a>. Charges appear as {DESCRIPTOR}.
-          </p>
+          <section className="card stack" aria-label="What you get">
+            <h3>What you get</h3>
+            <div className="gets">
+              <img src={url('/img/phone-home.webp')} alt="The Walkito app" />
+              <ul className="ticks">
+                <li>A short session most days</li>
+                <li>A video for every move</li>
+                <li>A plan that changes each week</li>
+                <li>A morning reminder</li>
+              </ul>
+            </div>
+          </section>
         </>
       )}
 
       <ReviewCards />
+      <TrustLines />
 
       <section className="stack" aria-label="Questions">
         <details>
@@ -388,6 +376,19 @@ export function Price() {
           <summary>How do I cancel?</summary>
           <p className="small">
             Go to {SITE}/s/cancel and tap Cancel, or reply to any email from us. You keep access until the end of the time you paid for.
+          </p>
+        </details>
+        <details>
+          <summary>Do I need any equipment?</summary>
+          <p className="small">
+            No. Your first week needs only a sturdy chair. Later, if you have a ball or a resistance band at home, the app can use them.
+          </p>
+        </details>
+        <details>
+          <summary>Is this suitable at my age?</summary>
+          <p className="small">
+            The exercises are gentle, and most can be done sitting down. If you told us about a recent surgery, numbness, dizziness or a
+            walking aid, your first week stays seated. If you are unsure, ask your doctor or physical therapist before you start.
           </p>
         </details>
         <details>
@@ -405,6 +406,21 @@ export function Price() {
         {COMPANY_LINE}
       </p>
       <AppButton from="price" quiet label="Prefer the App Store? Get the app" />
+
+      {phase !== 'held-back' && (
+        <Cta>
+          <button className="btn" type="button" disabled={phase !== 'idle'} onClick={() => void checkout()}>
+            {phase === 'opening' ? 'Opening checkout…' : `Start my plan · ${money(plan === 'monthly' ? m.intro : y.price)}`}
+          </button>
+          <div className="pay">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor" />
+              <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="2.2" />
+            </svg>
+            Secure checkout · Cancel any time
+          </div>
+        </Cta>
+      )}
     </Page>
   );
 }
