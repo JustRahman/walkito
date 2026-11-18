@@ -1,6 +1,6 @@
 import { useEffect, type ComponentType } from 'react';
 
-import { missingStep, STEP } from './flow';
+import { missingStep, RETIRED, STEP } from './flow';
 import { track } from './lib/analytics';
 import { go, usePath } from './router';
 import { Cancel, Me } from './screens/account';
@@ -35,7 +35,6 @@ export const ROUTES: Readonly<Record<string, ComponentType>> = {
   [STEP.compare]: Compare,
   [STEP.reviews]: Reviews,
   [STEP.goals]: Goals,
-  [STEP.before]: TryMove,
   [STEP.move]: TryMove,
   [STEP.after]: After,
   [STEP.felt]: FeltAnswer,
@@ -59,7 +58,7 @@ export const ROUTES: Readonly<Record<string, ComponentType>> = {
 export function App() {
   const path = usePath();
   const s = useFunnel();
-  const redirect = missingStep(path, s);
+  const redirect = RETIRED[path] ?? missingStep(path, s);
   useEffect(() => {
     if (redirect != null) go(redirect, { replace: true });
   }, [redirect]);

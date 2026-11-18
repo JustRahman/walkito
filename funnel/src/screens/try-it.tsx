@@ -54,7 +54,7 @@ export function TryMove() {
   };
 
   return (
-    <Page progress={PROGRESS[STEP.move]} backTo={STEP.goals}>
+    <Page progress={PROGRESS[STEP.move]}>
       <div className="stack gap-s">
         <span className="eyebrow">Try it now · 60 seconds</span>
         <h2>{move.title}</h2>
@@ -125,11 +125,11 @@ const FELT: ReadonlyArray<{ value: NonNullable<TryIt['felt']>; label: string }> 
 ];
 
 /** The move's still on top, the question in words (Headspace's "How'd it go?"). */
-function Felt({ children, backTo, progress }: { children: ReactNode; backTo: string; progress: string }) {
+function Felt({ children, progress }: { children: ReactNode; progress: string }) {
   const s = useFunnel();
   const move = tryMove(s.answers);
   return (
-    <Page progress={PROGRESS[progress]} backTo={backTo}>
+    <Page progress={PROGRESS[progress]}>
       <img className="still" src={move.poster} alt="" />
       {children}
     </Page>
@@ -145,7 +145,7 @@ export function After() {
     setTimeout(() => go(STEP.felt), ADVANCE_MS);
   };
   return (
-    <Felt backTo={STEP.move} progress={STEP.after}>
+    <Felt progress={STEP.after}>
       <div className="stack gap-s center">
         <h2>How did that feel?</h2>
         <p className="small">Take a moment to notice.</p>
@@ -166,7 +166,7 @@ export function FeltAnswer() {
   const s = useFunnel();
   const good = s.tryIt.felt === 'lighter' || s.tryIt.felt === 'better';
   return (
-    <Felt backTo={STEP.after} progress={STEP.felt}>
+    <Felt progress={STEP.felt}>
       <div className="stack gap-s center">
         <h2>{good ? 'Nice work. That’s the first move of your plan.' : 'That’s normal on day 1.'}</h2>
         {!good && <p className="lead">Feet change with daily practice, not one move. Tomorrow’s move is ready.</p>}
@@ -187,7 +187,6 @@ export function Praise() {
   return (
     <Slide
       progress={PROGRESS[STEP.praise]}
-      backTo={STEP.felt}
       label="Continue"
       next={() => (track('step_completed', { step: STEP.praise }), go(STEP.routine))}
     >
@@ -216,7 +215,7 @@ export function Routine() {
     track('first_step_routine_shown');
   }, []);
   return (
-    <Page progress={PROGRESS[STEP.routine]} backTo={STEP.praise}>
+    <Page progress={PROGRESS[STEP.routine]}>
       <div className="stack gap-s">
         <span className="eyebrow">{hero ? 'Your first-step routine' : 'A bonus for your mornings'}</span>
         <h2>Tomorrow at {at}, before your first step</h2>
@@ -282,7 +281,7 @@ export function Balance() {
   };
 
   return (
-    <Page progress={PROGRESS[STEP.balance]} backTo={STEP.routine}>
+    <Page progress={PROGRESS[STEP.balance]}>
       {phase === 'intro' && (
         <>
           <div className="stack gap-s">
@@ -387,7 +386,7 @@ export function Building() {
   }, [total]);
   const shown = Math.min(lines.length, Math.floor(done * lines.length) + 1);
   return (
-    <Page progress={PROGRESS[STEP.building]}>
+    <Page progress={PROGRESS[STEP.building]} backTo={null}>
       <h2 className="center">Analyzing your answers</h2>
       <div className="dial" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(done * 100)}>
         <svg viewBox="0 0 168 168">

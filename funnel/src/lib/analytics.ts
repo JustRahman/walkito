@@ -86,6 +86,8 @@ export function startAnalytics(): void {
     });
     posthog.register({
       funnel: 'web-v1',
+      // The quiz's order and look. Step charts split where it changes: v6 from Nov 2026.
+      design: 'v6',
       app_variant: import.meta.env.DEV ? 'development' : 'web',
       price_variant: getState().variant,
     });

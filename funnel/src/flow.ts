@@ -25,7 +25,6 @@ export const STEP = {
   compare: '/s/29',
   reviews: '/s/30',
   goals: '/s/26',
-  before: '/s/10',
   move: '/s/11',
   after: '/s/12',
   felt: '/s/32',
@@ -76,6 +75,28 @@ export const ORDER: readonly string[] = [
   STEP.code,
   STEP.price,
 ];
+
+/**
+ * Paths the quiz no longer has, each with where its visitor goes now. Somebody
+ * part-way through when a new order ships, or coming back to a saved link,
+ * would otherwise land on the first screen.
+ */
+export const RETIRED: Readonly<Record<string, string>> = {
+  '/s/10': STEP.move,
+};
+
+/**
+ * The step before this one: where Back goes when the browser has nothing to go
+ * back to (she opened a link, or reloaded). Never the loader, which would only
+ * send her forward again.
+ */
+export function prevOf(path: string): string | null {
+  if (path.endsWith('/note')) return path.slice(0, -'/note'.length);
+  const at = ORDER.indexOf(path);
+  if (at <= 0) return null;
+  const before = ORDER[at - 1]!;
+  return before === STEP.building ? (ORDER[at - 2] ?? null) : before;
+}
 
 /** The quiz in four parts, each named above the progress bar from its first step on. */
 const SECTIONS: ReadonlyArray<readonly [from: string, label: string]> = [

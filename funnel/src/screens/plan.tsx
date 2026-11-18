@@ -32,7 +32,7 @@ export function Plan() {
     track('plan_viewed');
   }, []);
   return (
-    <Page backTo={STEP.goals}>
+    <Page>
       <div className="stack gap-s">
         <h1>{name != null ? `${name}, here’s a peek at your plan:` : 'Here’s a peek at your plan:'}</h1>
         <p className="lead">

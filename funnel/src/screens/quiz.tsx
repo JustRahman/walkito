@@ -18,7 +18,6 @@ function Single<K extends keyof Answers>({
   sub,
   options,
   next,
-  backTo,
 }: {
   path: string;
   field: K;
@@ -26,7 +25,6 @@ function Single<K extends keyof Answers>({
   sub?: ReactNode;
   options: ReadonlyArray<Option<NonNullable<Answers[K]>>>;
   next: string | ((value: NonNullable<Answers[K]>) => string | null);
-  backTo?: string;
 }) {
   const s = useFunnel();
   const [picked, setPicked] = useState<Answers[K] | undefined>(s.answers[field]);
@@ -38,7 +36,7 @@ function Single<K extends keyof Answers>({
     if (target != null) setTimeout(() => go(target), ADVANCE_MS);
   };
   return (
-    <Page progress={PROGRESS[path]} backTo={backTo}>
+    <Page progress={PROGRESS[path]}>
       <div className="stack gap-s">
         <h2>{title}</h2>
         {sub != null && <p className="small">{sub}</p>}
@@ -108,7 +106,6 @@ export function Focus() {
     <Single
       path={STEP.focus}
       field="focus"
-      backTo={STEP.card}
       title="What bothers your feet most?"
       options={[
         { value: 'heel', label: 'My heel or arch', icon: 'foot' },
@@ -127,7 +124,6 @@ export function When() {
     <Single
       path={STEP.when}
       field="when"
-      backTo={STEP.focus}
       title="When do you notice it most?"
       options={[
         { value: 'morning', label: 'First steps in the morning', icon: 'sunrise' },
@@ -147,7 +143,7 @@ export function Wake() {
   const s = useFunnel();
   const [time, setTime] = useState(wakeOf(s.answers));
   return (
-    <Page progress={PROGRESS[STEP.wake]} backTo={STEP.when}>
+    <Page progress={PROGRESS[STEP.wake]}>
       <h2>When do you usually get up?</h2>
       <input
         className="field time"
@@ -179,7 +175,6 @@ export function Since() {
     <Single
       path={STEP.since}
       field="since"
-      backTo={STEP.wake}
       title="How long has this been going on?"
       options={[
         { value: 'new', label: 'Less than 3 months' },
@@ -211,7 +206,7 @@ export function Tried() {
       return rest.includes(value) ? rest.filter((v) => v !== value) : [...rest, value];
     });
   return (
-    <Page progress={PROGRESS[STEP.tried]} backTo={STEP.since}>
+    <Page progress={PROGRESS[STEP.tried]}>
       <div className="stack gap-s">
         <h2>What have you tried?</h2>
         <p className="small">Choose all that apply.</p>
@@ -246,7 +241,6 @@ export function Day() {
     <Single
       path={STEP.day}
       field="day"
-      backTo={STEP.tried}
       title="What does your usual day look like?"
       options={[
         { value: 'sit8', label: 'Sitting most of the day', hint: '8 hours or more', icon: 'couch' },
@@ -270,7 +264,6 @@ export function Start() {
     <Single
       path={STEP.start}
       field="start"
-      backTo={STEP.day}
       title="Where would you like to start?"
       options={[
         { value: 'chair', label: 'In a chair', icon: 'couch' },
@@ -287,7 +280,6 @@ export function Safety() {
     <Single
       path={STEP.safety}
       field="safety"
-      backTo={STEP.start}
       title="Anything we should plan around?"
       options={[
         { value: 'surgery', label: 'Recent surgery or injury' },
@@ -303,7 +295,7 @@ export function Safety() {
 
 export function SafetyNote() {
   return (
-    <Page progress={PROGRESS[STEP.safety]} backTo={STEP.safety}>
+    <Page progress={PROGRESS[STEP.safety]}>
       <div className="panel stack">
         <h2>Thanks for telling us</h2>
         <p>We’ll keep your first week seated. Please check with your doctor or physical therapist before you start.</p>
@@ -322,7 +314,6 @@ export function Minutes() {
     <Single
       path={STEP.minutes}
       field="minutes"
-      backTo={STEP.safety}
       title="How much time each day?"
       options={[
         { value: 3, label: '3 minutes', hint: 'A gentle start', icon: 'feather' },

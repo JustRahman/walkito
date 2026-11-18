@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { url } from './config';
-import { appLink, sectionOf } from './flow';
+import { appLink, prevOf, sectionOf } from './flow';
 import { ICONS, type IconName } from './icons.gen';
 import { track } from './lib/analytics';
 import { back, usePath } from './router';
@@ -19,15 +19,18 @@ export function Page({
 }: {
   children: ReactNode;
   progress?: number;
-  backTo?: string;
+  /** Where Back goes without a history. Left out: the step before, in the quiz. Null: no Back. */
+  backTo?: string | null;
   footer?: boolean;
 }) {
-  const section = sectionOf(usePath());
+  const path = usePath();
+  const section = sectionOf(path);
+  const before = backTo === undefined ? prevOf(path) : backTo;
   return (
     <main className="page">
       <header className="topbar">
-        {backTo != null && (
-          <button className="back" type="button" onClick={() => back(backTo)} aria-label="Back">
+        {before != null && (
+          <button className="back" type="button" onClick={() => back(before)} aria-label="Back">
             <Chevron />
           </button>
         )}
@@ -83,18 +86,16 @@ export function Icon({ name, size }: { name: IconName; size?: number }) {
 export function Slide({
   children,
   progress,
-  backTo,
   next,
   label = 'Next',
 }: {
   children: ReactNode;
   progress?: number;
-  backTo: string;
   next: () => void;
   label?: string;
 }) {
   return (
-    <Page progress={progress} backTo={backTo}>
+    <Page progress={progress}>
       <div className="statement">{children}</div>
       <Cta>
         <button className="btn" type="button" onClick={next}>

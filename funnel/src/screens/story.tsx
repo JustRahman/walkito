@@ -19,7 +19,7 @@ export function Card() {
     go(STEP.focus);
   };
   return (
-    <Page progress={PROGRESS[STEP.card]} backTo={STEP.age}>
+    <Page progress={PROGRESS[STEP.card]}>
       <h1 className="center">Here’s your Walkito card</h1>
       <div className="member" aria-label="Your Walkito card">
         <div className="top">
@@ -72,7 +72,7 @@ export function Life() {
       return rest.includes(value) ? rest.filter((v) => v !== value) : [...rest, value];
     });
   return (
-    <Page progress={PROGRESS[STEP.life]} backTo={STEP.minutes}>
+    <Page progress={PROGRESS[STEP.life]}>
       <div className="stack gap-s">
         <h2>Does any of this sound familiar?</h2>
         <p className="small">Choose all that apply.</p>
@@ -112,7 +112,7 @@ export function Fault() {
   const s = useFunnel();
   const runner = kindOf(s.answers) === 'runner';
   return (
-    <Slide progress={PROGRESS[STEP.fault]} backTo={STEP.life} next={() => (track('step_completed', { step: STEP.fault }), go(STEP.path))}>
+    <Slide progress={PROGRESS[STEP.fault]} next={() => (track('step_completed', { step: STEP.fault }), go(STEP.path))}>
       <img className="still" src={poster('short_foot_seated')} alt="" />
       <h1>{runner ? 'Cushioned shoes leave your feet less to do.' : 'Sitting all day weakens your feet.'}</h1>
       <p>Chairs and soft shoes do your foot muscles’ job.</p>
@@ -123,7 +123,7 @@ export function Fault() {
 /** Statement 2 of 3: it can change. */
 export function Path() {
   return (
-    <Slide progress={PROGRESS[STEP.path]} backTo={STEP.fault} next={() => (track('step_completed', { step: STEP.path }), go(STEP.research))}>
+    <Slide progress={PROGRESS[STEP.path]} next={() => (track('step_completed', { step: STEP.path }), go(STEP.research))}>
       <img className="still" src={poster('big_toe_lift')} alt="" />
       <h1>It’s not your fault. And it can change.</h1>
       <p>Foot muscles respond to small daily work.</p>
@@ -145,7 +145,7 @@ const JOURNALS = [
 /** Statement 3 of 3: where the exercises come from. */
 export function Research() {
   return (
-    <Slide progress={PROGRESS[STEP.research]} backTo={STEP.path} next={() => (track('step_completed', { step: STEP.research }), go(STEP.compare))}>
+    <Slide progress={PROGRESS[STEP.research]} next={() => (track('step_completed', { step: STEP.research }), go(STEP.compare))}>
       <img className="still" src={poster('heel_raise_double')} alt="" />
       <h1>Built on published research</h1>
       <ul className="journals">
@@ -163,7 +163,7 @@ const WITH = ['A plan for your feet', '5 minutes, from a chair', 'A reminder eve
 /** Without Walkito / With Walkito, as Flo's: two cards, the second marked. */
 export function Compare() {
   return (
-    <Page progress={PROGRESS[STEP.compare]} backTo={STEP.research}>
+    <Page progress={PROGRESS[STEP.compare]}>
       <h2 className="center">With Walkito, you know what to do</h2>
       <div className="versus">
         <section className="without">
@@ -213,7 +213,7 @@ export const REVIEWS = [
 /** Its own screen: who already uses it, in their words. No counts. */
 export function Reviews() {
   return (
-    <Slide progress={PROGRESS[STEP.reviews]} backTo={STEP.compare} next={() => (track('step_completed', { step: STEP.reviews }), go(STEP.goals))}>
+    <Slide progress={PROGRESS[STEP.reviews]} next={() => (track('step_completed', { step: STEP.reviews }), go(STEP.goals))}>
       <h1>Made for people like you</h1>
       <div className="stack" style={{ width: '100%' }}>
         {(PREVIEW ? PLACEHOLDER_REVIEWS : REVIEWS).map((r) => (
@@ -243,7 +243,7 @@ export function Goals() {
   const options = lifeFor(s.answers);
   const hersFirst = [...options.filter((o) => mentioned.includes(o.goal)), ...options.filter((o) => !mentioned.includes(o.goal))];
   return (
-    <Page progress={PROGRESS[STEP.goals]} backTo={STEP.reviews}>
+    <Page progress={PROGRESS[STEP.goals]}>
       <h2 className="center">What do you want back?</h2>
       <div className="stack">
         {hersFirst.map((o) => (
@@ -327,7 +327,7 @@ export function Sign() {
     setDrawn(false);
   };
   return (
-    <Page progress={PROGRESS[STEP.sign]} backTo={STEP.routine}>
+    <Page progress={PROGRESS[STEP.sign]}>
       <div className="stack gap-s">
         <h2>Sign your commitment</h2>
         <p className="lead">Promise yourself {s.answers.minutes ?? 5} minutes a day for your feet.</p>
