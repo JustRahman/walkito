@@ -253,10 +253,9 @@ export function goalLabels(a: Answers): string[] {
   return LIFE.filter((o) => a.goals?.includes(o.goal)).map((o) => o.goalLabel);
 }
 
-/** Her goals before she picks: the mirror of what she said, or simply walking. */
-export function suggestedGoals(a: Answers): string[] {
-  const mirror = LIFE.filter((o) => a.life?.includes(o.value)).map((o) => o.goal);
-  return mirror.length > 0 ? mirror : ['walk'];
+/** The goals that mirror what she said gets in her way: listed first and marked, never ticked for her. */
+export function mentionedGoals(a: Answers): string[] {
+  return LIFE.filter((o) => a.life?.includes(o.value)).map((o) => o.goal);
 }
 
 export const WHEN_LABEL: Readonly<Record<NonNullable<Answers['when']>, string>> = {

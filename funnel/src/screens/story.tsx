@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { PREVIEW, url } from '../config';
-import { kindOf, lifeFor, PROGRESS, shortDate, STEP, suggestedGoals } from '../flow';
+import { kindOf, lifeFor, mentionedGoals, PROGRESS, shortDate, STEP } from '../flow';
 import { track } from '../lib/analytics';
 import { PLACEHOLDER_REVIEWS } from '../preview/placeholders';
 import { go } from '../router';
@@ -230,16 +230,19 @@ export function Reviews() {
   );
 }
 
-/** Her goals: coloured pills with a check, as QUITTR's. The mirror of what she told us, already ticked. */
+/** Her goals: coloured pills with a check, as QUITTR's. None is ticked for her: the mirror of what she told us comes first, and says so. */
 export function Goals() {
   const s = useFunnel();
-  const [picked, setPicked] = useState<string[]>(s.answers.goals ?? suggestedGoals(s.answers));
+  const [picked, setPicked] = useState<string[]>(s.answers.goals ?? []);
   const toggle = (goal: string) => setPicked((now) => (now.includes(goal) ? now.filter((g) => g !== goal) : [...now, goal]));
+  const mentioned = mentionedGoals(s.answers);
+  const options = lifeFor(s.answers);
+  const hersFirst = [...options.filter((o) => mentioned.includes(o.goal)), ...options.filter((o) => !mentioned.includes(o.goal))];
   return (
     <Page progress={PROGRESS[STEP.goals]} backTo={STEP.reviews}>
       <h2 className="center">What do you want back?</h2>
       <div className="stack">
-        {lifeFor(s.answers).map((o) => (
+        {hersFirst.map((o) => (
           <MultiChoice
             key={o.goal}
             className="goal"
@@ -249,6 +252,7 @@ export function Goals() {
             onToggle={() => toggle(o.goal)}
           >
             {o.goalLabel}
+            {mentioned.includes(o.goal) && <span className="hint">You mentioned this</span>}
           </MultiChoice>
         ))}
       </div>
