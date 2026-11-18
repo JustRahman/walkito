@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { CARLA_PHOTO, PREVIEW, url } from './config';
-import { PLACEHOLDER_CARLA_QUOTE } from './preview/placeholders';
+import { url } from './config';
 import { appLink, sectionOf } from './flow';
 import { ICONS, type IconName } from './icons.gen';
 import { track } from './lib/analytics';
@@ -180,32 +179,6 @@ export function Check({ checked, onChange, children, className }: { checked: boo
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>{children}</span>
     </label>
-  );
-}
-
-/**
- * Dr. Carla Shayman, with exactly what we hold in writing: her Upwork
- * contract (Oct 30, 2026) covers her review of our two English guides, heel
- * pain and flat feet, and the use of her bio and photo. Never "reviewed every
- * exercise" without her broader written consent.
- */
-export function Reviewer() {
-  return (
-    <>
-      {PREVIEW && (
-        <p className="doc-quote" data-placeholder={PLACEHOLDER_CARLA_QUOTE.mark}>
-          “{PLACEHOLDER_CARLA_QUOTE.text}”
-        </p>
-      )}
-      <figure className="doctor">
-      <img src={CARLA_PHOTO.replace('.webp', '@2x.webp')} alt="Dr. Carla Shayman" />
-      <figcaption>
-        <b>Dr. Carla Shayman, PT, DPT</b>
-        <span>Physical therapist</span>
-        <span className="tint">Reviewed our heel pain and flat feet guides</span>
-        </figcaption>
-      </figure>
-    </>
   );
 }
 

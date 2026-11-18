@@ -9,7 +9,8 @@ import type { Focus } from './engine/plan';
  * key, so a reload lands where she was.
  */
 export type Answers = {
-  age?: '75+' | '65-74' | '55-64' | 'under55';
+  /** Decades since v6. The four before it are what earlier visitors stored. */
+  age?: 'under50' | '50-59' | '60-69' | '70+' | '75+' | '65-74' | '55-64' | 'under55';
   focus?: Focus;
   when?: 'morning' | 'sitting' | 'evening' | 'running' | 'allday' | 'varies';
   since?: 'new' | 'months' | 'year' | 'years';

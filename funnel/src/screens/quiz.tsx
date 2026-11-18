@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react';
 
+import hero from '../assets/photos/hero-socks-morning.jpg';
 import { url } from '../config';
 import { PROGRESS, STEP, wakeOf } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, useFunnel, type Answers } from '../state';
-import { ADVANCE_MS, Choice, Cta, MultiChoice, Page, Reviewer, type IconName } from '../ui';
+import { ADVANCE_MS, Choice, Cta, MultiChoice, Page, type IconName } from '../ui';
 
 type Option<V> = { value: V; label: string; icon?: IconName; hint?: string; tag?: string };
 
@@ -54,13 +55,17 @@ function Single<K extends keyof Answers>({
 }
 
 const AGES: ReadonlyArray<Option<NonNullable<Answers['age']>>> = [
-  { value: 'under55', label: 'Under 55' },
-  { value: '55-64', label: '55–64' },
-  { value: '65-74', label: '65–74' },
-  { value: '75+', label: '75+' },
+  { value: 'under50', label: 'Under 50' },
+  { value: '50-59', label: '50–59' },
+  { value: '60-69', label: '60–69' },
+  { value: '70+', label: '70 or older' },
 ];
 
-/** The first screen is the first question: the promise, then her age. */
+/**
+ * The first screen is the first question: what this is, then her age. The four
+ * cards are in view without scrolling on a 390 x 660 screen (Facebook's
+ * browser), and it says before anything else that the plan is paid.
+ */
 export function Age() {
   const s = useFunnel();
   const pick = (value: NonNullable<Answers['age']>) => {
@@ -70,22 +75,30 @@ export function Age() {
   };
   return (
     <Page footer>
-      <div className="stack gap-s center">
-        <h1>Foot exercises made for your age</h1>
-        <p className="lead">5 minutes a day. From a chair.</p>
+      <div className="stack gap-s">
+        <h1>
+          Gentle daily foot exercises, made for <em>you</em>
+        </h1>
+        <p className="small">A few minutes a day, mostly from a chair. Answer a few questions to get your plan.</p>
       </div>
-      <Reviewer />
-      <h3 className="center">Select your age</h3>
-      <div className="grid2">
-        {AGES.map((o) => (
-          <Choice key={o.value} selected={s.answers.age === o.value} onClick={() => pick(o.value)}>
-            {o.label}
-          </Choice>
-        ))}
+      <img className="photo" src={hero} alt="" width={666} height={1000} />
+      <div className="stack">
+        <h3>First, how old are you?</h3>
+        <div className="grid2">
+          {AGES.map((o) => (
+            <Choice key={o.value} selected={s.answers.age === o.value} onClick={() => pick(o.value)}>
+              {o.label}
+            </Choice>
+          ))}
+        </div>
+        <p className="caption">We ask so your plan starts at the right pace.</p>
       </div>
-      <p className="caption center">
-        By choosing your age you agree to our <a href={url('/terms')}>Terms</a> and <a href={url('/privacy')}>Privacy Policy</a>.
-      </p>
+      <div className="stack gap-s">
+        <p className="caption">The quiz is free. The plan is a paid subscription, and you’ll see the price before you decide.</p>
+        <p className="caption">
+          By choosing your age you agree to our <a href={url('/terms')}>Terms</a> and <a href={url('/privacy')}>Privacy Policy</a>.
+        </p>
+      </div>
     </Page>
   );
 }
