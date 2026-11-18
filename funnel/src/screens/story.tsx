@@ -224,7 +224,7 @@ export function Reviews() {
             <blockquote>“{r.text}”</blockquote>
           </figure>
         ))}
-        <p className="caption-light">{PREVIEW ? 'PREVIEW ONLY: placeholder reviews' : 'From the App Store'}</p>
+        {!PREVIEW && <p className="caption-light">From the App Store</p>}
       </div>
     </Slide>
   );
