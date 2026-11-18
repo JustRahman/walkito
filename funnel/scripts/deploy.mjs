@@ -35,9 +35,12 @@ for (const key of ['FUNNEL_SUPABASE_URL', 'FUNNEL_SUPABASE_ANON_KEY', 'FUNNEL_RC
     process.exit(1);
   }
 }
-if (env.FUNNEL_PREVIEW) {
-  console.error('deploy: FUNNEL_PREVIEW is set. Placeholder texts never go to walkito.site/go. Nothing built.');
-  process.exit(1);
+// Rahim's placeholder doctor quote and reviews (src/preview/placeholders.ts)
+// reach walkito.site/go only when asked for by name, never from a stray env var.
+delete env.FUNNEL_PREVIEW;
+if (process.argv.includes('--with-placeholders')) {
+  env.FUNNEL_PREVIEW = '1';
+  console.warn('deploy: --with-placeholders: the NOT REAL doctor quote and reviews go to walkito.site/go. Redeploy without it before any ad traffic.');
 }
 if (env.FUNNEL_RC_KEY.startsWith('rcb_sb_')) console.warn('deploy: FUNNEL_RC_KEY is a SANDBOX key. Purchases will not be charged.');
 if (!env.FUNNEL_PIXEL_ID) console.warn('deploy: no FUNNEL_PIXEL_ID, Meta pixel and CAPI stay off.');
