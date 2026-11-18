@@ -455,7 +455,7 @@ function HeldBack({
 }) {
   const back = (
     <button className="btn secondary" type="button" onClick={onBack}>
-      Back to my plan
+      Back to the plans
     </button>
   );
   if (picked == null)
@@ -479,13 +479,16 @@ function HeldBack({
         <p className="card">{PRICE_ANSWER}</p>
       ) : picked === 'unsure' ? (
         <div className="card stack">
-          <p className="lead">Try it. If it is not for you, {GUARANTEE_DAYS}-day money-back: one email and we refund.</p>
+          <p className="lead">Try it. If it isn’t for you, email us within {GUARANTEE_DAYS} days and we refund it.</p>
           <button className="btn" type="button" onClick={onBack}>
             Back to the plans
           </button>
+          <button className="btn secondary" type="button" onClick={() => go(STEP.plan)}>
+            See my first week again
+          </button>
         </div>
       ) : picked === 'think' ? (
-        <p className="card">Your plan is saved. We will email it to you.</p>
+        <p className="card">Your plan is saved. We’ll email it to you.</p>
       ) : (
         <p className="card">
           Write to us, a person reads every email. <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
@@ -511,7 +514,7 @@ function OfferCard({ onBuy }: { onBuy: (consentText: string) => Promise<string |
     <div className="card stack">
       <p className="lead">
         <b>
-          Your first year for {money(PRICE_OFFER.intro)}. Then {money(PRICE_OFFER.price)} a year. Cancel any time.
+          We can offer your first year for {money(PRICE_OFFER.intro)}. Then {money(PRICE_OFFER.price)} a year. Cancel any time.
         </b>
       </p>
       <Check checked={agreed} onChange={setAgreed}>
