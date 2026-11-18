@@ -1,41 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { DAY_LABEL, FOCUS_LABEL, goalLabels, kindOf, offersBalance, PLAN_NAME, PROGRESS, SINCE_LABEL, STEP, tryMove, WHEN_LABEL } from '../flow';
+import { DAY_LABEL, firstName, FOCUS_LABEL, goalLabels, kindOf, offersBalance, PLAN_NAME, PROGRESS, STEP, tryMove, WHEN_LABEL } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
-import { update, useFunnel } from '../state';
-import { clock, Clip, Cta, Page, Scale, Tick } from '../ui';
-
-export function Before() {
-  const s = useFunnel();
-  const pick = (n: number) => {
-    update((x) => ({ tryIt: { ...x.tryIt, before: n, skipped: false } }));
-    track('step_completed', { step: STEP.before });
-    setTimeout(() => go(STEP.move), 220);
-  };
-  return (
-    <Page progress={PROGRESS[STEP.before]} backTo={STEP.goals}>
-      <div className="stack gap-s">
-        <span className="eyebrow">Try it now</span>
-        <h2>One move. 60 seconds. Seated.</h2>
-        <p className="lead">First, how do your feet feel right now?</p>
-      </div>
-      <Scale value={s.tryIt.before} onPick={pick} low="Loose" high="Very stiff" />
-      <div className="spacer" />
-      <button
-        className="btn quiet"
-        type="button"
-        onClick={() => {
-          update((x) => ({ tryIt: { ...x.tryIt, skipped: true } }));
-          track('tryit_skipped');
-          go(STEP.sign);
-        }}
-      >
-        Skip, show my plan
-      </button>
-    </Page>
-  );
-}
+import { update, useFunnel, type TryIt } from '../state';
+import { Choice, clock, Clip, Cta, Page, Slide, Tick } from '../ui';
 
 const LENGTH = 60;
 
@@ -68,8 +37,11 @@ export function TryMove() {
   };
 
   return (
-    <Page progress={PROGRESS[STEP.move]} backTo={STEP.before}>
-      <h2>{move.title}</h2>
+    <Page progress={PROGRESS[STEP.move]} backTo={STEP.goals}>
+      <div className="stack gap-s">
+        <span className="eyebrow">Try it now · 60 seconds</span>
+        <h2>{move.title}</h2>
+      </div>
       {move.clip != null && <Clip src={move.clip} poster={move.poster} playing={state !== 'paused'} label={`${move.title}: ${move.cue}`} />}
       <p className="card" aria-live="polite">
         {move.cue}
@@ -87,6 +59,17 @@ export function TryMove() {
               }}
             >
               Start 60 seconds
+            </button>
+            <button
+              className="btn quiet"
+              type="button"
+              onClick={() => {
+                update((x) => ({ tryIt: { ...x.tryIt, skipped: true } }));
+                track('tryit_skipped');
+                go(STEP.sign);
+              }}
+            >
+              Skip, show my plan
             </button>
           </Cta>
         </>
@@ -116,60 +99,94 @@ export function TryMove() {
   );
 }
 
+const FELT: ReadonlyArray<{ value: NonNullable<TryIt['felt']>; label: string }> = [
+  { value: 'lighter', label: 'Lighter, looser' },
+  { value: 'better', label: 'A little better' },
+  { value: 'same', label: 'About the same' },
+  { value: 'unsure', label: 'Hard to tell' },
+];
+
+/** The move's still on a warm top, the question in words (Headspace's "How'd it go?"). */
+function Felt({ children, backTo, progress }: { children: ReactNode; backTo: string; progress: string }) {
+  const s = useFunnel();
+  const move = tryMove(s.answers);
+  return (
+    <Page progress={PROGRESS[progress]} backTo={backTo}>
+      <div className="felt-top">
+        <img src={move.poster} alt="" />
+      </div>
+      {children}
+    </Page>
+  );
+}
+
+/** "How did that feel?", answered in words. No scale, no number. */
 export function After() {
   const s = useFunnel();
-  const [now, setNow] = useState<number | undefined>(s.tryIt.after);
-  const before = s.tryIt.before;
-  const next = offersBalance(s.answers) ? STEP.balance : STEP.sign;
-  if (now == null)
-    return (
-      <Page progress={PROGRESS[STEP.after]} backTo={STEP.move}>
-        <div className="stack gap-s">
-          <span className="eyebrow">Well done</span>
-          <h2>How do your feet feel now?</h2>
-        </div>
-        <Scale
-          onPick={(n) => {
-            setNow(n);
-            update((x) => ({ tryIt: { ...x.tryIt, after: n } }));
-            track('step_completed', { step: STEP.after });
-          }}
-          low="Loose"
-          high="Very stiff"
-        />
-      </Page>
-    );
+  const pick = (felt: NonNullable<TryIt['felt']>) => {
+    update((x) => ({ tryIt: { ...x.tryIt, felt } }));
+    track('step_completed', { step: STEP.after });
+    setTimeout(() => go(STEP.felt), 200);
+  };
   return (
-    <Page progress={PROGRESS[STEP.after]} backTo={STEP.move}>
+    <Felt backTo={STEP.move} progress={STEP.after}>
       <div className="stack gap-s center">
-        <div className="done-mark pop" aria-hidden="true">
-          <Tick />
-        </div>
-        <span className="eyebrow">Day 1, move 1</span>
-        <h1>You did your first move</h1>
+        <h2>How did that feel?</h2>
+        <p className="small">Take a moment to notice.</p>
       </div>
-      <div className="card pop">
-        <div className="row center">
-          <div>
-            <div className="caption">Before</div>
-            <div style={{ fontSize: '2.6rem', fontWeight: 800 }}>{before ?? '–'}</div>
-          </div>
-          <div style={{ flex: 'none', alignSelf: 'center', color: 'var(--caption)', fontSize: '1.6rem' }} aria-hidden="true">
-            →
-          </div>
-          <div>
-            <div className="caption">Now</div>
-            <div style={{ fontSize: '2.6rem', fontWeight: 800, color: 'var(--primary)' }}>{now}</div>
-          </div>
-        </div>
+      <div className="stack">
+        {FELT.map((o) => (
+          <Choice key={o.value} className="soft-choice" selected={s.tryIt.felt === o.value} onClick={() => pick(o.value)}>
+            {o.label}
+          </Choice>
+        ))}
       </div>
-      <p className="small center">Your own note for today. Some days it changes, some days it doesn’t.</p>
+    </Felt>
+  );
+}
+
+/** Her answer, given back as what it means for her own goal (Headspace, Liven). Never a dead end. */
+export function FeltAnswer() {
+  const s = useFunnel();
+  const goal = goalLabels(s.answers)[0] ?? 'Walk without thinking about my feet';
+  const good = s.tryIt.felt === 'lighter' || s.tryIt.felt === 'better';
+  return (
+    <Felt backTo={STEP.after} progress={STEP.felt}>
+      <div className="stack gap-s center">
+        <h2>{good ? 'That’s your feet waking up.' : 'That’s normal on day 1.'}</h2>
+        {good ? (
+          <p className="lead">
+            Do this daily and you’re working toward: <b className="goal-word">{goal}</b>
+          </p>
+        ) : (
+          <p className="lead">Feet change with daily practice, not one move. Tomorrow’s move is ready.</p>
+        )}
+      </div>
       <Cta>
-        <button className="btn" type="button" onClick={() => go(next)}>
-          Continue
+        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.felt }), go(STEP.praise))}>
+          Next
         </button>
       </Cta>
-    </Page>
+    </Felt>
+  );
+}
+
+/** Full colour, one line (pliability, QUITTR). */
+export function Praise() {
+  const s = useFunnel();
+  const name = firstName(s);
+  return (
+    <Slide
+      tone="praise"
+      label="Continue"
+      next={() => (track('step_completed', { step: STEP.praise }), go(offersBalance(s.answers) ? STEP.balance : STEP.sign))}
+    >
+      <h1 className="praise">
+        {name != null ? `Nice work, ${name}.` : 'Nice work.'}
+        <br />
+        Day 1 of your plan is done <span className="praise-tick"><Tick /></span>
+      </h1>
+    </Slide>
   );
 }
 
@@ -198,7 +215,7 @@ export function Balance() {
   };
 
   return (
-    <Page progress={PROGRESS[STEP.balance]} backTo={STEP.after}>
+    <Page progress={PROGRESS[STEP.balance]} backTo={STEP.praise}>
       {phase === 'intro' && (
         <>
           <div className="stack gap-s">

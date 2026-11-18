@@ -139,10 +139,6 @@ b { font-weight: 800; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 .grid2 .choice { min-height: 76px; font-size: 1.3rem; font-weight: 800; justify-content: space-between; }
 
-/* 1 to 5, in one row: a tap instead of five lines to read. */
-.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
-.scale .choice { min-height: 64px; padding: 0; justify-content: center; font-size: 1.4rem; font-weight: 800; }
-.scale-ends { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--caption); font-weight: 600; }
 
 .btn {
   width: 100%;
@@ -392,32 +388,6 @@ details[open] { padding-bottom: 1rem; }
 .down::after { content: ''; position: absolute; left: -5px; bottom: -2px; border: 6px solid transparent; border-top-color: var(--primary-line); }
 .plain { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; font-weight: 700; }
 
-/* Her plan, by name, as Runna shows one. */
-.named {
-  border-radius: 24px;
-  padding: 1.6rem 1.25rem 1.4rem;
-  color: #fff;
-  text-align: center;
-  background: radial-gradient(120% 90% at 50% 0%, #8b5cf6 0%, #4c1d95 70%, #2e1065 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
-}
-.named .badge {
-  width: 96px;
-  height: 108px;
-  display: grid;
-  place-items: center;
-  font-size: 1.7rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  background: rgba(255, 255, 255, 0.12);
-  border: 3px solid #f0abfc;
-  clip-path: polygon(50% 0, 100% 14%, 100% 62%, 50% 100%, 0 62%, 0 14%);
-}
-.named h1 { font-size: 2rem; }
-.named p { opacity: 0.9; font-weight: 700; }
 
 .done-mark { width: 72px; height: 72px; margin: 0 auto; border-radius: 50%; background: var(--positive); display: grid; place-items: center; }
 .done-mark svg { width: 40px; height: 40px; }
@@ -507,12 +477,6 @@ details[open] { padding-bottom: 1rem; }
 .link-light { border: 0; background: none; color: #fff; font: inherit; font-weight: 700; opacity: 0.85; padding: 0.4rem 0; cursor: pointer; }
 .slide .btn[disabled] { background: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.6); box-shadow: none; }
 
-/* J: "we've made you a plan". */
-.done-mark.small { width: 48px; height: 48px; background: #fff; }
-.done-mark.small svg { width: 26px; height: 26px; }
-.done-mark.small svg path { stroke: var(--primary); }
-.plan-done .named { width: 100%; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); }
-.plan-done .named h2 { font-size: 1.7rem; }
 .goal-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.45rem; }
 .goal-chips span { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: 999px; border: 2px solid; background: rgba(255, 255, 255, 0.1); font-size: 0.92rem; font-weight: 700; }
 
@@ -527,6 +491,40 @@ details[open] { padding-bottom: 1rem; }
 .box { display: flex; justify-content: center; align-items: flex-end; gap: 0.25rem; }
 .box .ico:first-child { align-self: flex-start; }
 .btn.gift-open { background: linear-gradient(90deg, #f6a96b 0%, #ec5f8f 100%); box-shadow: 0 4px 0 #c24470; }
+
+/* v5: "How did that feel?" (Headspace 32/33), the praise (pliability 8), the plan peek (Centr 20). */
+.felt-top { margin: -0.5rem -1.25rem 0; height: 34vh; min-height: 220px; background: #f7b733; border-radius: 0 0 48% 48% / 0 0 18% 18%; display: grid; place-items: center; overflow: hidden; }
+.felt-top img { width: 72%; max-width: 300px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 22px; box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.5); }
+.choice.soft-choice { justify-content: center; text-align: center; border-radius: 999px; min-height: 56px; background: #f6f3ee; border-color: #ece6dc; box-shadow: none; }
+.choice.soft-choice .grow { flex: none; }
+.goal-word { color: var(--primary); }
+.slide.praise { --slide: linear-gradient(180deg, #0b0b2a 0%, #1b1b6e 55%, #3b2fd6 100%); }
+h1.praise { font-size: 2.3rem; font-weight: 600; line-height: 1.2; text-align: left; align-self: stretch; }
+.praise-tick { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #fff; vertical-align: middle; }
+.praise-tick svg path { stroke: #1b1b6e; }
+.peek-title { font-size: 1.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; line-height: 1.1; }
+.peek-line { color: var(--muted); }
+.peek-line b { color: var(--text); }
+.tile { position: relative; border-radius: 14px; overflow: hidden; background-size: cover; background-position: center; color: #fff; }
+.tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.72) 100%); }
+.tile > * { position: relative; z-index: 1; }
+.tile.big { aspect-ratio: 16 / 10; display: flex; flex-direction: column; justify-content: space-between; padding: 0.7rem; }
+.tile-tag { align-self: flex-start; background: rgba(0, 0, 0, 0.55); border-radius: 6px; padding: 0.15rem 0.5rem; font-size: 0.8rem; font-weight: 800; }
+.tile-foot { display: flex; flex-direction: column; gap: 0.35rem; }
+.tile-foot b { font-size: 1.1rem; }
+.tile-chips { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.tile-chips i { font-style: normal; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 4px; padding: 0.05rem 0.35rem; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.goal-chips.light { justify-content: flex-start; }
+.goal-chips.light span { font-size: 0.85rem; padding: 0.2rem 0.6rem; }
+.peek-title + .peek-line { margin-top: -0.6rem; }
+.tile.big { aspect-ratio: 2 / 1 !important; }
+.tile.locked { aspect-ratio: 1.6 / 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 0.7rem; }
+.tile.locked::before { content: ''; position: absolute; inset: 0; z-index: 1; backdrop-filter: blur(3px) saturate(0.6); -webkit-backdrop-filter: blur(3px) saturate(0.6); background: rgba(80, 60, 140, 0.35); }
+.tile.locked > * { z-index: 2; }
+.tile-lock { position: absolute !important; top: 50%; left: 50%; transform: translate(-50%, -70%); width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, 0.9); color: #111114; display: grid; place-items: center; }
+.goal-chips.light span { background: var(--card); color: var(--text); }
+.btn.dark { background: #111114; box-shadow: 0 4px 0 #000; }
 
 @media (prefers-reduced-motion: reduce) {
   .fade, .pop, .check.nudge { animation: none; }

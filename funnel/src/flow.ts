@@ -28,6 +28,8 @@ export const STEP = {
   before: '/s/10',
   move: '/s/11',
   after: '/s/12',
+  felt: '/s/32',
+  praise: '/s/33',
   balance: '/s/13',
   building: '/s/14',
   sign: '/s/31',
@@ -59,9 +61,10 @@ const ORDER: readonly string[] = [
   STEP.compare,
   STEP.reviews,
   STEP.goals,
-  STEP.before,
   STEP.move,
   STEP.after,
+  STEP.felt,
+  STEP.praise,
   STEP.balance,
   STEP.sign,
   STEP.building,
@@ -216,7 +219,8 @@ export const PLAN_WEEKS = 12;
 
 /** "12 weeks · 5 min a day · seated" */
 export function planLine(a: Answers): string {
-  return `${PLAN_WEEKS} weeks · ${a.minutes ?? 5} min a day · ${a.start === 'standing' ? 'standing' : 'seated'}`;
+  const where = kindOf(a) === 'runner' ? 'before or after your runs' : a.start === 'standing' ? 'standing' : 'seated';
+  return `${PLAN_WEEKS} weeks · ${a.minutes ?? 5} min a day · ${where}`;
 }
 
 export type LifeOption = { value: string; label: string; goal: string; goalLabel: string; icon: IconName; color: string };

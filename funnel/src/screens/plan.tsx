@@ -1,43 +1,44 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
-import { firstName, kindOf, LIFE, PLAN_NAME, planLine, STEP } from '../flow';
+import { firstName, kindOf, LIFE, PLAN_NAME, planLine, planView, STEP } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
-import { Icon, Tick } from '../ui';
+import { Cta, Icon, Page } from '../ui';
 
-/** "Desk Feet Reset" -> "DFR", for the badge. */
-function initials(name: string): string {
-  return name
-    .split(/[\s-]+/)
-    .filter((w) => /^[A-Z]/.test(w))
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 3);
+function Lock() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor" />
+      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="2.2" />
+    </svg>
+  );
 }
 
-/** "Anna, we've made you a plan." Her plan by name and her goals as chips (QUITTR). No date for a result. */
+/**
+ * Centr's "here's a peek at your plan": week 1 as a photo tile from her own
+ * first-week moves, the later weeks locked beside it, and her goals as chips.
+ * No date for a result.
+ */
 export function Plan() {
   const s = useFunnel();
   const name = firstName(s);
+  const view = useMemo(() => planView(s), [s.answers, s.tryIt]);
   const title = PLAN_NAME[kindOf(s.answers)];
   const goals = LIFE.filter((o) => s.answers.goals?.includes(o.goal));
+  const moves = view.days.flatMap((d) => d.moves).filter((m, i, all) => all.findIndex((x) => x.id === m.id) === i);
+  const [first, second, third] = [moves[0], moves[1] ?? moves[0], moves[2] ?? moves[1] ?? moves[0]];
   useEffect(() => {
     track('plan_viewed');
   }, []);
   return (
-    <main className="slide plan-done">
-      <div className="slide-body">
-        <div className="done-mark small pop" aria-hidden="true">
-          <Tick />
-        </div>
-        <h1>{name != null ? `${name}, we’ve made you a plan.` : 'We’ve made you a plan.'}</h1>
-        <section className="named" aria-label="Your plan">
-          <div className="badge">{initials(title)}</div>
-          <h2>{title}</h2>
-          <p>{planLine(s.answers)}</p>
-        </section>
-        <div className="goal-chips">
+    <Page backTo={STEP.goals}>
+      <h1 className="peek-title">{name != null ? `${name}, here’s a peek at your plan:` : 'Here’s a peek at your plan:'}</h1>
+      <p className="peek-line">
+        <b>{title}:</b> {planLine(s.answers)}
+      </p>
+      {goals.length > 0 && (
+        <div className="goal-chips light">
           {goals.map((g) => (
             <span key={g.goal} style={{ borderColor: g.color }}>
               <Icon name={g.icon} size={18} />
@@ -45,10 +46,39 @@ export function Plan() {
             </span>
           ))}
         </div>
+      )}
+      {first != null && (
+        <div className="tile big" style={{ backgroundImage: `url(${first.poster})` }}>
+          <span className="tile-tag">Week 1 · today</span>
+          <div className="tile-foot">
+            <b>{first.title}</b>
+            <span className="tile-chips">
+              <i>{view.days[0]?.minutes ?? s.answers.minutes ?? 5} min</i>
+              <i>{moves.length} moves this week</i>
+            </span>
+          </div>
+        </div>
+      )}
+      <div className="tiles">
+        {[
+          { m: second, label: 'Week 2' },
+          { m: third, label: 'Weeks 3–12' },
+        ].map(({ m, label }) =>
+          m == null ? null : (
+            <div key={label} className="tile locked" style={{ backgroundImage: `url(${m.poster})` }}>
+              <span className="tile-lock">
+                <Lock />
+              </span>
+              <b>{label}</b>
+            </div>
+          ),
+        )}
       </div>
-      <button className="pill wide" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
-        Get my plan
-      </button>
-    </main>
+      <Cta>
+        <button className="btn dark" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
+          Get my plan
+        </button>
+      </Cta>
+    </Page>
   );
 }

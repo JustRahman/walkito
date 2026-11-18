@@ -83,7 +83,7 @@ export function Slide({
   next,
   label = 'Next',
 }: {
-  tone: 'warm' | 'deep' | 'sky' | 'night';
+  tone: 'warm' | 'deep' | 'sky' | 'night' | 'praise';
   children: ReactNode;
   dots?: { at: number; of: number };
   next: () => void;
@@ -185,25 +185,6 @@ export function MultiChoice({
       <span className="grow">{children}</span>
       <span className="tick">{checked && <Tick />}</span>
     </button>
-  );
-}
-
-/** 1 to 5 in one row, with only the two ends named. */
-export function Scale({ value, onPick, low, high }: { value?: number; onPick: (n: number) => void; low: string; high: string }) {
-  return (
-    <div className="stack gap-s">
-      <div className="scale" role="radiogroup">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button key={n} className="choice" type="button" role="radio" aria-checked={value === n} aria-label={`${n} of 5`} onClick={() => onPick(n)}>
-            {n}
-          </button>
-        ))}
-      </div>
-      <div className="scale-ends">
-        <span>{low}</span>
-        <span>{high}</span>
-      </div>
-    </div>
   );
 }
 

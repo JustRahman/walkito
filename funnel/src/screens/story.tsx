@@ -260,7 +260,7 @@ export function Goals() {
           onClick={() => {
             answer({ goals: picked });
             track('step_completed', { step: STEP.goals });
-            go(STEP.before);
+            go(STEP.move);
           }}
         >
           These are my goals

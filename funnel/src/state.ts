@@ -26,8 +26,8 @@ export type Answers = {
 };
 
 export type TryIt = {
-  before?: number;
-  after?: number;
+  /** How the move felt, in her words: no number is asked any more. */
+  felt?: 'lighter' | 'better' | 'same' | 'unsure';
   seconds?: number;
   skipped?: boolean;
   balance?: number | 'skipped';
