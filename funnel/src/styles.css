@@ -486,12 +486,6 @@ details[open] { padding-bottom: 1rem; }
 .quote blockquote { margin: 0; font-weight: 700; }
 .quote figcaption { font-size: 0.9rem; color: var(--caption); }
 
-/* L: Flo's gift box. */
-.gift-page { background: #fff; min-height: 100dvh; }
-.box { display: flex; justify-content: center; align-items: flex-end; gap: 0.25rem; }
-.box .ico:first-child { align-self: flex-start; }
-.btn.gift-open { background: linear-gradient(90deg, #f6a96b 0%, #ec5f8f 100%); box-shadow: 0 4px 0 #c24470; }
-
 /* v5: "How did that feel?" (Headspace 32/33), the praise (pliability 8), the plan peek (Centr 20). */
 .felt-top { margin: -0.5rem -1.25rem 0; height: 34vh; min-height: 220px; background: #f7b733; border-radius: 0 0 48% 48% / 0 0 18% 18%; display: grid; place-items: center; overflow: hidden; }
 .felt-top img { width: 72%; max-width: 300px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 22px; box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.5); }

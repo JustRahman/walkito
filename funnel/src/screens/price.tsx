@@ -18,9 +18,9 @@ import { addDays, clockLabel, kindOf, PLAN_NAME, planLine, shortDate, STEP, wake
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
-import { back, go } from '../router';
+import { go } from '../router';
 import { update, useFunnel } from '../state';
-import { AppButton, Check, Choice, Icon, Page } from '../ui';
+import { AppButton, Check, Choice, Page } from '../ui';
 import { PLACEHOLDER_REVIEWS } from '../preview/placeholders';
 import { REVIEWS } from './story';
 import { TrustLines } from './trust';
@@ -51,7 +51,7 @@ export function Price() {
   const [picked, setPlan] = useState<PlanId>(s.plan ?? 'monthly');
   const [agreed, setAgreed] = useState(false);
   const packages = useRef<Promise<Packages | null> | null>(null);
-  const [phase, setPhase] = useState<'idle' | 'opening' | 'open' | 'gift' | 'held-back'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'opening' | 'open' | 'held-back'>('idle');
   const [heldBack, setHeldBack] = useState<string | null>(null);
   /** The offer is on screen in this visit (it was not shown before). */
   const [offerShownNow, setOfferShownNow] = useState(false);
@@ -143,7 +143,7 @@ export function Price() {
     }
     if (result.status === 'cancelled') {
       track('checkout_closed', { plan });
-      setPhase(showGift('checkout_closed') ? 'gift' : 'held-back');
+      setPhase('held-back');
       return;
     }
     track('checkout_failed', { plan, code: result.code });
@@ -171,17 +171,17 @@ export function Price() {
   };
 
   /**
-   * The one-time gift, at most once per person: marked before it is seen, so
-   * a reload never brings it back. False when it was shown before, she has
-   * bought, or RevenueCat has no such product.
+   * The one-time offer, only under "What held you back?" -> "The price" and at
+   * most once per person: marked before it is seen, so a reload never brings
+   * it back. Not shown when it was shown before, she has bought, or RevenueCat
+   * has no such product.
    */
-  const showGift = (trigger: 'checkout_closed' | 'leave' | 'held_back'): boolean => {
-    if (!offerReady || s.offerShown === true || s.purchased === true) return false;
-    setOfferShownNow(trigger === 'held_back');
+  const showOffer = (): void => {
+    if (!offerReady || s.offerShown === true || s.purchased === true) return;
+    setOfferShownNow(true);
     update({ offerShown: true });
     void saveLead({ offer_shown_at: new Date().toISOString() });
-    track('exit_gift_shown', { offer: PRICE_OFFER.id, trigger });
-    return true;
+    track('exit_gift_shown', { offer: PRICE_OFFER.id, trigger: 'held_back' });
   };
 
   /** The one-time offer's checkout: the same consent, events and success page as the main plans. */
@@ -218,25 +218,11 @@ export function Price() {
   };
 
   const retest = addDays(today, 14);
-  if (phase === 'gift')
-    return (
-      <Gift
-        onBuy={buyOffer}
-        onClose={() => {
-          track('exit_gift_declined', { offer: PRICE_OFFER.id });
-          setPhase('held-back');
-        }}
-      />
-    );
   const perDay = (total: number, days: number) => money(Math.round((total / days) * 100) / 100);
   const monthDays = Math.round((charge.getTime() - today.getTime()) / 86_400_000);
   const yearDays = Math.round((renewYear.getTime() - today.getTime()) / 86_400_000);
   return (
-    <Page
-      backTo={STEP.plan}
-      onBack={phase === 'idle' ? () => (showGift('leave') ? setPhase('gift') : back(STEP.plan)) : undefined}
-      footer
-    >
+    <Page backTo={STEP.plan} footer>
       <div className="stack gap-s center">
         <h1>{PLAN_NAME[kindOf(s.answers)]}</h1>
         <p className="small">{planLine(s.answers)}</p>
@@ -268,7 +254,7 @@ export function Price() {
           onPick={(reason) => {
             setHeldBack(reason);
             track('held_back', { reason });
-            if (reason === 'price') showGift('held_back');
+            if (reason === 'price') showOffer();
             if (reason === 'think') {
               void saveLead({ plan_email_requested_at: new Date().toISOString() });
               track('plan_email_requested');
@@ -502,7 +488,7 @@ function HeldBack({
  * year. The same unticked consent box as the main plans, with the exact
  * amounts and the renewal date.
  */
-function OfferCard({ onBuy, headline = true }: { onBuy: (consentText: string) => Promise<string | null>; headline?: boolean }) {
+function OfferCard({ onBuy }: { onBuy: (consentText: string) => Promise<string | null> }) {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -510,13 +496,11 @@ function OfferCard({ onBuy, headline = true }: { onBuy: (consentText: string) =>
   const consent = `I understand: ${money(PRICE_OFFER.intro)} today for my first year, then ${money(PRICE_OFFER.price)} every year from ${yearDate(renews)} until I cancel.`;
   return (
     <div className="card stack">
-      {headline && (
-        <p className="lead">
-          <b>
-            Your first year for {money(PRICE_OFFER.intro)}. Then {money(PRICE_OFFER.price)} a year. Cancel any time.
-          </b>
-        </p>
-      )}
+      <p className="lead">
+        <b>
+          Your first year for {money(PRICE_OFFER.intro)}. Then {money(PRICE_OFFER.price)} a year. Cancel any time.
+        </b>
+      </p>
       <Check checked={agreed} onChange={setAgreed}>
         {consent}
       </Check>
@@ -541,55 +525,5 @@ function OfferCard({ onBuy, headline = true }: { onBuy: (consentText: string) =>
         {busy ? 'Opening checkout…' : `Start my year for ${money(PRICE_OFFER.intro)}`}
       </button>
     </div>
-  );
-}
-
-/**
- * Flo's gift box: a closed box first, the offer when she opens it. Shown once,
- * by the same triggers as before. No timer, nothing that runs out.
- */
-function Gift({ onBuy, onClose }: { onBuy: (consentText: string) => Promise<string | null>; onClose: () => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <main className="page gift-page">
-      <header className="topbar">
-        <button className="back" type="button" onClick={onClose} aria-label="No, thanks">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-          </svg>
-        </button>
-      </header>
-      <div className="fade stack gap-l" style={{ flex: 1, justifyContent: 'center' }}>
-        <div className={open ? 'box small' : 'box pop'} aria-hidden="true">
-          <Icon name="sparkles" size={34} />
-          <Icon name="gift" size={open ? 96 : 168} />
-          <Icon name="sparkles" size={26} />
-        </div>
-        {open ? (
-          <>
-            <div className="stack gap-s center">
-              <h1>Your first year {money(PRICE_OFFER.intro)}</h1>
-              <p className="lead">Then {money(PRICE_OFFER.price)} a year. Cancel any time.</p>
-            </div>
-            <OfferCard onBuy={onBuy} headline={false} />
-            <button className="btn quiet" type="button" onClick={onClose}>
-              No, thanks
-            </button>
-          </>
-        ) : (
-          <div className="stack gap-s center">
-            <h1>A gift just for you</h1>
-            <p className="lead">Open the box to see your offer.</p>
-          </div>
-        )}
-      </div>
-      {!open && (
-        <div className="cta">
-          <button className="btn gift-open" type="button" onClick={() => setOpen(true)}>
-            Open now
-          </button>
-        </div>
-      )}
-    </main>
   );
 }

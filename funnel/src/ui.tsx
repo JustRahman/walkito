@@ -13,21 +13,18 @@ export function Page({
   children,
   progress,
   backTo,
-  onBack,
   footer = false,
 }: {
   children: ReactNode;
   progress?: number;
   backTo?: string;
-  /** Replaces going back, once: the price page shows its one-time gift first. */
-  onBack?: () => void;
   footer?: boolean;
 }) {
   return (
     <main className="page">
       <header className="topbar">
         {backTo != null && (
-          <button className="back" type="button" onClick={() => (onBack != null ? onBack() : back(backTo))} aria-label="Back">
+          <button className="back" type="button" onClick={() => back(backTo)} aria-label="Back">
             <Chevron />
           </button>
         )}

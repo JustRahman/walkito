@@ -45,9 +45,13 @@ type Events = {
   cancel_chosen: { choice: string };
   cancel_status: { status: string; matched_by: string };
   checkout_needs_sign_in: Record<string, never>;
-  /** The one-time gift ($29.99 first year), shown once: after she closes checkout, leaves the price page, or answers "The price". */
-  exit_gift_shown: { offer: string; trigger: 'checkout_closed' | 'leave' | 'held_back' };
-  exit_gift_declined: { offer: string };
+  /**
+   * The one-time offer ($29.99 first year), shown once, only after she answers
+   * "The price". Until v6 (Nov 18, 2026) it was also a gift box when she closed
+   * checkout or left the price page (`checkout_closed`, `leave`), which she
+   * could decline (`exit_gift_declined`): those stop on that date.
+   */
+  exit_gift_shown: { offer: string; trigger: 'held_back' };
   offer_checkout_opened: { offer: string };
   exit_gift_purchased: { offer: string };
   offer_closed: { offer: string };
