@@ -49,6 +49,9 @@ const RETIRED = [
   'it can change',
   'Day 1 of your plan is done',
   'Member since',
+  'peek at your plan',
+  'start Day 1 right here',
+  'A short session every day',
 ];
 
 type Line = { where: string; text: string };

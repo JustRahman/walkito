@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { ROUTES } from './App';
 import { PRICE_OFFER, PRICE_VARIANTS, yearlySaving } from './config';
-import { lifeFor, mentionedGoals, missingStep, ORDER, planLine, prevOf, RETIRED, sectionOf, STEP } from './flow';
+import { clockLabel, lifeFor, mentionedGoals, missingStep, ORDER, planLine, planView, prevOf, RETIRED, sectionOf, sessionOne, STEP, WAKE_TIMES } from './flow';
 import type { Answers, FunnelState } from './state';
 
 const ANSWERS: Answers = {
@@ -117,6 +117,30 @@ describe('what the plan and the price say', () => {
   test('the plan has no length', () => {
     expect(planLine(ANSWERS)).toBe('5 min a day · seated');
     expect(planLine({ ...ANSWERS, start: 'standing', minutes: 10 })).toBe('10 min a day · standing');
+  });
+
+  test('the plan page’s week is seven days from today, with the move she tried first and done', () => {
+    const now = new Date(2026, 10, 18, 9, 0);
+    const tried = state(ANSWERS, { tryIt: { seconds: 60, felt: 'lighter' } });
+    const view = planView(tried, now);
+    expect(view.days.length).toBe(7);
+    expect(view.days[0]!.label).toBe('Today');
+    expect(view.days[0]!.rest).toBe(false);
+    expect(view.days[0]!.moves[0]!.doneToday).toBe(true);
+    expect(view.days[0]!.moves.filter((m) => m.doneToday).length).toBe(1);
+    // "Not now" in the quiz: nothing is marked done.
+    const skipped = planView(state(ANSWERS, { tryIt: { skipped: true } }), now);
+    expect(skipped.days.flatMap((d) => d.moves).some((m) => m.doneToday)).toBe(false);
+    // After payment she is offered what is left, never the move she did.
+    const left = sessionOne(tried, now);
+    expect(left.length).toBeGreaterThan(0);
+    expect(left.some((m) => m.id === view.days[0]!.moves[0]!.id)).toBe(false);
+  });
+
+  test('a wake time reads as a clock, for the hours she can tap and for an exact one', () => {
+    expect(WAKE_TIMES.map((w) => clockLabel(w.value))).toEqual(['5:30 AM', '6:30 AM', '7:30 AM', '8:30 AM', '9:30 AM']);
+    expect(clockLabel('12:05')).toBe('12:05 PM');
+    expect(clockLabel('00:15')).toBe('12:15 AM');
   });
 
   test('running is only asked of a runner', () => {
