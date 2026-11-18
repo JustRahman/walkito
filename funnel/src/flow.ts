@@ -45,7 +45,7 @@ export const STEP = {
 } as const;
 
 /** The funnel in order, up to the price. */
-const ORDER: readonly string[] = [
+export const ORDER: readonly string[] = [
   STEP.age,
   STEP.card,
   STEP.focus,

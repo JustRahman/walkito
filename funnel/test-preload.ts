@@ -9,6 +9,9 @@ import { APP_SRC } from './engine-aliases.mjs';
  * stand-ins are swapped in at load time instead: the same two files Vite
  * points the engine at (`engine-aliases.mjs`).
  */
+// Vite's base, which src/config.ts reads as it loads: without it no test can import a screen.
+process.env.BASE_URL ??= '/';
+
 const shims = path.resolve(import.meta.dir, 'src/engine/shims');
 const I18N = path.join(APP_SRC, 'shared/lib/i18n/index.ts');
 const STATE = path.join(APP_SRC, 'entities/program/model/state.ts');

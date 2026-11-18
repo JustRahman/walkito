@@ -14,7 +14,7 @@ import { Card, Compare, Fault, Goals, Life, Path, Research, Reviews, Sign } from
 import { After, Balance, Building, FeltAnswer, Praise, Routine, TryMove } from './screens/try-it';
 import { useFunnel } from './state';
 
-const ROUTES: Readonly<Record<string, ComponentType>> = {
+export const ROUTES: Readonly<Record<string, ComponentType>> = {
   '/': Age,
   [STEP.age]: Age,
   [STEP.card]: Card,
