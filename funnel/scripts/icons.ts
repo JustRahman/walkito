@@ -11,9 +11,7 @@ import { FLUENT_ICONS } from '../../src/shared/ui/fluent-icon/icons';
 const NAMES = [
   'foot', 'leg', 'balance', 'sandal', 'runningShoe', 'briefcase',
   'sunrise', 'couch', 'sun', 'moon', 'leafInWind',
-  'healthWorker', 'softball', 'seedling',
-  'bed', 'bandage', 'feather', 'crutch', 'check',
-  'stopwatch', 'calendar', 'sparkles', 'heart', 'bullseye', 'strength', 'bulb', 'gift',
+  'bed', 'feather', 'stopwatch', 'strength',
 ] as const;
 
 const all: Readonly<Record<string, string>> = FLUENT_ICONS;
