@@ -270,8 +270,8 @@ b { font-weight: 700; }
 
 /* A drawing or the app's screen, whole. */
 .hero { display: block; margin: 0 auto; width: auto; max-width: 100%; height: 150px; object-fit: contain; }
-/* The first screen's photograph: a band no taller than a quarter of the screen, so the age cards stay in view. */
-.photo { display: block; width: 100%; height: min(24dvh, 180px); object-fit: cover; object-position: 50% 60%; border-radius: 16px; background: var(--track); }
+/* The first screen's photograph: a band no taller than a quarter of the screen, so the age cards stay in view. The first height is for a browser without dvh, which would otherwise show it whole. */
+.photo { display: block; width: 100%; height: 158px; height: min(24dvh, 180px); object-fit: cover; object-position: 50% 60%; border-radius: 16px; background: var(--track); }
 /* A photograph or an exercise still, cropped to one shape. */
 .still { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 16px; background: var(--track); }
 
