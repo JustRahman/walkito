@@ -2,6 +2,8 @@ import type { PostHog } from 'posthog-js';
 
 import { env } from '../config';
 import { getState } from '../state';
+import { accessToken, currentUser } from './account';
+import { matchOf, storeMatch, storedMatch, type Match } from './meta-match';
 
 /**
  * Every funnel event, declared once. Names and properties say that something
@@ -103,15 +105,20 @@ export function track<E extends keyof Events>(event: E, ...props: Events[E] exte
   withPostHog((p) => p.capture(event, props[0] ?? {}));
 }
 
-/** The Supabase user id, which is also the RevenueCat app user id, as the app does. */
+/** The Supabase user id, which is also the RevenueCat app user id, as the app does. With her email, Meta's pixel gets the two hashes it may match her by. */
 export function identify(userId: string, email?: string): void {
   withPostHog((p) => p.identify(userId, email != null ? { email } : undefined));
+  if (email != null) void matchPixel(userId, email);
 }
 
 // ---------------------------------------------------------------------------
 // Meta: Pixel in the browser and the same event through our own server, with
-// one event id so Meta counts it once. Four events only, no customer data
-// beyond what the browser already sends. Nothing loads without a pixel id.
+// one event id so Meta counts it once. Four events only. Once she has given
+// her email (the email step, never before), both also carry two SHA-256
+// hashes Meta may match her by: her email and our account id. The pixel is
+// handed the hashes, never the address; the server finds both from her token
+// and hashes them itself. No answer, nothing about her feet. Nothing loads
+// without a pixel id.
 // ---------------------------------------------------------------------------
 
 type MetaEvent = 'PageView' | 'ViewContent' | 'InitiateCheckout' | 'Purchase';
@@ -140,6 +147,9 @@ function rememberClick(): void {
   document.cookie = `_fbc=${value}; max-age=${90 * 86400}; path=/; samesite=lax; secure`;
 }
 
+/** The two hashes the pixel holds, once she has given her email. */
+let matched: Match | null = null;
+
 export function startPixel(): void {
   if (env.pixelId === '') return;
   rememberClick();
@@ -162,25 +172,54 @@ export function startPixel(): void {
   document.head.appendChild(script);
   // No automatic button and form scraping: the quiz is health-adjacent.
   window.fbq('set', 'autoConfig', false, env.pixelId);
-  window.fbq('init', env.pixelId);
+  // She gave her email on an earlier visit: the pixel starts with her two hashes.
+  matched = storedMatch();
+  if (matched != null) window.fbq('init', env.pixelId, matched);
+  else window.fbq('init', env.pixelId);
+  // An email given before the hashes were kept: they are made from her account now.
+  const email = getState().verified === true ? getState().email : undefined;
+  if (matched == null && email != null) {
+    void currentUser()
+      .then((user) => (user != null ? matchPixel(user.id, email) : undefined))
+      .catch(() => undefined);
+  }
+}
+
+/**
+ * Her email and our account id, hashed here with SubtleCrypto, kept for the
+ * next visit and handed to the pixel. A second `init` for the same pixel is
+ * how it takes them part-way through a visit. From then on the server's copy
+ * of each event goes with her token (`meta`), and carries the same two.
+ */
+async function matchPixel(userId: string, email: string): Promise<void> {
+  const match = await matchOf(userId, email);
+  if (match == null) return;
+  storeMatch(match);
+  if (env.pixelId === '' || window.fbq == null) return;
+  if (matched?.em === match.em && matched.external_id === match.external_id) return;
+  matched = match;
+  window.fbq('init', env.pixelId, match);
+}
+
+/** Her own token, for `meta-capi` to look her up by. Only once the pixel has her hashes too. */
+async function tokenForServer(): Promise<string | null> {
+  if (matched == null) return null;
+  return accessToken().catch(() => null);
 }
 
 export function meta(event: MetaEvent, eventId: string, value?: { value: number; currency: string }): void {
   if (env.pixelId === '' || window.fbq == null) return;
   window.fbq('track', event, value ?? {}, { eventID: eventId });
   if (event === 'Purchase' || env.supabaseUrl === '') return;
-  void fetch(`${env.supabaseUrl}/functions/v1/meta-capi`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', apikey: env.supabaseAnonKey },
-    body: JSON.stringify({
-      event_name: event,
-      event_id: eventId,
-      event_source_url: location.origin + location.pathname,
-      fbp: cookie('_fbp'),
-      fbc: cookie('_fbc'),
-    }),
-    keepalive: true,
-  }).catch(() => undefined);
+  const body = { event_name: event, event_id: eventId, event_source_url: location.origin + location.pathname };
+  void tokenForServer().then((token) =>
+    fetch(`${env.supabaseUrl}/functions/v1/meta-capi`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: env.supabaseAnonKey, ...(token != null ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ ...body, fbp: cookie('_fbp'), fbc: cookie('_fbc') }),
+      keepalive: true,
+    }).catch(() => undefined),
+  );
 }
 
 /** In-app browsers, for analytics and for the "open in Safari" fallback. */
