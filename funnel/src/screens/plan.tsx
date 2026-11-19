@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from 'react';
 
-import { adOf, clockLabel, firstName, goalLabels, OUTLOOK_SOURCE, patternName, PLAN_NAME, planLine, planView, sceneOf, STEP } from '../flow';
+import { adOf, firstName, goalLabels, OUTLOOK_SOURCE, patternName, PLAN_NAME, planLine, planView, sceneOf, STEP } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
 import { Cta, Page } from '../ui';
-import { herTime, triedRow } from '../words';
+import { herTime, morningOf, triedRow } from '../words';
 import { ReviewCards, TrustLines } from './trust';
 
 /** "2026-11-18" -> "Wed" and "18", in her own time zone. */
@@ -25,6 +25,8 @@ export function Plan() {
   const s = useFunnel();
   const name = firstName(s);
   const view = useMemo(() => planView(s), [s.answers, s.tryIt]);
+  /** Read once as the page opens: hours, never a clock that ticks. */
+  const morning = useMemo(() => morningOf(s.answers, new Date()), [s.answers]);
   const today = view.days[0];
   const sessions = view.days.filter((d) => !d.rest).length;
   const goals = goalLabels(s.answers);
@@ -111,9 +113,10 @@ export function Plan() {
       )}
 
       <div className="card">
-        <b>Tomorrow morning</b>
+        <b>{morning.when}</b>
         <p className="small">
-          Your 2-minute first-step routine{s.answers.wake != null ? `, around ${clockLabel(s.answers.wake)}` : ', before your first step'}.
+          Your 2-minute first-step routine{s.answers.wake != null ? '.' : ', before your first step.'}
+          {morning.away != null && ` That’s ${morning.away}.`}
         </p>
       </div>
 

@@ -574,6 +574,28 @@ export function clockLabel(hhmm: string): string {
   return `${((h! + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h! < 12 ? 'AM' : 'PM'}`;
 }
 
+/** Before this hour a visit belongs to the evening before, as on the server (`NIGHT_ENDS` in `_shared/web/sequence.ts`). */
+const NIGHT_ENDS = 4;
+/** The welcome email goes first, and the next one waits three hours after it (`GAP_HOURS` there), so the first-step email is on time only this far ahead. */
+const EMAIL_LEAD_HOURS = 4;
+
+/**
+ * Her next morning, by the rule the server sends the first-step email on
+ * (`web_morning`): the day after she starts, at her wake time, where a start
+ * before 4 AM counts as the evening before, so its morning is the same day's.
+ *
+ * `hours` is whole hours from now, for "about 13 hours from now": a number the
+ * page prints once, never a ticking clock. `byEmail` is false when the email
+ * could not be out by her wake time, and then no page promises it.
+ */
+export function nextMorning(now: Date, wake: string): { at: Date; tomorrow: boolean; hours: number; byEmail: boolean } {
+  const [h, m] = wake.split(':').map(Number);
+  const tomorrow = now.getHours() >= NIGHT_ENDS;
+  const at = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (tomorrow ? 1 : 0), h, m);
+  const ahead = (at.getTime() - now.getTime()) / 3_600_000;
+  return { at, tomorrow, hours: Math.round(ahead), byEmail: ahead >= EMAIL_LEAD_HOURS };
+}
+
 /** When she gets up, as hours she can tap. Each is stored as the middle of its hour, in the same "HH:MM" an exact time is. */
 export const WAKE_TIMES: ReadonlyArray<{ value: string; label: string }> = [
   { value: '05:30', label: 'Before 6 AM' },

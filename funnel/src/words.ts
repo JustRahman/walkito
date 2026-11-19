@@ -1,4 +1,19 @@
-import { anchorLabel, burned, factsOf, patternName, sceneOf, sixtyPlus, spentALot, spentOf, START_LABEL, tickedCount, type Scene } from './flow';
+import {
+  anchorLabel,
+  burned,
+  clockLabel,
+  factsOf,
+  nextMorning,
+  patternName,
+  sceneOf,
+  sixtyPlus,
+  spentALot,
+  spentOf,
+  START_LABEL,
+  tickedCount,
+  wakeOf,
+  type Scene,
+} from './flow';
 import type { Move } from './engine/plan';
 import type { Answers } from './state';
 
@@ -386,4 +401,34 @@ export function spentAnchor(a: Answers, today: string): string | null {
   const spent = spentSaid(a);
   if (spent == null || spentOf(a) === 'under100') return null;
   return `You told us you’ve spent ${spent} on your feet so far. This is ${today} to find out whether training them is the missing part. And you can have it back.`;
+}
+
+// ── Her next morning, on the plan page and the price ───────────────────────
+
+/**
+ * Her next morning in words: "Tomorrow, around 7:30 AM" and "about 13 hours
+ * from now". Before 4 AM it is "This morning", by the server's own rule
+ * (`nextMorning`). Without a wake time of hers there is no clock time to say
+ * and no hours to count: we never print a time she did not give.
+ */
+export function morningOf(a: Answers, now: Date): { when: string; away: string | null; byEmail: boolean } {
+  const next = nextMorning(now, wakeOf(a));
+  if (a.wake == null || wakeOf(a) !== a.wake) return { when: next.tomorrow ? 'Tomorrow morning' : 'This morning', away: null, byEmail: next.byEmail };
+  return {
+    when: `${next.tomorrow ? 'Tomorrow' : 'This morning'}, around ${clockLabel(a.wake)}`,
+    away: next.hours >= 1 ? `about ${next.hours} ${next.hours === 1 ? 'hour' : 'hours'} from now` : null,
+    byEmail: next.byEmail,
+  };
+}
+
+/**
+ * The price page's one real clock: start today, and the first-step routine is
+ * in her inbox on her next morning. Null when the email could not be out by
+ * then (she is up within a few hours): the page then says something else.
+ */
+export function inboxLine(a: Answers, now: Date): string | null {
+  const morning = morningOf(a, now);
+  if (!morning.byEmail) return null;
+  const when = morning.when[0]!.toLowerCase() + morning.when.slice(1);
+  return `Start today and your first-step routine is in your inbox ${when}.${morning.away != null ? ` That’s ${morning.away}.` : ''}`;
 }

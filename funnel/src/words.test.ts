@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { Answers } from './state';
-import { guessOf, herTime, listOf, NOT_QUITE, patternOf, permissionLine, planSentence, readyLine, releaseOf, spentAnchor, spentSaid, summaryOf, triedNouns, triedRow } from './words';
+import { guessOf, herTime, inboxLine, listOf, morningOf, NOT_QUITE, patternOf, permissionLine, planSentence, readyLine, releaseOf, spentAnchor, spentSaid, summaryOf, triedNouns, triedRow } from './words';
 
 /**
  * What is said back to her is put together from her answers, so no reader of
@@ -279,5 +279,29 @@ describe('what is said back to her', () => {
     expect(readyLine([move(true), move(false)], 4, true)).toBe('The rest of today’s session is ready the moment you start: 2 moves, about 4 minutes.');
     expect(readyLine([move(true), move(true), move(true)], 5, false)).toBe('Your first session is ready the moment you start. It’s about 5 minutes, sitting down.');
     expect(readyLine([move(false)], 2, false)).toBe('Your first session is ready the moment you start. It’s about 2 minutes.');
+  });
+
+  test('her next morning: the time she gave, hours and never minutes, and no promise the email cannot keep', () => {
+    const evening = new Date(2026, 10, 19, 18, 30);
+    expect(morningOf({ wake: '07:30' }, evening)).toEqual({ when: 'Tomorrow, around 7:30 AM', away: 'about 13 hours from now', byEmail: true });
+    expect(inboxLine({ wake: '07:30' }, evening)).toBe('Start today and your first-step routine is in your inbox tomorrow, around 7:30 AM. That’s about 13 hours from now.');
+    // Before 4 AM her next morning is this one.
+    const night = new Date(2026, 10, 20, 1, 30);
+    expect(morningOf({ wake: '05:30' }, night)).toEqual({ when: 'This morning, around 5:30 AM', away: 'about 4 hours from now', byEmail: true });
+    expect(inboxLine({ wake: '05:30' }, night)).toBe('Start today and your first-step routine is in your inbox this morning, around 5:30 AM. That’s about 4 hours from now.');
+    // Up in an hour: the plan page still says when, the price page does not promise an email by then.
+    expect(morningOf({ wake: '05:30' }, new Date(2026, 10, 20, 3, 45)).away).toBe('about 2 hours from now');
+    expect(morningOf({ wake: '04:30' }, new Date(2026, 10, 20, 3, 20)).away).toBe('about 1 hour from now');
+    expect(inboxLine({ wake: '05:30' }, new Date(2026, 10, 20, 3, 45))).toBeNull();
+    // No wake time of hers (a visitor from before the question, or "Not now"): no clock time and no hours.
+    expect(morningOf({}, evening)).toEqual({ when: 'Tomorrow morning', away: null, byEmail: true });
+    expect(inboxLine({}, evening)).toBe('Start today and your first-step routine is in your inbox tomorrow morning.');
+    expect(morningOf({ wake: 'soon' }, night).when).toBe('This morning');
+    for (let hour = 0; hour < 24; hour++)
+      for (const wake of ['05:30', '06:30', '07:30', '08:30', '09:30', '12:05', undefined]) {
+        const line = inboxLine({ wake }, new Date(2026, 10, 19, hour, 20));
+        if (line != null) check(`${hour}:20 / ${wake}`, line);
+        expect(line ?? '', `${hour}:20 / ${wake}`).not.toMatch(/minute|second|\b0 hours|-\d/);
+      }
   });
 });

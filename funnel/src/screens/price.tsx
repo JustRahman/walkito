@@ -16,14 +16,14 @@ import {
   yearlyPerMonth,
   yearlySaving,
 } from '../config';
-import { addDays, defaultPlan, firstName, longDate, minutesOf, PLAN_NAME, planLine, planView, sceneOf, sessionOne, shortDate, STEP, wakeOf } from '../flow';
+import { addDays, adOf, defaultPlan, firstName, longDate, minutesOf, PLAN_NAME, planLine, planView, sceneOf, sessionOne, shortDate, STEP, wakeOf } from '../flow';
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
 import { go } from '../router';
 import { update, useFunnel } from '../state';
 import { AppButton, Check, Choice, Cta, Page } from '../ui';
-import { permissionLine, readyLine, spentAnchor } from '../words';
+import { inboxLine, morningOf, permissionLine, readyLine, spentAnchor } from '../words';
 import { ReviewCards, TrustLines } from './trust';
 
 type PlanId = 'monthly' | 'yearly';
@@ -236,10 +236,15 @@ export function Price() {
   const sessions = view.days.filter((d) => !d.rest).length;
   const moves = new Set(view.days.flatMap((d) => d.moves.map((move) => move.id))).size;
   const priceToday = money(plan === 'monthly' ? m.intro : y.price);
+  /** Her next morning, read once as the page opens. The clock leads for a morning answer and for the ad about mornings. */
+  const morning = useMemo(() => morningOf(s.answers, today), [s.answers, today]);
+  const clock = sceneOf(s.answers) === 'morning' || adOf(s) === 'ad2_v1morning' ? inboxLine(s.answers, today) : null;
   /** Her own spend against today's price; without one, the year against a pair of shoes, where the year is on offer. */
   const anchor =
     spentAnchor(s.answers, priceToday) ??
     (yearly === true ? `A whole year is ${money(y.price)}. That’s less than most pairs of supportive shoes.` : null);
+  /** The first-step email, on the day and at the time the server sends it. */
+  const firstStep = morning.byEmail ? <TimelineRow title={morning.when} text="Your first-step routine, by email." /> : null;
   return (
     <Page backTo={STEP.plan} footer>
       <div className="stack gap-s">
@@ -251,7 +256,7 @@ export function Price() {
           {PLAN_NAME[sceneOf(s.answers)]} · {planLine(s.answers)}
         </p>
         <p className="small">
-          <b>Day 1 is today, {longDate(today)}.</b> {readyLine(left, minutesOf(left), begun)}
+          <b>Day 1 is today, {longDate(today)}.</b> {clock ?? readyLine(left, minutesOf(left), begun)}
         </p>
       </div>
       <p>{permissionLine(s.answers)}</p>
@@ -383,6 +388,7 @@ export function Price() {
               {plan === 'monthly' ? (
                 <>
                   <TimelineRow now title="Today" text={`${money(m.intro)}. Your plan starts now.`} />
+                  {firstStep}
                   <TimelineRow title={shortDate(retest)} text="Day 14: your first progress check in the app." />
                   <TimelineRow title={shortDate(addDays(charge, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
                   <TimelineRow title={shortDate(charge)} text={`${money(m.price)} a month. Cancel any time.`} />
@@ -390,6 +396,7 @@ export function Price() {
               ) : (
                 <>
                   <TimelineRow now title="Today" text={`${money(y.price)} for a year.`} />
+                  {firstStep}
                   <TimelineRow title={shortDate(retest)} text="Day 14: your first progress check in the app." />
                   <TimelineRow title={yearDate(addDays(renewYear, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
                   <TimelineRow title={yearDate(renewYear)} text={`${money(y.price)} for the next year. Cancel any time.`} />

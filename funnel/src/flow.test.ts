@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { dayOf, nextWebEmail, type WebPerson } from '../../supabase/functions/_shared/web/sequence.ts';
 import { ROUTES } from './App';
 import { PRICE_OFFER, PRICE_VARIANTS, yearlyPerMonth, yearlySaving } from './config';
 import {
@@ -16,6 +17,7 @@ import {
   mentionedGoals,
   minutesOf,
   missingStep,
+  nextMorning,
   MOVE_CAP,
   ORDER,
   paidFor,
@@ -389,6 +391,49 @@ describe('what the plan and the price say', () => {
         for (const safety of ['none', 'numb'] as const)
           for (const minutes of [3, 5, 10] as const)
             expect(planView(state({ ...ANSWERS, focus, start, safety, minutes }), now).days.flatMap((d) => d.moves).every((m) => m.clip != null)).toBe(true);
+  });
+
+  test('her next morning is the server’s: the day after she starts, at her wake time, and before 4 AM the same morning', () => {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const localDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const evening = nextMorning(new Date(2026, 10, 19, 18, 30), '07:30');
+    expect([localDay(evening.at), evening.tomorrow, evening.hours, evening.byEmail]).toEqual(['2026-11-20', true, 13, true]);
+    const night = nextMorning(new Date(2026, 10, 20, 1, 30), '07:30');
+    expect([localDay(night.at), night.tomorrow, night.hours, night.byEmail]).toEqual(['2026-11-20', false, 6, true]);
+    // Up within the hour: the email cannot be out by then, so no page promises it.
+    expect(nextMorning(new Date(2026, 10, 20, 3, 30), '04:15').byEmail).toBe(false);
+    // Just past 4 AM her day has begun: the email is tomorrow's, as on the server.
+    expect(nextMorning(new Date(2026, 10, 20, 4, 5), '07:30').hours).toBe(27);
+
+    // Every half hour of two days (the night the clocks change in the US among them), against the server's own decision.
+    for (const start of [new Date(2026, 10, 19, 0, 10), new Date(2026, 9, 31, 0, 10), new Date(2027, 2, 13, 0, 10)]) {
+      for (let i = 0; i < 96; i++) {
+        const now = new Date(start.getTime() + i * 30 * 60_000);
+        for (const wake of ['05:30', '07:30', '09:30', '11:45']) {
+          const next = nextMorning(now, wake);
+          // The same day: the one after the day her purchase belongs to.
+          const day1 = dayOf(now.toISOString(), zone);
+          const [y, m, d] = day1.split('-').map(Number);
+          expect(localDay(next.at)).toBe(localDay(new Date(y!, m! - 1, d! + 1)));
+          expect(clockLabel(wake)).toBe(clockLabel(`${String(next.at.getHours()).padStart(2, '0')}:${String(next.at.getMinutes()).padStart(2, '0')}`));
+          if (!next.byEmail) continue;
+          // She pays now, the welcome goes within the quarter hour: the server sends the first-step email at that minute, and not before it.
+          const person = (at: Date): WebPerson => ({
+            userId: 'u',
+            email: 'linda@example.com',
+            zone,
+            unsubscribed: false,
+            checkoutOpenedAt: null,
+            wakeTime: wake,
+            customer: { productId: 'none', status: 'intro', periodEnd: null, introEndsAt: null, firstPurchaseAt: now.toISOString() },
+            log: [{ key: 'web_welcome', sentAt: new Date(now.getTime() + 15 * 60_000).toISOString(), status: 'sent' }],
+          });
+          const just = (minutes: number) => new Date(next.at.getTime() + minutes * 60_000);
+          expect(nextWebEmail(person(just(1)), just(1)).decision?.kind).toBe('web_morning');
+          expect(nextWebEmail(person(just(-1)), just(-1)).decision).toBeNull();
+        }
+      }
+    }
   });
 
   test('the prices are Rahman’s: $4.99 then $9.99 a month, $49.99 a year, $29.99 for the one offer', () => {
