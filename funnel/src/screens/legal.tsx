@@ -1,7 +1,7 @@
 import { COMPANY_LINE, DESCRIPTOR, GUARANTEE_DAYS, SITE, SUPPORT_EMAIL, url } from '../config';
 import { Page } from '../ui';
 
-const UPDATED = 'November 15, 2026';
+const UPDATED = 'November 19, 2026';
 const mail = <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>;
 const who = <>{COMPANY_LINE}</>;
 
@@ -102,7 +102,7 @@ export function Privacy() {
         <h2>The short version</h2>
         <ul>
           <li>Your quiz answers stay in your browser unless you tick the box to save them with your plan.</li>
-          <li>We never send your answers, your ratings or your email to Meta, PostHog or any advertiser.</li>
+          <li>We never send your answers or your ratings to Meta, PostHog or any advertiser. Meta gets only a scrambled (hashed) version of your email, to measure our ads.</li>
           <li>We never sell your data.</li>
         </ul>
 
@@ -146,8 +146,8 @@ export function Privacy() {
           <li>
             <b>Meta (Facebook and Instagram)</b>: Meta’s pixel and our server tell Meta that a page
             was viewed, that the plan page was viewed, that checkout started and that a purchase was made, with its amount.
-            Meta receives your IP address, browser details and Meta’s own cookie IDs. Meta never receives your email, your
-            answers or anything about your health. Meta uses this to measure and improve its ads.
+            Meta receives your IP address, browser details and Meta’s own cookie IDs. Meta never receives your answers or
+            anything about your health. Meta uses this to measure and improve its ads.
           </li>
           <li>
             To measure our ads, we send Meta a scrambled (hashed) version of your email and a random account ID. Meta can match
