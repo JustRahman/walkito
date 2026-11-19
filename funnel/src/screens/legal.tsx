@@ -150,6 +150,10 @@ export function Privacy() {
             answers or anything about your health. Meta uses this to measure and improve its ads.
           </li>
           <li>
+            To measure our ads, we send Meta a scrambled (hashed) version of your email and a random account ID. Meta can match
+            them to an account but can’t read them. We never send your quiz answers or anything about your health.
+          </li>
+          <li>
             <b>Google</b>: if you choose “Continue with Google”, Google confirms who you are and gives us your email address
             and name. Google learns that you signed in to Walkito, and nothing about your answers.
           </li>
