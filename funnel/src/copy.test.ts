@@ -27,6 +27,54 @@ const RULES: ReadonlyArray<[rule: string, pattern: RegExp]> = [
   ['more than two words in capitals', /\b[A-Z]{2,}(?: [A-Z]{2,}){2,}\b/],
 ];
 
+/**
+ * v7 (Nov 19, 2026): words nobody says to a neighbor over the fence. They are
+ * what makes a line read as written by a machine, and she trusts it less.
+ */
+const KILL_WORDS: ReadonlyArray<[rule: string, pattern: RegExp]> = [
+  ['"unlock"', /\bunlock(s|ed|ing)?\b/i],
+  ['"elevate"', /\belevat(e|es|ed|ing)\b/i],
+  ['"transform"', /\btransform(s|ed|ing|ation|ative)?\b/i],
+  ['"empower"', /\bempower(s|ed|ing|ment)?\b/i],
+  ['"journey"', /\bjourneys?\b/i],
+  ['"seamless"', /\bseamless(ly)?\b/i],
+  ['"effortless"', /\beffortless(ly)?\b/i],
+  ['"game-changer"', /\bgame[- ]chang(er|ers|ing)\b/i],
+  ['"delve"', /\bdelv(e|es|ed|ing)\b/i],
+  ['"holistic"', /\bholistic(ally)?\b/i],
+  ['"tailored"', /\btailor(ed|s|ing)?\b/i],
+  ['"Great choice"', /\bgreat choice\b/i],
+];
+
+/**
+ * v7: pressure and claims the founders ruled out after the research. No fake
+ * scarcity or deadline, no borrowed authority, nothing about her age or her
+ * weight, and never the competitors' story that she is tearing her foot.
+ */
+const PRESSURE: ReadonlyArray<[rule: string, pattern: RegExp]> = [
+  ['"spots left"', /\bspots? (left|remaining)\b/i],
+  ['"expires in"', /\bexpir(es|ing) in\b/i],
+  ['"last chance"', /\blast chance\b/i],
+  ['"clinically proven"', /\bclinically[- ]proven\b/i],
+  ['"doctor recommended"', /\bdoctor[- ]recommended\b/i],
+  ['"prevent falls"', /\bprevent(s|ing)? (a fall|falls|falling)\b/i],
+  ['"at your age"', /\bat your age\b/i],
+  ['"senior"', /\bseniors?\b/i],
+  ['"elderly"', /\belderly\b/i],
+  ['"obese"', /\b(obese|obesity)\b/i],
+  ['"tear"', /\b(re-?)?tear(s|ing)?\b/i],
+];
+
+/**
+ * v7: the sentence shapes that give a machine away. A line says what the thing
+ * is, without first saying what it is not.
+ */
+const SHAPES: ReadonlyArray<[rule: string, pattern: RegExp]> = [
+  ['"X isn’t Y. It’s Z"', /\b(?:is|are|was|were)(?:n['’]t| not)\b[^.!?{}<>]{0,90}[.!?]["”’']?\s+(?:It|That|This|They)(?:['’]s|['’]re| is| are| was)\b/],
+  ['"not just X, but Y"', /\bnot (?:just|only|merely)\b[^.!?{}<>]{0,90}\bbut\b/i],
+  ['"it’s not X, it’s Y"', /\b(?:it|that|this)(?:['’]s| is) not\b[^.!?{}<>]{0,90},\s*(?:it|that|this)(?:['’]s| is)\b/i],
+];
+
 /** "Guarantee" belongs to the refund and to nothing else. */
 const GUARANTEE = /\bguarantee[sd]?\b/i;
 const REFUND_LINE = /money-back/;
@@ -64,13 +112,16 @@ function linesOf(name: string, text: string): Line[] {
   return text.split('\n').map((line, i) => ({ where: `${name}:${i + 1}`, text: line.trim() }));
 }
 
-const LINES: Line[] = [
+/** Every file that can hold a word she reads, comments left out. */
+const FILES: ReadonlyArray<{ name: string; text: string }> = [
   ...readdirSync(SRC, { recursive: true, encoding: 'utf8' })
     .filter((name) => /\.tsx?$/.test(name) && !SKIP.test(name))
     .sort()
-    .flatMap((name) => linesOf(name, withoutComments(readFileSync(join(SRC, name), 'utf8')))),
-  ...linesOf('index.html', readFileSync(join(SRC, '../index.html'), 'utf8')),
+    .map((name) => ({ name, text: withoutComments(readFileSync(join(SRC, name), 'utf8')) })),
+  { name: 'index.html', text: readFileSync(join(SRC, '../index.html'), 'utf8') },
 ];
+
+const LINES: Line[] = FILES.flatMap((file) => linesOf(file.name, file.text));
 
 describe('the quiz’s copy', () => {
   test('the screens are read', () => {
@@ -81,6 +132,21 @@ describe('the quiz’s copy', () => {
   for (const [rule, pattern] of RULES)
     test(`never ${rule}`, () => {
       expect(LINES.filter((l) => pattern.test(l.text)).map((l) => `${l.where}: ${l.text}`)).toEqual([]);
+    });
+
+  for (const [rule, pattern] of [...KILL_WORDS, ...PRESSURE])
+    test(`never ${rule}`, () => {
+      expect(LINES.filter((l) => pattern.test(l.text)).map((l) => `${l.where}: ${l.text}`)).toEqual([]);
+    });
+
+  // A sentence in a screen can run over two lines of source, so these read each file as one text.
+  for (const [rule, pattern] of SHAPES)
+    test(`never the shape ${rule}`, () => {
+      const found = FILES.flatMap((file) => {
+        const hit = file.text.replace(/\s+/g, ' ').match(pattern);
+        return hit == null ? [] : [`${file.name}: ${hit[0]}`];
+      });
+      expect(found).toEqual([]);
     });
 
   test('"guarantee" only on the money-back line', () => {

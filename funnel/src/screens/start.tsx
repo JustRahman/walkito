@@ -181,7 +181,7 @@ function GetTheApp({ email, via, from = 'start' }: { email?: string; via?: 'goog
 }
 
 function AccessLine({ status, email }: { status: 'checking' | 'yes' | 'slow'; email?: string }) {
-  if (status === 'yes') return <p className="note">Your plan is unlocked for {email}.</p>;
+  if (status === 'yes') return <p className="note">Your plan is active for {email}.</p>;
   if (status === 'slow')
     return (
       <p className="note">
