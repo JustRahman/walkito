@@ -5,7 +5,6 @@ import { App } from './App';
 import { meta, startAnalytics, startPixel, track, webview } from './lib/analytics';
 import { DEFAULT_VARIANT, PRICE_VARIANTS } from './config';
 import { getState, update } from './state';
-import '@fontsource-variable/nunito/wght.css';
 import './styles.css';
 
 const params = new URLSearchParams(location.search);

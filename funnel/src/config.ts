@@ -37,6 +37,20 @@ export const PRICE_VARIANTS: Readonly<Record<string, PriceVariant>> = {
 export const DEFAULT_VARIANT = 'b';
 
 /**
+ * What the yearly plan costs less than the same twelve months paid monthly,
+ * the first of them at its intro price. Worked out here so the line on the
+ * price page follows the prices and is never typed.
+ */
+export function yearlySaving(v: PriceVariant): number {
+  return Math.round((v.monthly.intro + (v.yearly.months - 1) * v.monthly.price - v.yearly.price) * 100) / 100;
+}
+
+/** The year as a monthly figure, "$4.17": its price over its twelve months. The only smaller number the year is ever given; never one per day. */
+export function yearlyPerMonth(v: PriceVariant): number {
+  return Math.round((v.yearly.price / v.yearly.months) * 100) / 100;
+}
+
+/**
  * The one-time offer after "What held you back?" -> "The price": the first
  * year for $29.99, then $49.99 a year. A NEW RevenueCat product with a paid
  * first period (one year at $29.99) that renews at $49.99; the live products
@@ -74,6 +88,13 @@ export const REMINDER_DAYS_BEFORE = 2;
 /** Refund window, days after any charge. */
 export const GUARANTEE_DAYS = 14;
 
+/**
+ * The refund tied to her mornings ("If your first steps don't feel easier…"),
+ * to test against the standard wording. It still promises the refund, never
+ * the result. OFF until the founders turn it on.
+ */
+export const BOLD_GUARANTEE: boolean = false;
+
 export const ONELINK = 'https://walkito.onelink.me/2L97/';
 
 // ── Trust lines on the plan and price pages ────────────────────────────────
@@ -84,6 +105,9 @@ export const ONELINK = 'https://walkito.onelink.me/2L97/';
  * is empty, the line is hidden.
  */
 export const PT_GUIDELINE_URL = '';
+
+/** The site's own list of the papers and guidelines its guides cite (site/lib/citations.ts), each with a DOI or PubMed id. */
+export const SOURCES_URL = 'https://walkito.site/science/';
 
 /**
  * Dr. Carla Shayman's name and photo, worded as her Upwork contract (Oct 30,
@@ -99,7 +123,7 @@ export const CARLA_PHOTO = '/team/carla-shayman.webp';
 /** The App Store rating the line quotes. Change it if the rating changes. */
 export const APP_STORE_RATING = '5.0';
 
-/** "Used by 1,000+ women" shows only once the server's real count passes this. */
+/** "Used by 1,000+ people" shows only once the server's real count passes this. The server counts people, not women. */
 export const PEOPLE_THRESHOLD = 1000;
 
 /**
@@ -113,7 +137,7 @@ export const SUPPORT_EMAIL = import.meta.env.FUNNEL_SUPPORT_EMAIL || 'hello@walk
 export const COMPANY = 'Nemy LLC';
 export const POSTAL_ADDRESS = import.meta.env.FUNNEL_POSTAL_ADDRESS || '';
 /** Nemy LLC's Stripe account descriptor, shared with the agency, so not changed for Walkito. */
-export const DESCRIPTOR = 'NEMY LLC';
+export const DESCRIPTOR = 'NEMY WALKITO';
 
 /** "Nemy LLC, 30 N Gould St…", whether or not the address already starts with the name. */
 export const COMPANY_LINE = POSTAL_ADDRESS === '' ? COMPANY : POSTAL_ADDRESS.startsWith(COMPANY) ? POSTAL_ADDRESS : `${COMPANY}, ${POSTAL_ADDRESS}`;

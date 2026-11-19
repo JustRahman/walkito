@@ -24,8 +24,9 @@ import { webProduct, type WebProduct } from './products.ts';
  * - `web_renewal_notice`: on the local day two days before the charge,
  *   09:00 to 21:00 (or the day after, if a run missed it, while the charge is
  *   still 12 hours away). For the monthly plan only the step from the first
- *   week to $9.99 is announced; for the 3-month plan, every renewal. Never for
- *   a plan that will not renew.
+ *   month to $9.99 is announced; for the yearly plans and the 3-month plan,
+ *   every renewal, the $29.99 year's step to $49.99 included. Never for a plan
+ *   that will not renew.
  *
  * For people with an address who reached the price page (or opened
  * checkout, or asked for the plan by email) and did not buy (no
@@ -149,10 +150,8 @@ export function renewalOf(customer: WebCustomer): { at: string; product: WebProd
   const product = webProduct(customer.productId);
   if (product == null) return null;
   if (customer.status !== 'intro' && customer.status !== 'active') return null;
-  if (product.notice === 'intro') {
-    return customer.status === 'intro' && customer.introEndsAt != null ? { at: customer.introEndsAt, product } : null;
-  }
-  return customer.periodEnd != null ? { at: customer.periodEnd, product } : null;
+  if (customer.status === 'intro' && customer.introEndsAt != null) return { at: customer.introEndsAt, product };
+  return product.notice === 'every' && customer.periodEnd != null ? { at: customer.periodEnd, product } : null;
 }
 
 const hoursSince = (iso: string, now: Date) => (now.getTime() - Date.parse(iso)) / HOUR_MS;

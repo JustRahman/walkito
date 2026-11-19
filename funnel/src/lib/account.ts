@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js';
 
 import { env } from '../config';
 import { beforeCheckout, type Guard } from './checkout-guard';
+import { storeMatch } from './meta-match';
 
 let client: Promise<SupabaseClient | null> | null = null;
 
@@ -22,6 +23,14 @@ export async function currentUser(): Promise<User | null> {
   if (db == null) return null;
   const { data } = await db.auth.getSession();
   return data.session?.user ?? null;
+}
+
+/** Her own token, for a function that looks her up itself (`meta-capi`). Null when this browser holds no account. */
+export async function accessToken(): Promise<string | null> {
+  const db = await supabase();
+  if (db == null) return null;
+  const { data } = await db.auth.getSession();
+  return data.session?.access_token ?? null;
 }
 
 /**
@@ -184,6 +193,8 @@ export async function guardCheckout(email: string): Promise<Guard> {
 }
 
 export async function signOut(): Promise<void> {
+  // The hashes Meta's pixel was given go with the account.
+  storeMatch(null);
   const db = await supabase();
   await db?.auth.signOut();
 }

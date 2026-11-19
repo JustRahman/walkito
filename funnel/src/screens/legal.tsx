@@ -1,7 +1,7 @@
 import { COMPANY_LINE, DESCRIPTOR, GUARANTEE_DAYS, SITE, SUPPORT_EMAIL, url } from '../config';
 import { Page } from '../ui';
 
-const UPDATED = 'November 15, 2026';
+const UPDATED = 'November 19, 2026';
 const mail = <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>;
 const who = <>{COMPANY_LINE}</>;
 
@@ -47,9 +47,14 @@ export function Terms() {
         </ul>
         <p>
           Your plan renews automatically. Payments are handled by Stripe through RevenueCat, and they appear on your statement
-          as {DESCRIPTOR}, the company that makes Walkito. Prices are in US dollars and include any tax shown at checkout.
+          as {DESCRIPTOR} (NEMY LLC is the company that makes Walkito). Prices are in US dollars and include any tax shown at
+          checkout.
         </p>
-        <p>We email you a reminder before the first full monthly charge, and before each yearly renewal.</p>
+        <p>
+          The lower first-month price is for new members only. If you have bought a Walkito plan here before, the checkout page
+          shows the full monthly price instead, before you pay.
+        </p>
+        <p>We email you a reminder two days before the first full monthly charge, and two days before every yearly renewal.</p>
 
         <h2>Cancelling</h2>
         <p>
@@ -59,8 +64,9 @@ export function Terms() {
 
         <h2>Refunds</h2>
         <p>
-          Not for you? Reply to any email from us, or write to {mail}, within {GUARANTEE_DAYS} days of a charge and we refund
-          that charge. Refunds go back to the card you paid with. A refunded plan ends when the refund is made.
+          Every charge can be refunded in full within {GUARANTEE_DAYS} days of that charge, renewals included. Reply to any
+          email from us, or write to {mail}, and we refund it. There is no phone call, no form and no reason needed. Refunds go
+          back to the card you paid with. A refunded plan ends when the refund is made.
         </p>
 
         <h2>Using the app with your plan</h2>
@@ -102,17 +108,24 @@ export function Privacy() {
         <h2>The short version</h2>
         <ul>
           <li>Your quiz answers stay in your browser unless you tick the box to save them with your plan.</li>
-          <li>We never send your answers, your ratings or your email to Meta, PostHog or any advertiser.</li>
+          <li>We never send your answers or your ratings to Meta, PostHog or any advertiser. Meta gets only a scrambled (hashed) version of your email, to measure our ads.</li>
           <li>We never sell your data.</li>
         </ul>
 
         <h2>What we collect</h2>
         <p>
-          <b>Your quiz answers</b> (age range, what you want help with, when you notice it, what you have tried, how you want
-          to start, anything to plan around, minutes a day) and <b>your try-it notes</b> (how your feet felt before and after,
-          and the optional balance seconds). They are kept in your browser’s storage to build your plan. They are saved to our
-          server only if you tick “Save my answers with my plan”. Our{' '}
-          <a href={url('/health-data')}>Consumer Health Data Privacy Policy</a> covers them in detail.
+          <b>Your quiz answers</b> (age range, what you want help with, when you notice it, how long you have had it, what you
+          have tried, including special shoes, insoles, a shot or a night splint, roughly what you have spent on your feet so
+          far, your usual day, the lines you ticked about your days, what you want back, how you want to start, anything to
+          plan around, minutes a day, and the everyday moment you picked to do them after), <b>your try-it notes</b> (how the
+          move felt, and the optional balance seconds) and, after Day 1, <b>your first steps that morning on a 0 to 10 scale</b>,
+          if you choose to give it. They are kept in your browser’s storage to build your plan. They are saved to our server
+          only if you tick “Save my answers with my plan”. Our <a href={url('/health-data')}>Consumer Health Data Privacy Policy</a>{' '}
+          covers them in detail.
+        </p>
+        <p>
+          <b>When you usually get up</b>, as a time of day. It is saved with your email so your first-step routine email
+          arrives that morning at that time. It says nothing about your health on its own.
         </p>
         <p>
           <b>Your email address</b>, to send you a sign-in code, save your plan, send your receipt and the emails about your
@@ -146,8 +159,12 @@ export function Privacy() {
           <li>
             <b>Meta (Facebook and Instagram)</b>: Meta’s pixel and our server tell Meta that a page
             was viewed, that the plan page was viewed, that checkout started and that a purchase was made, with its amount.
-            Meta receives your IP address, browser details and Meta’s own cookie IDs. Meta never receives your email, your
-            answers or anything about your health. Meta uses this to measure and improve its ads.
+            Meta receives your IP address, browser details and Meta’s own cookie IDs. Meta never receives your answers or
+            anything about your health. Meta uses this to measure and improve its ads.
+          </li>
+          <li>
+            To measure our ads, we send Meta a scrambled (hashed) version of your email and a random account ID. Meta can match
+            them to an account but can’t read them. We never send your quiz answers or anything about your health.
           </li>
           <li>
             <b>Google</b>: if you choose “Continue with Google”, Google confirms who you are and gives us your email address
@@ -205,10 +222,12 @@ export function HealthData() {
         <h2>What we collect</h2>
         <ul>
           <li>What you would like help with first, for example heel or arch, or feeling steadier.</li>
-          <li>When you notice it most, and what you have tried.</li>
+          <li>When you notice it most, how long you have had it, and what you have tried: for example stretching, special shoes, insoles, a shot in your foot or a night splint.</li>
+          <li>Roughly how much you have spent on your feet so far, if you tried something that costs money.</li>
+          <li>The lines you ticked as true for your days, for example holding the wall for your first steps, or cutting walks short, and what you want back.</li>
           <li>Whether you start seated or standing, and anything to plan around: recent surgery or injury, numbness or swelling, dizziness or a fall, or using a cane or walker.</li>
           <li>Your age range.</li>
-          <li>How your feet felt before and after the try-it move, the optional balance seconds, and how your first session felt.</li>
+          <li>How the try-it move felt, the optional balance seconds, how your first session felt, and your first steps that morning on a 0 to 10 scale, if you give it.</li>
         </ul>
 
         <h2>Where it comes from and why</h2>
@@ -226,7 +245,8 @@ export function HealthData() {
         <h2>Who we share it with</h2>
         <p>
           No one, except Supabase, which stores it for us and may use it for nothing else. We never sell it, and we never send
-          it to Meta, PostHog or any advertiser.
+          it to Meta, PostHog or any advertiser. To measure our ads, Meta receives only a scrambled (hashed) version of your
+          email and a random account ID, never anything on this list.
         </p>
 
         <h2>Your rights</h2>

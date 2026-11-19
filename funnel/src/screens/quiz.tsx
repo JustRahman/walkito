@@ -1,11 +1,14 @@
 import { useState, type ReactNode } from 'react';
 
-import { url } from '../config';
-import { PROGRESS, STEP, wakeOf } from '../flow';
+import bedMorning from '../assets/photos/bed-morning.jpg';
+import chairWindow from '../assets/photos/chair-window.jpg';
+import hero from '../assets/photos/hero-socks-morning.jpg';
+import { DEFAULT_VARIANT, money, PRICE_VARIANTS, url, yearlyPerMonth } from '../config';
+import { adOf, anchorsFor, paidFor, PROGRESS, STEP, WAKE_TIMES, wakeOf, type Ad } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, useFunnel, type Answers } from '../state';
-import { Choice, Cta, MultiChoice, Page, Reviewer, type IconName } from '../ui';
+import { ADVANCE_MS, Choice, Cta, MultiChoice, Page, type IconName } from '../ui';
 
 type Option<V> = { value: V; label: string; icon?: IconName; hint?: string; tag?: string };
 
@@ -17,7 +20,6 @@ function Single<K extends keyof Answers>({
   sub,
   options,
   next,
-  backTo,
 }: {
   path: string;
   field: K;
@@ -25,7 +27,6 @@ function Single<K extends keyof Answers>({
   sub?: ReactNode;
   options: ReadonlyArray<Option<NonNullable<Answers[K]>>>;
   next: string | ((value: NonNullable<Answers[K]>) => string | null);
-  backTo?: string;
 }) {
   const s = useFunnel();
   const [picked, setPicked] = useState<Answers[K] | undefined>(s.answers[field]);
@@ -34,10 +35,10 @@ function Single<K extends keyof Answers>({
     answer({ [field]: value } as Partial<Answers>);
     track('step_completed', { step: path });
     const target = typeof next === 'string' ? next : next(value);
-    if (target != null) setTimeout(() => go(target), 220);
+    if (target != null) setTimeout(() => go(target), ADVANCE_MS);
   };
   return (
-    <Page progress={PROGRESS[path]} backTo={backTo}>
+    <Page progress={PROGRESS[path]}>
       <div className="stack gap-s">
         <h2>{title}</h2>
         {sub != null && <p className="small">{sub}</p>}
@@ -54,38 +55,127 @@ function Single<K extends keyof Answers>({
 }
 
 const AGES: ReadonlyArray<Option<NonNullable<Answers['age']>>> = [
-  { value: 'under55', label: 'Under 55' },
-  { value: '55-64', label: '55–64' },
-  { value: '65-74', label: '65–74' },
-  { value: '75+', label: '75+' },
+  { value: 'under50', label: 'Under 50' },
+  { value: '50-59', label: '50–59' },
+  { value: '60-69', label: '60–69' },
+  { value: '70+', label: '70 or older' },
 ];
 
-/** The first screen is the first question: the promise, then her age. */
+type Entry = {
+  title: ReactNode;
+  sub: string;
+  /** The photograph, and the part of it the band keeps. Left out: Ad 3's receipt. */
+  photo?: { src: string; at: string };
+};
+
+/**
+ * The first screen, one per ad: it starts with the words and the picture the
+ * ad she tapped ended on. The question under it is the same for everyone.
+ */
+const ENTRY: Readonly<Record<Ad | 'default', Entry>> = {
+  ad2_v1morning: {
+    title: (
+      <>
+        That first step out of bed. <em>You know the one.</em>
+      </>
+    ),
+    sub: '2 minutes on the edge of the bed, before your feet touch the floor.',
+    photo: { src: bedMorning, at: '50% 88%' },
+  },
+  ad3_receipt: {
+    title: (
+      <>
+        Insoles. Splints. New shoes. <em>And the first step still hurts?</em>
+      </>
+    ),
+    sub: 'You didn’t do anything wrong. Nobody showed you how to make your feet stronger. Start here, sitting down.',
+  },
+  ad1_plancard: {
+    title: (
+      <>
+        Your 7-day foot plan, <em>sitting down</em>.
+      </>
+    ),
+    sub: 'A few minutes a day from a chair. Answer a few questions and we’ll build your first week.',
+    photo: { src: chairWindow, at: '50% 72%' },
+  },
+  default: {
+    title: (
+      <>
+        Foot exercises you do <em>sitting down</em>.
+      </>
+    ),
+    sub: 'A few minutes a day. Answer a few questions and we’ll build your plan.',
+    photo: { src: hero, at: '50% 60%' },
+  },
+};
+
+/** Ad 3's receipt, carried on: three things bought and crossed out, and the one line still open. */
+function Receipt() {
+  return (
+    <ul className="receipt">
+      {['Insoles', 'Night splint', 'New shoes'].map((bought) => (
+        <li key={bought}>
+          <s>{bought}</s>
+          <span>tried</span>
+        </li>
+      ))}
+      <li>
+        Training your feet
+        <span>not yet</span>
+      </li>
+    </ul>
+  );
+}
+
+/**
+ * The first screen is the first question: what this is, then her age. The four
+ * cards are in view without scrolling on a 390 x 660 screen (Facebook's
+ * browser), and it says before anything else that the plan is paid.
+ */
 export function Age() {
   const s = useFunnel();
+  const ad = adOf(s);
+  const entry = ENTRY[ad ?? 'default'];
+  const price = PRICE_VARIANTS[s.variant] ?? PRICE_VARIANTS[DEFAULT_VARIANT]!;
   const pick = (value: NonNullable<Answers['age']>) => {
     answer({ age: value });
     track('step_completed', { step: STEP.age });
-    setTimeout(() => go(STEP.card), 180);
+    setTimeout(() => go(STEP.focus), ADVANCE_MS);
   };
   return (
     <Page footer>
-      <div className="stack gap-s center">
-        <h1>Foot exercises made for your age</h1>
-        <p className="lead">5 minutes a day. From a chair.</p>
+      <div className="stack gap-s">
+        <h1>{entry.title}</h1>
+        <p className="small">{entry.sub}</p>
       </div>
-      <Reviewer />
-      <h3 className="center">Select your age</h3>
-      <div className="grid2">
-        {AGES.map((o) => (
-          <Choice key={o.value} selected={s.answers.age === o.value} arrow onClick={() => pick(o.value)}>
-            {o.label}
-          </Choice>
-        ))}
+      {entry.photo != null ? <img className="photo" src={entry.photo.src} alt="" style={{ objectPosition: entry.photo.at }} /> : <Receipt />}
+      <div className="stack">
+        <h3>First, how old are you?</h3>
+        <div className="grid2">
+          {AGES.map((o) => (
+            <Choice key={o.value} selected={s.answers.age === o.value} onClick={() => pick(o.value)}>
+              {o.label}
+            </Choice>
+          ))}
+        </div>
+        <p className="caption">We ask so your plan starts at the right pace.</p>
       </div>
-      <p className="caption center">
-        By choosing your age you agree to our <a href={url('/terms')}>Terms</a> and <a href={url('/privacy')}>Privacy Policy</a>.
-      </p>
+      <div className="stack gap-s">
+        {ad === 'ad3_receipt' ? (
+          // Her ad named a price, so this screen does too.
+          <p className="caption">
+            The quiz is free. The plan is {money(price.yearly.price)} a year (that’s {money(yearlyPerMonth(price))} a month), or{' '}
+            {money(price.monthly.intro)} for the first month for new members and {money(price.monthly.price)} a month after that. You’ll see everything
+            before you decide.
+          </p>
+        ) : (
+          <p className="caption">The quiz is free. The plan is a paid subscription, and you’ll see the price before you decide.</p>
+        )}
+        <p className="caption">
+          By choosing your age you agree to our <a href={url('/terms')}>Terms</a> and <a href={url('/privacy')}>Privacy Policy</a>.
+        </p>
+      </div>
     </Page>
   );
 }
@@ -95,11 +185,10 @@ export function Focus() {
     <Single
       path={STEP.focus}
       field="focus"
-      backTo={STEP.card}
       title="What bothers your feet most?"
       options={[
-        { value: 'heel', label: 'My heel or arch', icon: 'foot' },
-        { value: 'flat', label: 'Flat, tired arches', icon: 'sandal' },
+        { value: 'heel', label: 'My heel or the bottom of my foot', icon: 'foot' },
+        { value: 'flat', label: 'Flat or tired arches', icon: 'sandal' },
         { value: 'allday', label: 'Sore after a day on my feet', icon: 'briefcase' },
         { value: 'moving', label: 'Stiff feet or ankles', icon: 'runningShoe' },
         { value: 'steady', label: 'Feeling unsteady on my feet', icon: 'balance' },
@@ -114,49 +203,69 @@ export function When() {
     <Single
       path={STEP.when}
       field="when"
-      backTo={STEP.focus}
       title="When do you notice it most?"
       options={[
         { value: 'morning', label: 'First steps in the morning', icon: 'sunrise' },
         { value: 'sitting', label: 'Standing up after sitting', icon: 'couch' },
-        { value: 'evening', label: 'After work, by evening', icon: 'moon' },
-        { value: 'running', label: 'During or after runs', icon: 'runningShoe' },
+        { value: 'evening', label: 'By the evening', icon: 'moon' },
+        { value: 'running', label: 'During or after a walk or run', icon: 'runningShoe' },
         { value: 'allday', label: 'All day', icon: 'sun' },
         { value: 'varies', label: 'It varies', icon: 'leafInWind' },
       ]}
-      next={STEP.wake}
+      next={STEP.heardWhen}
     />
   );
 }
 
-/** When she gets up: her first-step routine is set for then. */
+/**
+ * When she gets up, asked where it is used: right before the routine it sets.
+ * One tap on an hour, or an exact time for anyone who wants one.
+ */
 export function Wake() {
   const s = useFunnel();
+  const [picked, setPicked] = useState(s.answers.wake);
+  const [exact, setExact] = useState(false);
   const [time, setTime] = useState(wakeOf(s.answers));
+  const save = (wake: string) => {
+    setPicked(wake);
+    answer({ wake });
+    track('wake_time_set');
+    track('step_completed', { step: STEP.wake });
+  };
   return (
-    <Page progress={PROGRESS[STEP.wake]} backTo={STEP.when}>
-      <h2>When do you usually get up?</h2>
-      <input
-        className="field time"
-        type="time"
-        aria-label="Usual wake-up time"
-        value={time}
-        onChange={(e) => e.target.value !== '' && setTime(e.target.value)}
-      />
-      <Cta>
-        <button
-          className="btn"
-          type="button"
-          onClick={() => {
-            answer({ wake: time });
-            track('wake_time_set');
-            track('step_completed', { step: STEP.wake });
-            go(STEP.since);
-          }}
-        >
-          Continue
-        </button>
-      </Cta>
+    <Page progress={PROGRESS[STEP.wake]}>
+      <div className="stack gap-s">
+        <h2>What time do you usually get up?</h2>
+        <p className="small">Your plan has a 2-minute routine for before your first steps. We’ll set it for this time.</p>
+      </div>
+      {exact ? (
+        <>
+          <input
+            className="field time"
+            type="time"
+            aria-label="Usual wake-up time"
+            autoFocus
+            value={time}
+            onChange={(e) => e.target.value !== '' && setTime(e.target.value)}
+          />
+          <Cta>
+            <button className="btn" type="button" onClick={() => (save(time), go(STEP.routine))}>
+              Continue
+            </button>
+          </Cta>
+        </>
+      ) : (
+        <div className="stack">
+          {WAKE_TIMES.map((o) => (
+            <Choice key={o.value} selected={picked === o.value} onClick={() => (save(o.value), setTimeout(() => go(STEP.routine), ADVANCE_MS))}>
+              {o.label}
+            </Choice>
+          ))}
+          <button className="btn quiet" type="button" onClick={() => setExact(true)}>
+            Pick an exact time
+          </button>
+        </div>
+      )}
     </Page>
   );
 }
@@ -166,26 +275,33 @@ export function Since() {
     <Single
       path={STEP.since}
       field="since"
-      backTo={STEP.wake}
       title="How long has this been going on?"
       options={[
-        { value: 'new', label: 'Less than 3 months', icon: 'seedling' },
-        { value: 'months', label: '3 to 12 months', icon: 'calendar' },
-        { value: 'year', label: '1 to 3 years', icon: 'calendar' },
-        { value: 'years', label: 'More than 3 years', icon: 'calendar' },
+        { value: 'new', label: 'Less than 3 months' },
+        { value: 'months', label: '3 to 12 months' },
+        { value: 'year', label: '1 to 3 years' },
+        { value: 'years', label: 'More than 3 years' },
       ]}
       next={STEP.tried}
     />
   );
 }
 
+/**
+ * In her words, the things she names most often first. `shoes` and `shot` are
+ * new in v7; `insoles` was "Insoles or new shoes" until then, so what is said
+ * back about it never mentions shoes (words.ts).
+ */
 const TRIED: ReadonlyArray<Option<string>> = [
-  { value: 'stretching', label: 'Stretching on my own', icon: 'leg' },
-  { value: 'insoles', label: 'Insoles or new shoes', icon: 'runningShoe' },
-  { value: 'pt', label: 'A doctor or physical therapist', icon: 'healthWorker' },
-  { value: 'roller', label: 'Massage or a foot roller', icon: 'softball' },
-  { value: 'videos', label: 'Videos online', icon: 'bulb' },
-  { value: 'nothing', label: 'Nothing yet', icon: 'seedling' },
+  { value: 'shoes', label: 'Special shoes or slippers' },
+  { value: 'insoles', label: 'Insoles or orthotics' },
+  { value: 'stretching', label: 'Stretching or exercises on my own' },
+  { value: 'roller', label: 'A ball, a roller or massage' },
+  { value: 'pt', label: 'A doctor, a podiatrist or physical therapy' },
+  { value: 'shot', label: 'A shot in my foot' },
+  { value: 'splint', label: 'A night splint' },
+  { value: 'videos', label: 'Videos online' },
+  { value: 'nothing', label: 'Nothing yet' },
 ];
 
 export function Tried() {
@@ -198,14 +314,14 @@ export function Tried() {
       return rest.includes(value) ? rest.filter((v) => v !== value) : [...rest, value];
     });
   return (
-    <Page progress={PROGRESS[STEP.tried]} backTo={STEP.since}>
+    <Page progress={PROGRESS[STEP.tried]}>
       <div className="stack gap-s">
-        <h2>What have you tried?</h2>
+        <h2>What have you already tried?</h2>
         <p className="small">Choose all that apply.</p>
       </div>
       <div className="stack">
         {TRIED.map((o) => (
-          <MultiChoice key={o.value} icon={o.icon} checked={picked.includes(o.value)} onToggle={() => toggle(o.value)}>
+          <MultiChoice key={o.value} checked={picked.includes(o.value)} onToggle={() => toggle(o.value)}>
             {o.label}
           </MultiChoice>
         ))}
@@ -218,7 +334,8 @@ export function Tried() {
           onClick={() => {
             answer({ tried: picked });
             track('step_completed', { step: STEP.tried });
-            go(STEP.day);
+            // What it all cost is only asked of someone who paid for some of it.
+            go(paidFor(picked) ? STEP.spent : STEP.heardTried);
           }}
         >
           Continue
@@ -228,19 +345,55 @@ export function Tried() {
   );
 }
 
+/**
+ * What it has cost her so far, in her own rough figure. Asked only after she
+ * ticked something that costs money. She can decline to add it up.
+ */
+export function Spent() {
+  return (
+    <Single
+      path={STEP.spent}
+      field="spent"
+      title="Roughly how much have you spent on your feet so far?"
+      sub="Shoes, insoles, visits, gadgets. A rough guess is fine."
+      options={[
+        { value: 'under100', label: 'Under $100' },
+        { value: '100-500', label: '$100 to $500' },
+        { value: '500-1000', label: '$500 to $1,000' },
+        { value: 'over1000', label: 'More than $1,000' },
+        { value: 'unsure', label: 'I’d rather not add it up' },
+      ]}
+      next={STEP.heardTried}
+    />
+  );
+}
+
+/** The moment in her day that her minutes follow: something she already does, the likeliest for her scene first. */
+export function AnchorStep() {
+  const a = useFunnel().answers;
+  return (
+    <Single
+      path={STEP.anchor}
+      field="anchor"
+      title={`When will you do your ${a.minutes ?? 5} minutes?`}
+      sub="Pick something you already do every day. New habits stick better when they follow an old one."
+      options={anchorsFor(a)}
+      next={STEP.commit}
+    />
+  );
+}
+
 export function Day() {
   return (
     <Single
       path={STEP.day}
       field="day"
-      backTo={STEP.tried}
-      title="What does your usual day look like?"
+      title="What does a usual day look like?"
       options={[
-        { value: 'sit8', label: 'Sitting most of the day', hint: '8 hours or more', icon: 'couch' },
-        { value: 'sit4', label: 'Sitting part of the day', hint: '4 to 8 hours', icon: 'briefcase' },
+        { value: 'sit8', label: 'Mostly sitting', icon: 'couch' },
+        { value: 'sit4', label: 'Some sitting, some standing', icon: 'briefcase' },
         { value: 'feet', label: 'On my feet most of the day', icon: 'leg' },
-        { value: 'run_short', label: 'I run', hint: 'Under 10 miles a week', icon: 'runningShoe' },
-        { value: 'run_long', label: 'I run a lot', hint: '10 miles a week or more', icon: 'strength' },
+        { value: 'run_short', label: 'I run regularly', icon: 'runningShoe' },
       ]}
       next={STEP.start}
     />
@@ -257,12 +410,11 @@ export function Start() {
     <Single
       path={STEP.start}
       field="start"
-      backTo={STEP.day}
-      title="Where would you like to start?"
+      title="Where would you like to do your exercises?"
       options={[
         { value: 'chair', label: 'In a chair', icon: 'couch' },
         { value: 'bed', label: 'On the edge of the bed', icon: 'bed' },
-        ...(seatedAd ? [] : [{ value: 'standing' as const, label: 'Standing', hint: 'With a hand on a counter', icon: 'balance' as const }]),
+        ...(seatedAd ? [] : [{ value: 'standing' as const, label: 'Standing, with a hand on a counter', icon: 'balance' as const }]),
       ]}
       next={STEP.safety}
     />
@@ -274,14 +426,14 @@ export function Safety() {
     <Single
       path={STEP.safety}
       field="safety"
-      backTo={STEP.start}
       title="Anything we should plan around?"
+      sub="We ask so your first week is safe for you. Choose the one that matters most."
       options={[
-        { value: 'surgery', label: 'Recent surgery or injury', icon: 'bandage' },
-        { value: 'numb', label: 'Numbness or swelling', icon: 'feather' },
-        { value: 'dizzy', label: 'Dizziness or a fall this year', icon: 'leafInWind' },
-        { value: 'aid', label: 'I use a cane or walker', icon: 'crutch' },
-        { value: 'none', label: 'None of these', icon: 'check' },
+        { value: 'surgery', label: 'Recent surgery or injury' },
+        { value: 'numb', label: 'Numbness or swelling' },
+        { value: 'dizzy', label: 'Dizziness or a fall this year' },
+        { value: 'aid', label: 'I use a cane or walker' },
+        { value: 'none', label: 'None of these' },
       ]}
       next={(value) => (value === 'none' ? STEP.minutes : '/s/7/note')}
     />
@@ -290,11 +442,10 @@ export function Safety() {
 
 export function SafetyNote() {
   return (
-    <Page progress={PROGRESS[STEP.safety]} backTo={STEP.safety}>
-      <div className="stack center" style={{ marginTop: '1rem' }}>
-        <img className="hero s pop" src={url('/img/art-shield.webp')} alt="" />
+    <Page progress={PROGRESS[STEP.safety]}>
+      <div className="panel stack">
         <h2>Thanks for telling us</h2>
-        <p className="lead">We’ll keep your first week seated. Please check with your doctor or physical therapist before you start.</p>
+        <p>We’ll keep your first week seated. Please check with your doctor or physical therapist before you start.</p>
       </div>
       <Cta>
         <button className="btn" type="button" onClick={() => go(STEP.minutes)}>
@@ -310,14 +461,13 @@ export function Minutes() {
     <Single
       path={STEP.minutes}
       field="minutes"
-      backTo={STEP.safety}
-      title="How much time each day?"
+      title="How much time can you give your feet each day?"
       options={[
         { value: 3, label: '3 minutes', hint: 'A gentle start', icon: 'feather' },
-        { value: 5, label: '5 minutes', hint: 'What we suggest', icon: 'stopwatch', tag: 'Suggested' },
+        { value: 5, label: '5 minutes', icon: 'stopwatch', tag: 'Suggested' },
         { value: 10, label: '10 minutes', hint: 'A fuller session', icon: 'strength' },
       ]}
-      next={STEP.life}
+      next={STEP.summary}
     />
   );
 }

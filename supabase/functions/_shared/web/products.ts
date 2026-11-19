@@ -26,7 +26,8 @@ export type WebProduct = {
   months: number;
   /**
    * Which renewals get the notice two days before: only the end of the paid
-   * first period (the step from $0.99 to $9.99), or every renewal.
+   * first period (the step from $4.99 to $9.99), or every renewal, the end of
+   * a paid first period included.
    */
   notice: 'intro' | 'every';
 };
@@ -76,7 +77,7 @@ export const WEB_PRODUCTS: Readonly<Record<string, WebProduct>> = {
     intro: { amount: 29.99, days: 365 },
     amount: 49.99,
     months: 12,
-    notice: 'intro',
+    notice: 'every',
   },
   web_yearly: {
     id: 'web_yearly',

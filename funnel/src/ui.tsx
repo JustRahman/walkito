@@ -1,45 +1,54 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { CARLA_PHOTO, PREVIEW, url } from './config';
-import { PLACEHOLDER_CARLA_QUOTE } from './preview/placeholders';
-import { appLink } from './flow';
+import { url } from './config';
+import { appLink, prevOf, PROGRESS, sectionOf } from './flow';
 import { ICONS, type IconName } from './icons.gen';
 import { track } from './lib/analytics';
-import { back, go } from './router';
+import { back, go, usePath } from './router';
+import { useFunnel } from './state';
 
 export type { IconName };
+
+/** A tapped answer shows its tick for this long before the next screen comes. */
+export const ADVANCE_MS = 350;
 
 export function Page({
   children,
   progress,
   backTo,
-  onBack,
   footer = false,
 }: {
   children: ReactNode;
   progress?: number;
-  backTo?: string;
-  /** Replaces going back, once: the price page shows its one-time gift first. */
-  onBack?: () => void;
+  /** Where Back goes without a history. Left out: the step before, in the quiz. Null: no Back. */
+  backTo?: string | null;
   footer?: boolean;
 }) {
+  const path = usePath();
+  const answers = useFunnel().answers;
+  const section = sectionOf(path);
+  const before = backTo === undefined ? prevOf(path, answers) : backTo;
   return (
     <main className="page">
       <header className="topbar">
-        {backTo != null && (
-          <button className="back" type="button" onClick={() => (onBack != null ? onBack() : back(backTo))} aria-label="Back">
+        {before != null && (
+          <button className="back" type="button" onClick={() => back(before)} aria-label="Back">
             <Chevron />
           </button>
         )}
-        <a className="brand" href={url('/')} onClick={(e) => (e.preventDefault(), go('/'))}>
+        {/* Not a link: a tap on the name used to throw her back to the first screen. */}
+        <div className="brand">
           <img src={url('/img/icon.webp')} alt="" width={26} height={26} />
           Walkito
-        </a>
+        </div>
       </header>
       {progress != null && (
-        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
-          <div style={{ width: `${Math.round(progress * 100)}%` }} />
-        </div>
+        <>
+          {section != null && <div className="section">{section}</div>}
+          <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+            <div style={{ width: `${Math.round(progress * 100)}%` }} />
+          </div>
+        </>
       )}
       <div className="fade stack gap-l" style={{ flex: 1 }} key={typeof location !== 'undefined' ? location.pathname : ''}>
         {children}
@@ -49,10 +58,10 @@ export function Page({
   );
 }
 
-function Chevron({ right }: { right?: boolean }) {
+function Chevron() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d={right === true ? 'M9 5l7 7-7 7' : 'M15 5l-7 7 7 7'} stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -73,42 +82,40 @@ export function Icon({ name, size }: { name: IconName; size?: number }) {
 }
 
 /**
- * A full-colour screen, as QUITTR's: the brand on top, one picture, one big
- * line, at most one short line, the dots of its set and one white pill.
+ * Something said back to her between questions: a sage panel with an optional
+ * photograph, one line and a sentence or two. It says what she did or what the
+ * plan does, never what it will do for her feet, and it waits for her tap.
  */
-export function Slide({
-  tone,
+export function Reaction({
+  step,
+  photo,
+  title,
   children,
-  dots,
   next,
-  label = 'Next',
+  cta = 'Continue',
 }: {
-  tone: 'warm' | 'deep' | 'sky' | 'night' | 'praise';
-  children: ReactNode;
-  dots?: { at: number; of: number };
-  next: () => void;
-  label?: string;
+  step: string;
+  /** `at` is the part of the photograph to keep in the 16:10 frame, as an object-position. */
+  photo?: { src: string; at?: string };
+  title: string;
+  children?: ReactNode;
+  next: string;
+  /** The button, when it can say what she gets next. */
+  cta?: string;
 }) {
   return (
-    <main className={`slide ${tone}`}>
-      <header className="slide-top">
-        <img src={url('/img/icon.webp')} alt="" width={26} height={26} />
-        Walkito
-      </header>
-      <div className="slide-body fade" key={typeof location !== 'undefined' ? location.pathname : ''}>
+    <Page progress={PROGRESS[step]}>
+      <div className="panel stack">
+        {photo != null && <img className="still" src={photo.src} alt="" style={{ objectPosition: photo.at }} />}
+        <h2>{title}</h2>
         {children}
       </div>
-      {dots != null && (
-        <div className="dots" aria-hidden="true">
-          {Array.from({ length: dots.of }, (_, i) => (
-            <i key={i} className={i === dots.at ? 'on' : undefined} />
-          ))}
-        </div>
-      )}
-      <button className="pill" type="button" onClick={next}>
-        {label} <Chevron right />
-      </button>
-    </main>
+      <Cta>
+        <button className="btn" type="button" onClick={() => (track('step_completed', { step }), go(next))}>
+          {cta}
+        </button>
+      </Cta>
+    </Page>
   );
 }
 
@@ -135,8 +142,6 @@ export function Choice({
   icon,
   hint,
   tag,
-  arrow,
-  className,
 }: {
   children: ReactNode;
   selected?: boolean;
@@ -144,22 +149,18 @@ export function Choice({
   icon?: IconName;
   hint?: string;
   tag?: string;
-  arrow?: boolean;
-  className?: string;
 }) {
   return (
-    <button className={className != null ? `choice ${className}` : 'choice'} type="button" aria-pressed={selected === true} onClick={onClick}>
+    <button className="choice" type="button" aria-pressed={selected === true} onClick={onClick}>
       {icon != null && <Icon name={icon} />}
       <span className="grow">
         {children}
         {hint != null && <span className="hint">{hint}</span>}
       </span>
       {tag != null && <span className="tag">{tag}</span>}
-      {arrow === true && (
-        <span className="go">
-          <Chevron right />
-        </span>
-      )}
+      <span className="mark">
+        <Tick />
+      </span>
     </button>
   );
 }
@@ -169,21 +170,19 @@ export function MultiChoice({
   checked,
   onToggle,
   icon,
-  className,
-  style,
 }: {
   children: ReactNode;
   checked: boolean;
   onToggle: () => void;
   icon?: IconName;
-  className?: string;
-  style?: CSSProperties;
 }) {
   return (
-    <button className={className != null ? `choice ${className}` : 'choice'} style={style} type="button" role="checkbox" aria-checked={checked} onClick={onToggle}>
+    <button className="choice" type="button" role="checkbox" aria-checked={checked} onClick={onToggle}>
       {icon != null && <Icon name={icon} />}
       <span className="grow">{children}</span>
-      <span className="tick">{checked && <Tick />}</span>
+      <span className="mark box">
+        <Tick />
+      </span>
     </button>
   );
 }
@@ -198,43 +197,28 @@ export function Check({ checked, onChange, children, className }: { checked: boo
 }
 
 /**
- * Dr. Carla Shayman, with exactly what we hold in writing: her Upwork
- * contract (Oct 30, 2026) covers her review of our two English guides, heel
- * pain and flat feet, and the use of her bio and photo. Never "reviewed every
- * exercise" without her broader written consent.
+ * A real-feet clip: muted, inline, looping, with its poster until it plays.
+ * With "reduce motion" on it waits on the poster until she asks for it.
  */
-export function Reviewer() {
-  return (
-    <>
-      {PREVIEW && (
-        <p className="doc-quote" data-placeholder={PLACEHOLDER_CARLA_QUOTE.mark}>
-          “{PLACEHOLDER_CARLA_QUOTE.text}”
-        </p>
-      )}
-      <figure className="doctor">
-      <img src={CARLA_PHOTO.replace('.webp', '@2x.webp')} alt="Dr. Carla Shayman" />
-      <figcaption>
-        <b>Dr. Carla Shayman, PT, DPT</b>
-        <span>Physical therapist</span>
-        <span className="tint">Reviewed our heel pain and flat feet guides</span>
-        </figcaption>
-      </figure>
-    </>
-  );
-}
-
-/** A real-feet clip: muted, inline, looping, with its poster until it plays. */
 export function Clip({ src, poster, playing, label }: { src: string; poster: string; playing: boolean; label: string }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const [asked, setAsked] = useState(() => !matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
     const video = ref.current;
     if (video == null) return;
-    if (playing) void video.play().catch(() => undefined);
+    if (playing && asked) void video.play().catch(() => undefined);
     else video.pause();
-  }, [playing, src]);
+  }, [playing, asked, src]);
   return (
     <div className="video">
       <video ref={ref} src={src} poster={poster} muted playsInline loop preload="metadata" aria-label={label} />
+      {!asked && (
+        <button className="play" type="button" aria-label="Play the video" onClick={() => setAsked(true)}>
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

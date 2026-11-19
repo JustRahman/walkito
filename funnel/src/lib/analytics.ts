@@ -2,21 +2,24 @@ import type { PostHog } from 'posthog-js';
 
 import { env } from '../config';
 import { getState } from '../state';
+import { accessToken, currentUser } from './account';
+import { eventPair, matchOf, storeMatch, storedMatch, waitFor, type Match, type MetaEvent } from './meta-match';
 
 /**
  * Every funnel event, declared once. Names and properties say that something
  * happened, never what she told us: no age, no focus, no safety answer, no
- * rating, no balance seconds. Health data never leaves the quiz for analytics.
+ * rating, and not which reaction card an answer showed her. Health data never
+ * leaves the quiz for analytics.
  */
 type Events = {
   funnel_landed: { source: string | null; campaign: string | null; webview: string | null };
   step_viewed: { step: string };
   step_completed: { step: string };
+  /** The guess after "When do you notice it most?": whether she said "Yes, that's it". Never which guess it was: that follows a health answer. */
+  guess_answered: { hit: boolean };
   tryit_started: Record<string, never>;
   tryit_finished: { stopped_early: boolean };
   tryit_skipped: Record<string, never>;
-  balance_started: Record<string, never>;
-  balance_skipped: Record<string, never>;
   plan_viewed: Record<string, never>;
   wake_time_set: Record<string, never>;
   first_step_routine_shown: Record<string, never>;
@@ -45,9 +48,13 @@ type Events = {
   cancel_chosen: { choice: string };
   cancel_status: { status: string; matched_by: string };
   checkout_needs_sign_in: Record<string, never>;
-  /** The one-time gift ($29.99 first year), shown once: after she closes checkout, leaves the price page, or answers "The price". */
-  exit_gift_shown: { offer: string; trigger: 'checkout_closed' | 'leave' | 'held_back' };
-  exit_gift_declined: { offer: string };
+  /**
+   * The one-time offer ($29.99 first year), shown once, only after she answers
+   * "The price". Until v6 (Nov 18, 2026) it was also a gift box when she closed
+   * checkout or left the price page (`checkout_closed`, `leave`), which she
+   * could decline (`exit_gift_declined`): those stop on that date.
+   */
+  exit_gift_shown: { offer: string; trigger: 'held_back' };
   offer_checkout_opened: { offer: string };
   exit_gift_purchased: { offer: string };
   offer_closed: { offer: string };
@@ -82,7 +89,11 @@ export function startAnalytics(): void {
     });
     posthog.register({
       funnel: 'web-v1',
+      // The quiz's order and look. Step charts split where it changes: v6 from Nov 18, 2026; v7 (two new steps, /s/39 and /s/41) after it.
+      design: 'v7',
       app_variant: import.meta.env.DEV ? 'development' : 'web',
+      // The ad she tapped (its `utm_content`), on every event from `funnel_landed` on, so a step chart splits by ad. An ad's id is not health data.
+      ad: getState().utm?.utm_content ?? null,
       price_variant: getState().variant,
     });
     ph = posthog;
@@ -94,18 +105,21 @@ export function track<E extends keyof Events>(event: E, ...props: Events[E] exte
   withPostHog((p) => p.capture(event, props[0] ?? {}));
 }
 
-/** The Supabase user id, which is also the RevenueCat app user id, as the app does. */
+/** The Supabase user id, which is also the RevenueCat app user id, as the app does. With her email, Meta's pixel gets the two hashes it may match her by. */
 export function identify(userId: string, email?: string): void {
   withPostHog((p) => p.identify(userId, email != null ? { email } : undefined));
+  if (email != null) void matchPixel(userId, email);
 }
 
 // ---------------------------------------------------------------------------
 // Meta: Pixel in the browser and the same event through our own server, with
-// one event id so Meta counts it once. Four events only, no customer data
-// beyond what the browser already sends. Nothing loads without a pixel id.
+// one event id so Meta counts it once. Four events only. Once she has given
+// her email (the email step, never before), both also carry two SHA-256
+// hashes Meta may match her by: her email and our account id. The pixel is
+// handed the hashes, never the address; the server finds both from her token
+// and hashes them itself. No answer, nothing about her feet. Nothing loads
+// without a pixel id.
 // ---------------------------------------------------------------------------
-
-type MetaEvent = 'PageView' | 'ViewContent' | 'InitiateCheckout' | 'Purchase';
 
 type Fbq = ((...args: unknown[]) => void) & { callMethod?: unknown; queue?: unknown[]; loaded?: boolean; version?: string; push?: unknown; disablePushState?: boolean };
 
@@ -131,6 +145,9 @@ function rememberClick(): void {
   document.cookie = `_fbc=${value}; max-age=${90 * 86400}; path=/; samesite=lax; secure`;
 }
 
+/** The two hashes the pixel holds, once she has given her email. */
+let matched: Match | null = null;
+
 export function startPixel(): void {
   if (env.pixelId === '') return;
   rememberClick();
@@ -153,25 +170,59 @@ export function startPixel(): void {
   document.head.appendChild(script);
   // No automatic button and form scraping: the quiz is health-adjacent.
   window.fbq('set', 'autoConfig', false, env.pixelId);
-  window.fbq('init', env.pixelId);
+  // She gave her email on an earlier visit: the pixel starts with her two hashes.
+  matched = storedMatch();
+  if (matched != null) window.fbq('init', env.pixelId, matched);
+  else window.fbq('init', env.pixelId);
+  // An email given before the hashes were kept: they are made from her account now.
+  const email = getState().verified === true ? getState().email : undefined;
+  if (matched == null && email != null) {
+    void currentUser()
+      .then((user) => (user != null ? matchPixel(user.id, email) : undefined))
+      .catch(() => undefined);
+  }
 }
+
+/**
+ * Her email and our account id, hashed here with SubtleCrypto, kept for the
+ * next visit and handed to the pixel. A second `init` for the same pixel is
+ * how it takes them part-way through a visit. From then on the server's copy
+ * of each event goes with her token (`meta`), and carries the same two.
+ */
+async function matchPixel(userId: string, email: string): Promise<void> {
+  const match = await matchOf(userId, email);
+  if (match == null) return;
+  storeMatch(match);
+  if (env.pixelId === '' || window.fbq == null) return;
+  if (matched?.em === match.em && matched.external_id === match.external_id) return;
+  matched = match;
+  window.fbq('init', env.pixelId, match);
+}
+
+/** Her own token, for `meta-capi` to look her up by. Only once the pixel has her hashes too. */
+async function tokenForServer(): Promise<string | null> {
+  if (matched == null) return null;
+  return accessToken().catch(() => null);
+}
+
+/** The pixel's `_fbp` cookie is there, or 2 s have passed without it (a blocked pixel). One wait a page load. */
+let browserIdReady: Promise<void> | null = null;
 
 export function meta(event: MetaEvent, eventId: string, value?: { value: number; currency: string }): void {
   if (env.pixelId === '' || window.fbq == null) return;
-  window.fbq('track', event, value ?? {}, { eventID: eventId });
+  // The page as it is now: the server's copy may leave a moment later.
+  const pair = eventPair(event, eventId, location.origin + location.pathname, value);
+  window.fbq(...pair.pixel);
   if (event === 'Purchase' || env.supabaseUrl === '') return;
-  void fetch(`${env.supabaseUrl}/functions/v1/meta-capi`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', apikey: env.supabaseAnonKey },
-    body: JSON.stringify({
-      event_name: event,
-      event_id: eventId,
-      event_source_url: location.origin + location.pathname,
-      fbp: cookie('_fbp'),
-      fbc: cookie('_fbc'),
-    }),
-    keepalive: true,
-  }).catch(() => undefined);
+  browserIdReady ??= waitFor(() => cookie('_fbp') != null, 2000);
+  void Promise.all([tokenForServer(), browserIdReady]).then(([token]) =>
+    fetch(`${env.supabaseUrl}/functions/v1/meta-capi`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: env.supabaseAnonKey, ...(token != null ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ ...pair.server, fbp: cookie('_fbp'), fbc: cookie('_fbc') }),
+      keepalive: true,
+    }).catch(() => undefined),
+  );
 }
 
 /** In-app browsers, for analytics and for the "open in Safari" fallback. */

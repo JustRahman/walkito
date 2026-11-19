@@ -19,8 +19,9 @@ verify_jwt = true
 [functions.retention-message]
 verify_jwt = false
 
-# The web funnel's pages call it with no Supabase JWT; it forwards three page
-# events to Meta and nothing else, and answers 204 until the pixel is set.
+# The web funnel's pages call it with no Supabase JWT until she has given her
+# email, and with her own token after (checked by the function itself); it
+# forwards three page events to Meta, and answers 204 until the pixel is set.
 [functions.meta-capi]
 verify_jwt = false
 

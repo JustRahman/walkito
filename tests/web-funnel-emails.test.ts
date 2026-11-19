@@ -38,7 +38,6 @@ const SUNDAY = '2026-11-22T22:00:00.000Z';
 const CONFIG: WebMailConfig = {
   from: 'walkito <hello@walkito.site>',
   personalFrom: personalSender('walkito <hello@walkito.site>'),
-  replyTo: 'hello@walkito.site',
   postalAddress: '30 N Gould St, Sheridan, WY 82801',
   linkBase: 'https://walkito.site',
   functionsBase: 'https://example.supabase.co/functions/v1',
@@ -112,7 +111,7 @@ describe('web_welcome', () => {
     expect(e.after).toContain(GUARANTEE);
     expect(e.after).toContain(DESCRIPTOR);
     expect(GUARANTEE).toBe('Not for you? Reply to any email within 14 days of a charge and we refund it.');
-    expect(DESCRIPTOR).toContain('NEMY LLC');
+    expect(DESCRIPTOR).toContain('NEMY WALKITO');
   });
 
   test('a receipt for the 3-month plan', () => {
@@ -212,12 +211,33 @@ describe('a decision becomes an email', () => {
   });
 
   test('a product the catalog does not know is held, never guessed', () => {
-    const e = emailFor({ kind: 'web_welcome', logKey: 'web_welcome', renewalAt: null }, buyer({ productId: 'web_monthly_499' }), BASE);
-    expect(e).toEqual({ held: 'no catalog entry for web_monthly_499' });
+    const e = emailFor({ kind: 'web_welcome', logKey: 'web_welcome', renewalAt: null }, buyer({ productId: 'web_unknown_test' }), BASE);
+    expect(e).toEqual({ held: 'no catalog entry for web_unknown_test' });
+  });
+
+  test('the $29.99 year: its first notice says the first year ends, later ones say the year renews, both at $49.99', () => {
+    const at = '2027-11-17T02:00:00.000Z';
+    const decision = { kind: 'web_renewal_notice' as const, logKey: 'web_renewal_notice:2027-11-17', renewalAt: at };
+    const first = emailFor(decision, buyer({ productId: 'web_yearly_2999', status: 'intro', introEndsAt: at, periodEnd: at }), BASE);
+    if ('held' in first) throw new Error(first.held);
+    expect(first.subject).toBe('Your first year ends Tuesday, November 16');
+    expect(first.paragraphs.join(' ')).toContain('we will charge $49.99 to your card for the next year');
+    const later = emailFor(decision, buyer({ productId: 'web_yearly_2999', status: 'active', introEndsAt: null, periodEnd: at }), BASE);
+    if ('held' in later) throw new Error(later.held);
+    expect(later.subject).toStartWith('Your Walkito plan renews');
+    expect(later.paragraphs[0]).toStartWith('Your year of Walkito ends on');
+    expect(later.paragraphs.join(' ')).toContain('$49.99');
   });
 });
 
 describe('the message Resend receives', () => {
+  test('every funnel email, receipts, reminders and abandoned-plan emails alike, is answered at hello@walkito.site', async () => {
+    for (const email of everything()) {
+      const m = await composeWebMessage(email, { userId: USER, email: 'sam@example.com' }, CONFIG);
+      expect(m.reply_to).toBe('hello@walkito.site');
+    }
+  });
+
   test('the welcome: the button, the small print after it, the footer and one-click unsubscribe', async () => {
     const email = welcomeEmail({ product: monthly, nextChargeAt: SUNDAY, zone: NY, base: BASE });
     const m = await composeWebMessage(email, { userId: USER, email: 'sam@example.com' }, CONFIG);

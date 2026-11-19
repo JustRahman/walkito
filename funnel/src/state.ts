@@ -9,22 +9,28 @@ import type { Focus } from './engine/plan';
  * key, so a reload lands where she was.
  */
 export type Answers = {
-  age?: '75+' | '65-74' | '55-64' | 'under55';
+  /** Decades since v6. The four before it are what earlier visitors stored. */
+  age?: 'under50' | '50-59' | '60-69' | '70+' | '75+' | '65-74' | '55-64' | 'under55';
   focus?: Focus;
   when?: 'morning' | 'sitting' | 'evening' | 'running' | 'allday' | 'varies';
   since?: 'new' | 'months' | 'year' | 'years';
+  /** What she has already tried (/s/5). v7 added `shoes`, `shot` and `splint`; `insoles` was "insoles or new shoes" before it. */
   tried?: string[];
-  /** Her usual day: it names her plan (Desk, Runner, On your feet). */
+  /** Roughly what she has spent on her feet so far (/s/39). Only asked of someone who tried something that costs money. */
+  spent?: 'under100' | '100-500' | '500-1000' | 'over1000' | 'unsure';
+  /** Her usual day: with her other answers it puts her in a scene (sceneOf in flow.ts). */
   day?: 'sit8' | 'sit4' | 'feet' | 'run_short' | 'run_long';
   start?: 'chair' | 'bed' | 'standing';
   safety?: 'surgery' | 'numb' | 'dizzy' | 'aid' | 'none';
   minutes?: 3 | 5 | 10;
-  /** How her feet get in the way of her day, in her words (LIFE in flow.ts). */
+  /** The private details she ticked as true for her (LIFE in flow.ts). v7 added the lines by scene; the six before it are kept. */
   life?: string[];
-  /** What she wants back, the mirror of `life` (GOALS in flow.ts). */
+  /** What she wants back (GOALS in flow.ts), in the order she tapped them: the first is the one that matters most. */
   goals?: string[];
   /** When she usually gets up, "HH:MM", 24-hour: her first-step routine's time. */
   wake?: string;
+  /** The thing she already does every day that her minutes follow (/s/41). */
+  anchor?: 'bed' | 'coffee' | 'home' | 'show' | 'walk';
 };
 
 export type TryIt = {
@@ -54,9 +60,13 @@ export type FunnelState = {
   purchased?: boolean;
   utm?: Record<string, string>;
   askedWhy?: boolean;
-  /** The one-time price offer was shown: never again, on this browser or (via web_leads) after a reload. */
+  /** The one-time price offer was shown. It stays for the rest of that day and never comes back after (offerOf in flow.ts). */
   offerShown?: boolean;
+  /** When it was first shown, as an ISO instant. A visitor from before v7 has none: for her it has ended. */
+  offerShownAt?: string;
   feeling?: 'easy' | 'ok' | 'hard';
+  /** Her first steps that morning, 0 to 10, asked once after Day 1. Kept here; saved with her plan only with her health consent; never sent to analytics. */
+  firstSteps?: number | 'skipped';
   remindAt?: 'morning' | 'midday' | 'evening';
   remindBy?: 'email' | 'app';
   session1?: 'started' | 'done';

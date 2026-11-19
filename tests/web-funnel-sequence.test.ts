@@ -164,6 +164,22 @@ describe('web_morning', () => {
     expect(pick(p, ny('2026-11-17', 8, 45))).toBeNull();
   });
 
+  test('every buyer gets it, whatever the plan and whenever she bought, at her wake time the morning after', () => {
+    const plans: Partial<WebCustomer>[] = [
+      { productId: 'web_monthly_499', status: 'intro' },
+      { productId: 'web_yearly_4999', status: 'active', introEndsAt: null },
+      { productId: 'web_yearly_2999', status: 'intro' },
+    ];
+    const bought = [ny('2026-11-16', 9), ny('2026-11-16', 15), ny('2026-11-16', 23, 30), ny('2026-11-17', 2)];
+    for (const plan of plans) {
+      for (const at of bought) {
+        const p = person({ wakeTime: '06:30', log: [sent('web_welcome', plus(at, 60_000))] }, { ...plan, firstPurchaseAt: at.toISOString() });
+        const runs = Array.from({ length: 8 }, (_, i) => plus(ny('2026-11-17', 6, 30), i * 15 * 60_000));
+        expect(runs.map((now) => pick(p, now)).includes('web_morning')).toBe(true);
+      }
+    }
+  });
+
   test('a wake time that is not HH:MM is ignored: 08:00 to 12:00 as before', () => {
     const p = person({ log: welcomed, wakeTime: '7am' });
     expect(pick(p, ny('2026-11-17', 7))).toBeNull();
@@ -229,9 +245,47 @@ describe('web_renewal_notice', () => {
   });
 
   test('held for a product the catalog does not know, so no amount is guessed', () => {
-    expect(why(person({ log: before }, { productId: 'web_monthly_499' }), ny('2026-11-21', 9), 'web_renewal_notice')).toBe(
-      'no catalog entry for web_monthly_499',
+    expect(why(person({ log: before }, { productId: 'web_unknown_test' }), ny('2026-11-21', 9), 'web_renewal_notice')).toBe(
+      'no catalog entry for web_unknown_test',
     );
+  });
+
+  test('the $4.99 month: two days before the first $9.99, and not before later monthly charges', () => {
+    const introEnd = ny('2026-12-16', 21).toISOString();
+    const first = person({ log: before }, { productId: 'web_monthly_499', status: 'intro', introEndsAt: introEnd, periodEnd: introEnd });
+    expect(why(first, ny('2026-12-13', 12), 'web_renewal_notice')).toBe('not yet');
+    expect(nextWebEmail(first, ny('2026-12-14', 9)).decision?.logKey).toBe('web_renewal_notice:2026-12-17');
+    const later = person({ log: before }, { productId: 'web_monthly_499', status: 'active', introEndsAt: null, periodEnd: ny('2027-01-16', 21).toISOString() });
+    expect(why(later, ny('2027-01-14', 9), 'web_renewal_notice')).toBe('no renewal to announce');
+  });
+
+  test('every yearly renewal of the $49.99 year, each once', () => {
+    const year = (periodEnd: string, log: WebLogRow[] = []) =>
+      person({ log: [...before, ...log] }, { productId: 'web_yearly_4999', status: 'active', introEndsAt: null, periodEnd });
+    expect(nextWebEmail(year('2027-11-17T02:00:00.000Z'), ny('2027-11-14', 9)).decision?.logKey).toBe('web_renewal_notice:2027-11-17');
+    expect(why(year('2027-11-17T02:00:00.000Z'), ny('2027-11-13', 12), 'web_renewal_notice')).toBe('not yet');
+    const next = year('2028-11-17T02:00:00.000Z', [sent('web_renewal_notice:2027-11-17', ny('2027-11-14', 9))]);
+    expect(nextWebEmail(next, ny('2028-11-14', 9)).decision?.logKey).toBe('web_renewal_notice:2028-11-17');
+  });
+
+  test('the $29.99 year: before its step to $49.99, and before every yearly renewal after it', () => {
+    const introEnd = '2027-11-17T02:00:00.000Z';
+    const first = person({ log: before }, { productId: 'web_yearly_2999', status: 'intro', introEndsAt: introEnd, periodEnd: introEnd });
+    expect(nextWebEmail(first, ny('2027-11-14', 9)).decision).toEqual({
+      kind: 'web_renewal_notice',
+      logKey: 'web_renewal_notice:2027-11-17',
+      renewalAt: introEnd,
+    });
+    const after = person(
+      { log: [...before, sent('web_renewal_notice:2027-11-17', ny('2027-11-14', 9))] },
+      { productId: 'web_yearly_2999', status: 'active', introEndsAt: null, periodEnd: '2028-11-17T02:00:00.000Z' },
+    );
+    expect(nextWebEmail(after, ny('2028-11-14', 9)).decision?.logKey).toBe('web_renewal_notice:2028-11-17');
+  });
+
+  test('never for a yearly plan she cancelled', () => {
+    const cancelled = person({ log: before }, { productId: 'web_yearly_4999', status: 'cancelled', introEndsAt: null, periodEnd: '2027-11-17T02:00:00.000Z' });
+    expect(why(cancelled, ny('2027-11-14', 9), 'web_renewal_notice')).toBe('no renewal to announce');
   });
 });
 

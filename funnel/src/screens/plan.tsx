@@ -1,82 +1,160 @@
 import { useEffect, useMemo } from 'react';
 
-import { firstName, kindOf, LIFE, PLAN_NAME, planLine, planView, STEP } from '../flow';
+import { adOf, firstName, goalLabels, OUTLOOK_SOURCE, patternName, PLAN_NAME, planLine, planView, sceneOf, STEP } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
-import { Cta, Icon, Page } from '../ui';
+import { Cta, Page } from '../ui';
+import { herTime, morningOf, triedRow } from '../words';
+import { ReviewCards, TrustLines } from './trust';
 
-function Lock() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor" />
-      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="2.2" />
-    </svg>
-  );
+/** "2026-11-18" -> "Wed" and "18", in her own time zone. */
+function dayOf(date: string): { weekday: string; number: number } {
+  const [y, m, d] = date.split('-').map(Number);
+  return { weekday: new Date(y!, m! - 1, d!).toLocaleDateString('en-US', { weekday: 'short' }), number: d! };
 }
 
 /**
- * Centr's "here's a peek at your plan": week 1 as a photo tile from her own
- * first-week moves, the later weeks locked beside it, and her goals as chips.
- * No date for a result.
+ * Her plan, as the app's own engine built it from her answers: what it was
+ * built from, the first week's days, today's moves with the one she just did
+ * marked done, tomorrow morning's routine, and what to expect, said plainly.
+ * A picture of the plan, never of a result: no length, no date by which
+ * anything changes, nothing locked or blurred.
  */
 export function Plan() {
   const s = useFunnel();
   const name = firstName(s);
   const view = useMemo(() => planView(s), [s.answers, s.tryIt]);
-  const title = PLAN_NAME[kindOf(s.answers)];
-  const goals = LIFE.filter((o) => s.answers.goals?.includes(o.goal));
-  const moves = view.days.flatMap((d) => d.moves).filter((m, i, all) => all.findIndex((x) => x.id === m.id) === i);
-  const [first, second, third] = [moves[0], moves[1] ?? moves[0], moves[2] ?? moves[1] ?? moves[0]];
+  /** Read once as the page opens: hours, never a clock that ticks. */
+  const morning = useMemo(() => morningOf(s.answers, new Date()), [s.answers]);
+  const today = view.days[0];
+  const sessions = view.days.filter((d) => !d.rest).length;
+  const goals = goalLabels(s.answers);
+  const a = s.answers;
+  const tried = triedRow(a);
+  const capital = (text: string) => text[0]!.toUpperCase() + text.slice(1);
+  const begun = today?.moves.some((m) => m.doneToday) === true;
+  // Ad 1 promised seven days, so her week is counted in days. The plan itself has no end either way.
+  const week = adOf(s) === 'ad1_plancard' ? 'Your first 7 days' : 'Your first week';
   useEffect(() => {
     track('plan_viewed');
   }, []);
   return (
-    <Page backTo={STEP.goals}>
-      <h1 className="peek-title">{name != null ? `${name}, here’s a peek at your plan:` : 'Here’s a peek at your plan:'}</h1>
-      <p className="peek-line">
-        <b>{title}:</b> {planLine(s.answers)}
-      </p>
-      {goals.length > 0 && (
-        <div className="goal-chips light">
-          {goals.map((g) => (
-            <span key={g.goal} style={{ borderColor: g.color }}>
-              <Icon name={g.icon} size={18} />
-              {g.goalLabel}
-            </span>
-          ))}
-        </div>
-      )}
-      {first != null && (
-        <div className="tile big" style={{ backgroundImage: `url(${first.poster})` }}>
-          <span className="tile-tag">Week 1 · today</span>
-          <div className="tile-foot">
-            <b>{first.title}</b>
-            <span className="tile-chips">
-              <i>{view.days[0]?.minutes ?? s.answers.minutes ?? 5} min</i>
-              <i>{moves.length} moves this week</i>
-            </span>
-          </div>
-        </div>
-      )}
-      <div className="tiles">
-        {[
-          { m: second, label: 'Week 2' },
-          { m: third, label: 'Weeks 3–12' },
-        ].map(({ m, label }) =>
-          m == null ? null : (
-            <div key={label} className="tile locked" style={{ backgroundImage: `url(${m.poster})` }}>
-              <span className="tile-lock">
-                <Lock />
-              </span>
-              <b>{label}</b>
-            </div>
-          ),
-        )}
+    <Page>
+      <div className="stack gap-s">
+        <h1>
+          {name != null ? `${name}, your plan is ` : 'Your plan is '}
+          <em>ready</em>
+        </h1>
+        <p className="lead">
+          {PLAN_NAME[sceneOf(s.answers)]} · {planLine(s.answers)}
+        </p>
       </div>
+
+      <section className="card stack" aria-label="Built from what you told us">
+        <h3>Built from what you told us</h3>
+        <div>
+          <b>Your pattern</b>
+          <p className="small">{capital(patternName(a))}</p>
+        </div>
+        {tried !== '' && (
+          <div>
+            <b>Already tried</b>
+            <p className="small">{capital(tried)}</p>
+          </div>
+        )}
+        <div>
+          <b>Your time</b>
+          <p className="small">{capital(herTime(a))}</p>
+        </div>
+      </section>
+
+      <section className="stack" aria-label={week}>
+        <h3>{week}</h3>
+        <div className="week">
+          {view.days.map((d, i) => {
+            const { weekday, number } = dayOf(d.date);
+            return (
+              <div
+                key={d.date}
+                className={i === 0 ? 'd today' : d.rest ? 'd rest' : 'd'}
+                aria-label={`${d.label}: ${d.rest ? 'a rest day' : `${d.minutes} minutes`}`}
+              >
+                <span>{weekday}</span>
+                <i>{number}</i>
+              </div>
+            );
+          })}
+        </div>
+        <p className="caption">
+          {sessions} sessions and {view.days.length - sessions} rest days. Rest days are the outlined ones.
+        </p>
+        {begun && today != null && today.moves.length > 1 && (
+          <p className="small">
+            <b>Day 1:</b> move 1 of {today.moves.length} done.
+          </p>
+        )}
+      </section>
+
+      {today != null && (
+        <section className="stack" aria-label="Today">
+          <h3>Today · {today.minutes} min</h3>
+          {today.moves.map((m) => (
+            <div className="card move" key={m.id}>
+              <img src={m.poster} alt="" loading="lazy" />
+              <div>
+                <div style={{ fontWeight: 700 }}>{m.title}</div>
+                <div className="caption">{m.dose}</div>
+              </div>
+              {m.doneToday && <span className="done">Done</span>}
+            </div>
+          ))}
+        </section>
+      )}
+
+      <div className="card">
+        <b>{morning.when}</b>
+        <p className="small">
+          Your 2-minute first-step routine{s.answers.wake != null ? '.' : ', before your first step.'}
+          {morning.away != null && ` That’s ${morning.away}.`}
+        </p>
+      </div>
+
+      <section className="card stack" aria-label="What to expect">
+        <h3>What to expect, honestly</h3>
+        <p className="small">In your first sessions you’ll feel your feet working. That’s normal.</p>
+        <p className="small">Your plan starts gentle. It changes every week, based on how your sessions feel.</p>
+        {a.focus === 'heel' ? (
+          <p className="small">
+            Be patient with it. A best-practice guide for heel pain says to expect several weeks or months, and that the outlook is good.
+            That’s why sessions are short enough to do daily.{' '}
+            <a href={OUTLOOK_SOURCE.url} target="_blank" rel="noopener noreferrer">
+              {OUTLOOK_SOURCE.label}
+            </a>
+          </p>
+        ) : (
+          <p className="small">Be patient with it. This is slow, steady work, which is why sessions are short enough to do daily.</p>
+        )}
+        <p className="small">Missing a day is fine. You pick it up the next day.</p>
+      </section>
+
+      {goals.length > 0 && (
+        <section className="stack" aria-label="Your goals">
+          <h3>You’re doing this for</h3>
+          <div className="goal-chips">
+            {goals.map((g) => (
+              <span key={g}>{g}</span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <ReviewCards count={1} />
+      <TrustLines />
+
       <Cta>
-        <button className="btn dark" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
-          Get my plan
+        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
+          Send me my plan
         </button>
       </Cta>
     </Page>

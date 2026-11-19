@@ -1,27 +1,28 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { moveOf } from '../engine/plan';
+import { APP_STORE_RATING } from '../config';
 import {
-  clockLabel,
+  adOf,
   DAY_LABEL,
   FIRST_STEP_MOVES,
   FIRST_STEP_SOURCE,
-  firstName,
-  FOCUS_LABEL,
   goalLabels,
-  kindOf,
-  offersBalance,
+  mentionedGoals,
+  patternName,
   PLAN_NAME,
   PROGRESS,
+  sceneOf,
   STEP,
+  todayCount,
   tryMove,
-  wakeOf,
   WHEN_LABEL,
 } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel, type TryIt } from '../state';
-import { Choice, clock, Clip, Cta, Page, Slide, Tick } from '../ui';
+import { ADVANCE_MS, Choice, clock, Clip, Cta, Page, Reaction } from '../ui';
+import { herTime, triedRow } from '../words';
 
 const LENGTH = 60;
 
@@ -54,10 +55,11 @@ export function TryMove() {
   };
 
   return (
-    <Page progress={PROGRESS[STEP.move]} backTo={STEP.goals}>
+    <Page progress={PROGRESS[STEP.move]}>
       <div className="stack gap-s">
-        <span className="eyebrow">Try it now · 60 seconds</span>
+        <span className="eyebrow">60 seconds</span>
         <h2>{move.title}</h2>
+        <p className="small">Before we build your plan, try the first move in it. This one’s yours to keep, whatever you decide.</p>
       </div>
       {move.clip != null && <Clip src={move.clip} poster={move.poster} playing={state !== 'paused'} label={`${move.title}: ${move.cue}`} />}
       <p className="card" aria-live="polite">
@@ -65,7 +67,9 @@ export function TryMove() {
       </p>
       {state === 'ready' ? (
         <>
-          <p className="small">Sit at the front of a sturdy chair, feet on the floor. Stop if anything hurts.</p>
+          <p className="small">
+            Sit at the front of a sturdy chair, feet on the floor. You’ll feel your foot working, and that’s normal. Stop if anything hurts.
+          </p>
           <Cta>
             <button
               className="btn"
@@ -83,10 +87,10 @@ export function TryMove() {
               onClick={() => {
                 update((x) => ({ tryIt: { ...x.tryIt, skipped: true } }));
                 track('tryit_skipped');
-                go(STEP.sign);
+                go(STEP.wake);
               }}
             >
-              Skip, show my plan
+              Not now
             </button>
           </Cta>
         </>
@@ -116,122 +120,101 @@ export function TryMove() {
   );
 }
 
+/** The stored values are older than the labels: the words no longer lead her to report a change. */
 const FELT: ReadonlyArray<{ value: NonNullable<TryIt['felt']>; label: string }> = [
-  { value: 'lighter', label: 'Lighter, looser' },
-  { value: 'better', label: 'A little better' },
-  { value: 'same', label: 'About the same' },
-  { value: 'unsure', label: 'Hard to tell' },
+  { value: 'lighter', label: 'Good' },
+  { value: 'better', label: 'Fine' },
+  { value: 'same', label: 'Didn’t feel much' },
+  { value: 'unsure', label: 'Not sure I did it right' },
 ];
 
-/** The move's still on a warm top, the question in words (Headspace's "How'd it go?"). */
-function Felt({ children, backTo, progress }: { children: ReactNode; backTo: string; progress: string }) {
-  const s = useFunnel();
-  const move = tryMove(s.answers);
-  return (
-    <Page progress={PROGRESS[progress]} backTo={backTo}>
-      <div className="felt-top">
-        <img src={move.poster} alt="" />
-      </div>
-      {children}
-    </Page>
-  );
-}
-
-/** "How did that feel?", answered in words. No scale, no number. */
+/** "How did that feel?", answered in words, under the move's still. No scale, no number. */
 export function After() {
   const s = useFunnel();
   const pick = (felt: NonNullable<TryIt['felt']>) => {
     update((x) => ({ tryIt: { ...x.tryIt, felt } }));
     track('step_completed', { step: STEP.after });
-    setTimeout(() => go(STEP.felt), 200);
+    setTimeout(() => go(STEP.felt), ADVANCE_MS);
   };
   return (
-    <Felt backTo={STEP.move} progress={STEP.after}>
+    <Page progress={PROGRESS[STEP.after]}>
+      <img className="still" src={tryMove(s.answers).poster} alt="" />
       <div className="stack gap-s center">
         <h2>How did that feel?</h2>
         <p className="small">Take a moment to notice.</p>
       </div>
       <div className="stack">
         {FELT.map((o) => (
-          <Choice key={o.value} className="soft-choice" selected={s.tryIt.felt === o.value} onClick={() => pick(o.value)}>
+          <Choice key={o.value} selected={s.tryIt.felt === o.value} onClick={() => pick(o.value)}>
             {o.label}
           </Choice>
         ))}
       </div>
-    </Felt>
-  );
-}
-
-/** Her answer, given back as what it means for her own goal (Headspace, Liven). Never a dead end. */
-export function FeltAnswer() {
-  const s = useFunnel();
-  const goal = goalLabels(s.answers)[0] ?? 'Walk without thinking about my feet';
-  const good = s.tryIt.felt === 'lighter' || s.tryIt.felt === 'better';
-  return (
-    <Felt backTo={STEP.after} progress={STEP.felt}>
-      <div className="stack gap-s center">
-        <h2>{good ? 'That’s your feet waking up.' : 'That’s normal on day 1.'}</h2>
-        {good ? (
-          <p className="lead">
-            Do this daily and you’re working toward: <b className="goal-word">{goal}</b>
-          </p>
-        ) : (
-          <p className="lead">Feet change with daily practice, not one move. Tomorrow’s move is ready.</p>
-        )}
-      </div>
-      <Cta>
-        <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.felt }), go(STEP.praise))}>
-          Next
-        </button>
-      </Cta>
-    </Felt>
-  );
-}
-
-/** Full colour, one line (pliability, QUITTR). */
-export function Praise() {
-  const s = useFunnel();
-  const name = firstName(s);
-  return (
-    <Slide
-      tone="praise"
-      label="Continue"
-      next={() => (track('step_completed', { step: STEP.praise }), go(STEP.routine))}
-    >
-      <h1 className="praise">
-        {name != null ? `Nice work, ${name}.` : 'Nice work.'}
-        <br />
-        Day 1 of your plan is done <span className="praise-tick"><Tick /></span>
-      </h1>
-    </Slide>
+    </Page>
   );
 }
 
 /**
- * Something she uses tomorrow: three moves in bed, about 2 minutes, at the
- * time she gets up. The study is a "why" link, never a promise.
+ * Her answer, given back as what she did, never as what it did to her feet:
+ * today's session has begun, and she is one move into it. How many moves
+ * today has is counted from her plan (the number her plan page shows), never
+ * typed.
+ */
+export function FeltAnswer() {
+  const s = useFunnel();
+  const good = s.tryIt.felt === 'lighter' || s.tryIt.felt === 'better';
+  const today = todayCount(s);
+  const left = today - 1;
+  return (
+    <Reaction
+      step={STEP.felt}
+      photo={{ src: tryMove(s.answers).poster }}
+      title={!good ? 'That’s common the first time.' : left > 0 ? `Move 1 of ${today} done.` : 'Today’s first move, done.'}
+      next={STEP.wake}
+    >
+      {good ? (
+        left > 0 && (
+          <>
+            <div className="dots" aria-hidden="true">
+              {Array.from({ length: today }, (_, i) => (
+                <i key={i} className={i === 0 ? 'on' : undefined} />
+              ))}
+            </div>
+            <p>Nice work. Today’s session has {left === 1 ? 'one more' : `${left} more`} like it.</p>
+          </>
+        )
+      ) : (
+        <p>New moves often feel awkward at first. In the app, every move has a video you can follow.</p>
+      )}
+    </Reaction>
+  );
+}
+
+/**
+ * Something she uses tomorrow: three moves on the edge of the bed, about 2
+ * minutes, before her first step. The study is a "why" link, never a promise.
  */
 export function Routine() {
   const s = useFunnel();
-  const at = clockLabel(wakeOf(s.answers));
-  const hero = s.answers.when === 'morning' || s.answers.life?.includes('mornings') === true;
+  // Ad 2 is about this routine, so for its visitors it is the plan's own, whatever they answered.
+  const hero = s.answers.when === 'morning' || mentionedGoals(s.answers).includes('mornings') || adOf(s) === 'ad2_v1morning';
   const moves = FIRST_STEP_MOVES.map((id) => moveOf({ id }));
   useEffect(() => {
     track('first_step_routine_shown');
   }, []);
   return (
-    <Page progress={PROGRESS[STEP.routine]} backTo={STEP.praise}>
+    <Page progress={PROGRESS[STEP.routine]}>
       <div className="stack gap-s">
         <span className="eyebrow">{hero ? 'Your first-step routine' : 'A bonus for your mornings'}</span>
-        <h2>Tomorrow at {at}, before your first step</h2>
-        <p className="small">2 minutes in bed. 3 moves.</p>
+        <h2>Tomorrow morning, before your first step</h2>
+        <p className="small">2 minutes on the edge of the bed. 3 moves.</p>
       </div>
       <div className="stack">
         {moves.map((m, i) => (
           <div className="card move" key={m.id}>
             <img src={m.poster} alt="" loading="lazy" />
             <div>
-              <div style={{ fontWeight: 800 }}>
+              <div style={{ fontWeight: 700 }}>
                 {i + 1}. {m.title}
               </div>
               <div className="caption">{m.cue}</div>
@@ -252,107 +235,11 @@ export function Routine() {
         <button
           className="btn"
           type="button"
-          onClick={() => (track('step_completed', { step: STEP.routine }), go(offersBalance(s.answers) ? STEP.balance : STEP.sign))}
+          onClick={() => (track('step_completed', { step: STEP.routine }), go(STEP.anchor))}
         >
-          Set it for {at}
+          Add it to my plan
         </button>
       </Cta>
-    </Page>
-  );
-}
-
-const HOLD = 10;
-
-export function Balance() {
-  const [phase, setPhase] = useState<'intro' | 'holding' | 'done'>('intro');
-  const [held, setHeld] = useState(0);
-  const started = useRef(0);
-
-  useEffect(() => {
-    if (phase !== 'holding') return;
-    const timer = setInterval(() => {
-      const seconds = Math.min(HOLD, Math.floor((Date.now() - started.current) / 1000));
-      setHeld(seconds);
-      if (seconds >= HOLD) stop(HOLD);
-    }, 200);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-
-  const stop = (seconds: number) => {
-    setHeld(seconds);
-    setPhase('done');
-    update((x) => ({ tryIt: { ...x.tryIt, balance: seconds } }));
-  };
-
-  return (
-    <Page progress={PROGRESS[STEP.balance]} backTo={STEP.routine}>
-      {phase === 'intro' && (
-        <>
-          <div className="stack gap-s">
-            <span className="eyebrow">Optional</span>
-            <h2>A 10-second balance check</h2>
-          </div>
-          <div className="card stack">
-            <p>Stand by a counter, one hand just above it. Lift one foot a little. We count to 10.</p>
-            <p className="small">Put your foot down or hold on any time. That is not failing.</p>
-          </div>
-          <Cta>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                started.current = Date.now();
-                track('balance_started');
-                setPhase('holding');
-              }}
-            >
-              Start
-            </button>
-            <button
-              className="btn quiet"
-              type="button"
-              onClick={() => {
-                update((x) => ({ tryIt: { ...x.tryIt, balance: 'skipped' } }));
-                track('balance_skipped');
-                go(STEP.sign);
-              }}
-            >
-              Skip this
-            </button>
-          </Cta>
-        </>
-      )}
-      {phase === 'holding' && (
-        <>
-          <div className="clock" aria-live="polite">
-            {held} s
-          </div>
-          <div className="ring">
-            <div style={{ width: `${(held / HOLD) * 100}%` }} />
-          </div>
-          <Cta>
-            <button className="btn" type="button" style={{ minHeight: 96 }} onClick={() => stop(Math.min(HOLD, Math.floor((Date.now() - started.current) / 1000)))}>
-              Foot down
-            </button>
-          </Cta>
-        </>
-      )}
-      {phase === 'done' && (
-        <>
-          <div className="stack gap-s center">
-            <h2>
-              You held {held} {held === 1 ? 'second' : 'seconds'}
-            </h2>
-            <p className="lead">A starting note for your plan. Not a medical test.</p>
-          </div>
-          <Cta>
-            <button className="btn" type="button" onClick={() => go(STEP.sign)}>
-              Continue
-            </button>
-          </Cta>
-        </>
-      )}
     </Page>
   );
 }
@@ -362,18 +249,22 @@ const R = 72;
 const TURN = 2 * Math.PI * R;
 
 /**
- * Her answers, read back one by one as the plan is put together. Every line
- * is something she told us or did, so the work shown is the work done.
+ * Her answers, read back one by one as the plan is put together: the story
+ * she confirmed half-way, in the same order. Every line is something she told
+ * us or did, so the work shown is the work done.
  */
 export function Building() {
   const s = useFunnel();
   const a = s.answers;
   const goals = goalLabels(a);
+  const tried = triedRow(a);
+  const pattern = patternName(a);
   const lines = [
-    `${FOCUS_LABEL[a.focus ?? 'heel']} · ${WHEN_LABEL[a.when ?? 'varies'].toLowerCase()}`,
-    a.day != null ? DAY_LABEL[a.day] : `${a.minutes ?? 5} minutes a day`,
+    `${pattern[0]!.toUpperCase()}${pattern.slice(1)}${a.when != null ? ` · ${WHEN_LABEL[a.when].toLowerCase()}` : ''}`,
+    tried !== '' ? `Already tried: ${tried}` : a.day != null ? DAY_LABEL[a.day] : null,
+    `Your time: ${herTime(a)}`,
     goals[0] != null ? `Goal: ${goals[0]}` : null,
-    `Your plan: ${PLAN_NAME[kindOf(a)]}`,
+    `Your plan: ${PLAN_NAME[sceneOf(a)]}`,
   ].filter((line): line is string => line != null);
   const total = lines.length * LINE_MS;
   const [done, setDone] = useState(0);
@@ -384,15 +275,15 @@ export function Building() {
       setDone(part);
       if (part >= 1) {
         clearInterval(timer);
-        setTimeout(() => go(STEP.plan, { replace: true }), 700);
+        setTimeout(() => go(STEP.name, { replace: true }), 700);
       }
     }, 60);
     return () => clearInterval(timer);
   }, [total]);
   const shown = Math.min(lines.length, Math.floor(done * lines.length) + 1);
   return (
-    <Page progress={PROGRESS[STEP.building]}>
-      <h2 className="center">Analyzing your answers</h2>
+    <Page progress={PROGRESS[STEP.building]} backTo={null}>
+      <h2 className="center">Putting your plan together</h2>
       <div className="dial" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(done * 100)}>
         <svg viewBox="0 0 168 168">
           <circle className="bg" cx="84" cy="84" r={R} />
@@ -400,6 +291,7 @@ export function Building() {
         </svg>
         <b>{Math.round(done * 100)}%</b>
       </div>
+      <p className="caption center">Rated {APP_STORE_RATING} ★ on the App Store</p>
       <div className="card">
         <ul className="ticks reading">
           {lines.slice(0, shown).map((line, i) => (
