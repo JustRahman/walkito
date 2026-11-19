@@ -13,6 +13,8 @@ type Events = {
   funnel_landed: { source: string | null; campaign: string | null; webview: string | null };
   step_viewed: { step: string };
   step_completed: { step: string };
+  /** The guess after "When do you notice it most?": whether she said "Yes, that's it". Never which guess it was: that follows a health answer. */
+  guess_answered: { hit: boolean };
   tryit_started: Record<string, never>;
   tryit_finished: { stopped_early: boolean };
   tryit_skipped: Record<string, never>;

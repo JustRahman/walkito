@@ -5,11 +5,12 @@ import chairWindow from '../assets/photos/chair-window.jpg';
 import cozyEvening from '../assets/photos/cozy-evening.jpg';
 import socksRug from '../assets/photos/socks-rug.jpg';
 import { SOURCES_URL, url } from '../config';
-import { factsOf, FOCUS_LABEL, lifeFor, mentionedGoals, PROGRESS, START_LABEL, STEP, WHEN_LABEL } from '../flow';
+import { lifeFor, mentionedGoals, PROGRESS, STEP } from '../flow';
 import { track } from '../lib/analytics';
-import { go } from '../router';
+import { back, go } from '../router';
 import { answer, update, useFunnel } from '../state';
 import { ADVANCE_MS, Choice, Cta, MultiChoice, Page, Reaction } from '../ui';
+import { guessOf, NOT_QUITE, releaseOf, summaryOf } from '../words';
 
 /**
  * Her first name, asked once the plan exists, for the plan's own headline.
@@ -101,73 +102,92 @@ const PHOTO = {
   evening: { src: cozyEvening, at: '50% 62%' },
 } as const;
 
-/** After "When do you notice it most?": her answer, and what the plan has for it. */
+/**
+ * After "When do you notice it most?": we guess the rest of her day before she
+ * describes it, and she says whether we got it. Either answer goes on; "Not
+ * quite" gets no second guess, only what her plan has. Whether the guess hit
+ * is kept nowhere but in a count (`guess_answered`).
+ */
 export function HeardWhen() {
-  const when = useFunnel().answers.when;
-  const said =
-    when === 'morning'
-      ? {
-          photo: PHOTO.bed,
-          title: 'Many people notice their feet most with the first steps of the day.',
-          text: 'So your plan includes a 2-minute routine you can do on the edge of the bed.',
-        }
-      : when === 'sitting'
-        ? { photo: PHOTO.chair, title: 'Got it.', text: 'Your plan has short moves you can do in the chair before you stand up.' }
-        : when === 'evening'
-          ? { photo: PHOTO.evening, title: 'Got it.', text: 'Sessions are short, so there’s one that fits after a long day.' }
-          : { photo: PHOTO.rug, title: 'Got it.', text: 'One short session a day, at whatever time suits you.' };
+  const a = useFunnel().answers;
+  const said = guessOf(a);
+  const [hit, setHit] = useState<boolean | null>(null);
+  const photo = a.when === 'morning' ? PHOTO.bed : a.when === 'sitting' ? PHOTO.chair : a.when === 'evening' ? PHOTO.evening : PHOTO.rug;
+  const reply = (value: boolean) => {
+    setHit(value);
+    track('guess_answered', { hit: value });
+  };
   return (
-    <Reaction step={STEP.heardWhen} photo={said.photo} title={said.title} next={STEP.since}>
-      <p>{said.text}</p>
-    </Reaction>
+    <Page progress={PROGRESS[STEP.heardWhen]}>
+      <div className="panel stack">
+        <img className="still" src={photo.src} alt="" style={{ objectPosition: photo.at }} />
+        <div className="stack fade" key={String(hit)} aria-live="polite">
+          {hit == null ? (
+            <>
+              <h2>Let us guess.</h2>
+              <p>{said.guess}</p>
+            </>
+          ) : hit ? (
+            <>
+              <h2>{said.heard}</h2>
+              {said.more != null && <p>{said.more}</p>}
+              <p>{said.plan}</p>
+            </>
+          ) : (
+            <>
+              <h2>{NOT_QUITE}</h2>
+              <p>{said.plan}</p>
+            </>
+          )}
+        </div>
+      </div>
+      <Cta>
+        {hit == null ? (
+          <>
+            <button className="btn" type="button" onClick={() => reply(true)}>
+              Yes, that’s it
+            </button>
+            <button className="btn secondary" type="button" onClick={() => reply(false)}>
+              Not quite
+            </button>
+          </>
+        ) : (
+          <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.heardWhen }), go(STEP.since))}>
+            Continue
+          </button>
+        )}
+      </Cta>
+    </Page>
   );
 }
 
-/** After "What have you already tried?": the effort was hers, and Walkito's part is only the plan. */
+/** After "What have you already tried?": none of it was her doing wrong, said with her own list (words.ts). */
 export function HeardTried() {
   const a = useFunnel().answers;
-  const tried = a.tried ?? [];
-  const said = tried.includes('pt')
-    ? {
-        title: 'Good.',
-        text: 'Walkito doesn’t replace your doctor or physical therapist. It gives you a short routine for the days in between.',
-      }
-    : tried.length === 0 || tried.includes('nothing')
-      ? { title: 'A good place to start.', text: 'Your first week is kept gentle.' }
-      : { title: 'You’ve already put effort in.', text: 'Walkito’s part is the plan: which moves, in what order, for how long.' };
+  const said = releaseOf(a);
   // Never the photograph she saw two screens ago.
   return (
-    <Reaction step={STEP.heardTried} photo={a.when === 'evening' ? PHOTO.rug : PHOTO.evening} title={said.title} next={STEP.day}>
-      <p>{said.text}</p>
+    <Reaction step={STEP.heardTried} photo={a.when === 'evening' ? PHOTO.rug : PHOTO.evening} title={said.title} next={STEP.day} cta={said.cta}>
+      {said.lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
     </Reaction>
   );
 }
 
-/** Half-way: her own answers in rows, to confirm or go back and change. No score, nothing we concluded. */
+/** Half-way: what she told us, as one paragraph in her own words, to confirm or change. No score, nothing we concluded. */
 export function Summary() {
   const a = useFunnel().answers;
-  const rows: Array<[string, string]> = [
-    ['Focus', FOCUS_LABEL[a.focus ?? 'heel']],
-    ['Noticed most', WHEN_LABEL[a.when ?? 'varies']],
-    ['Where', START_LABEL[a.start ?? 'chair']],
-    ['Time each day', `${a.minutes ?? 5} minutes`],
-    ...(factsOf(a).safetyFlag ? [['First week', 'Seated'] as [string, string]] : []),
-  ];
   return (
     <Page progress={PROGRESS[STEP.summary]}>
-      <h2>Here’s what we have so far</h2>
-      <dl className="card facts">
-        {rows.map(([k, v]) => (
-          <div key={k}>
-            <dt>{k}</dt>
-            <dd>{v}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className="caption">To change an answer, go back.</p>
+      <h2>Here’s what we heard</h2>
+      <p className="card">{summaryOf(a).join(' ')}</p>
       <Cta>
         <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.summary }), go(STEP.life))}>
           That’s right
+        </button>
+        <button className="btn quiet" type="button" onClick={() => back(STEP.minutes)}>
+          Change an answer
         </button>
       </Cta>
     </Page>

@@ -90,6 +90,7 @@ export function Reaction({
   title,
   children,
   next,
+  cta = 'Continue',
 }: {
   step: string;
   /** `at` is the part of the photograph to keep in the 16:10 frame, as an object-position. */
@@ -97,6 +98,8 @@ export function Reaction({
   title: string;
   children?: ReactNode;
   next: string;
+  /** The button, when it can say what she gets next. */
+  cta?: string;
 }) {
   return (
     <Page progress={PROGRESS[step]}>
@@ -107,7 +110,7 @@ export function Reaction({
       </div>
       <Cta>
         <button className="btn" type="button" onClick={() => (track('step_completed', { step }), go(next))}>
-          Continue
+          {cta}
         </button>
       </Cta>
     </Page>

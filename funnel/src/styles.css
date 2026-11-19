@@ -366,13 +366,6 @@ details[open] { padding-bottom: 1rem; }
 /* A preview build only: the placeholder quote over Dr. Shayman's line. */
 .doc-quote { font-family: var(--serif); font-size: 1.25rem; line-height: 1.3; }
 
-/* Her answers, read back in rows. */
-.facts { margin: 0; padding: 0.3rem 1.15rem; }
-.facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 0.8rem 0; }
-.facts > div + div { border-top: 1.5px solid var(--line); }
-.facts dt { flex: none; font-size: 1rem; color: var(--muted); }
-.facts dd { margin: 0; font-weight: 600; text-align: right; }
-
 /* Her first week: seven days from today. Today is filled, a rest day is only outlined. */
 .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.3rem; }
 .week .d { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; font-size: 0.9375rem; color: var(--caption); }
