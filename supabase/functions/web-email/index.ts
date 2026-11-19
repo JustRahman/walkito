@@ -58,7 +58,6 @@ const FROM = env('EMAIL_FROM') || 'walkito <hello@walkito.site>';
 const config: WebMailConfig = {
   from: FROM,
   personalFrom: personalSender(FROM),
-  replyTo: env('EMAIL_REPLY_TO') || 'hello@walkito.site',
   postalAddress: env('EMAIL_POSTAL_ADDRESS'),
   linkBase: env('EMAIL_LINK_BASE') || 'https://walkito.site',
   functionsBase: `${SUPABASE_URL}/functions/v1`,

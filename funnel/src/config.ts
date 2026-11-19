@@ -137,7 +137,7 @@ export const SUPPORT_EMAIL = import.meta.env.FUNNEL_SUPPORT_EMAIL || 'hello@walk
 export const COMPANY = 'Nemy LLC';
 export const POSTAL_ADDRESS = import.meta.env.FUNNEL_POSTAL_ADDRESS || '';
 /** Nemy LLC's Stripe account descriptor, shared with the agency, so not changed for Walkito. */
-export const DESCRIPTOR = 'NEMY LLC';
+export const DESCRIPTOR = 'NEMY WALKITO';
 
 /** "Nemy LLC, 30 N Gould St…", whether or not the address already starts with the name. */
 export const COMPANY_LINE = POSTAL_ADDRESS === '' ? COMPANY : POSTAL_ADDRESS.startsWith(COMPANY) ? POSTAL_ADDRESS : `${COMPANY}, ${POSTAL_ADDRESS}`;

@@ -14,12 +14,18 @@ import type { WebEmail } from './emails.ts';
  * for a funnel buyer they mark `web_leads.unsubscribed_at`.
  */
 
+/**
+ * Where every reply to a funnel email goes. Fixed, not configurable: the
+ * Terms promise a refund on any charge by replying to any of our emails, so a
+ * reply must always reach the inbox a person reads.
+ */
+export const WEB_REPLY_TO = 'hello@walkito.site';
+
 export type WebMailConfig = {
   /** `walkito <hello@walkito.site>`. */
   from: string;
   /** The day-3 note's sender: two names, the same address. */
   personalFrom: string;
-  replyTo: string;
   postalAddress: string;
   /** The main site, which serves the unsubscribe page and the mascot: `https://walkito.site`. */
   linkBase: string;
@@ -60,7 +66,7 @@ export async function composeWebMessage(email: WebEmail, recipient: { userId: st
   return {
     from: email.personal ? config.personalFrom : config.from,
     to: [recipient.email],
-    reply_to: config.replyTo,
+    reply_to: WEB_REPLY_TO,
     subject: email.subject,
     html,
     text,

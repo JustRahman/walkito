@@ -40,7 +40,7 @@ export type WebEmail = {
 };
 
 export const GUARANTEE = 'Not for you? Reply to any email within 14 days of a charge and we refund it.';
-export const DESCRIPTOR = 'Your card statement will show NEMY LLC, the company behind Walkito.';
+export const DESCRIPTOR = 'Your card statement will show NEMY WALKITO. NEMY LLC is the company behind Walkito.';
 const REPLY = 'Questions? Just reply. A real person reads every email.';
 
 /** The OneLink that opens the App Store or Google Play, tagged with the email it came from. */
@@ -211,12 +211,19 @@ export function day3Email(input: { base: string }): WebEmail {
  * Two days before a charge: the date, the amount, and how to stop it.
  * `intro` is the step from the first week's price to the monthly one.
  */
-export function renewalNoticeEmail(input: { product: WebProduct; renewalAt: string; zone: string; base: string }): WebEmail {
+export function renewalNoticeEmail(input: {
+  product: WebProduct;
+  renewalAt: string;
+  zone: string;
+  base: string;
+  /** This charge ends the paid first period. Defaults to true for a product that has one. */
+  introEnds?: boolean;
+}): WebEmail {
   const p = input.product;
   const amount = money(p.amount, p.currency);
   const date = longDate(input.renewalAt, input.zone);
   const short = shortDate(input.renewalAt, input.zone);
-  const intro = p.intro != null && p.notice === 'intro';
+  const intro = p.intro != null && (input.introEnds ?? true);
   const first = intro
     ? p.intro!.days === 7
       ? `Your first week of Walkito ends on ${date}.`
@@ -340,7 +347,8 @@ export function emailFor(decision: WebDecision, person: WebPerson, base: string)
     case 'web_renewal_notice': {
       const product = webProduct(c?.productId);
       if (product == null || decision.renewalAt == null) return { held: `no catalog entry for ${c?.productId ?? 'no product'}` };
-      return renewalNoticeEmail({ product, renewalAt: decision.renewalAt, zone: person.zone, base });
+      const introEnds = c?.status === 'intro' && c.introEndsAt === decision.renewalAt;
+      return renewalNoticeEmail({ product, renewalAt: decision.renewalAt, zone: person.zone, base, introEnds });
     }
     case 'web_morning':
       return morningEmail({ base, firstStep: wakeMinutes(person.wakeTime) != null });
