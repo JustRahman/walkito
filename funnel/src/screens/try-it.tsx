@@ -7,13 +7,14 @@ import {
   DAY_LABEL,
   FIRST_STEP_MOVES,
   FIRST_STEP_SOURCE,
-  FOCUS_LABEL,
   goalLabels,
-  kindOf,
+  mentionedGoals,
+  patternName,
   PLAN_NAME,
   PROGRESS,
-  sessionOne,
+  sceneOf,
   STEP,
+  todayCount,
   tryMove,
   WHEN_LABEL,
 } from '../flow';
@@ -58,7 +59,7 @@ export function TryMove() {
       <div className="stack gap-s">
         <span className="eyebrow">60 seconds</span>
         <h2>{move.title}</h2>
-        <p className="small">Before we build your plan, try the first move in it. You can do it sitting down.</p>
+        <p className="small">Before we build your plan, try the first move in it. This one’s yours to keep, whatever you decide.</p>
       </div>
       {move.clip != null && <Clip src={move.clip} poster={move.poster} playing={state !== 'paused'} label={`${move.title}: ${move.cue}`} />}
       <p className="card" aria-live="polite">
@@ -66,7 +67,9 @@ export function TryMove() {
       </p>
       {state === 'ready' ? (
         <>
-          <p className="small">Sit at the front of a sturdy chair, feet on the floor. Stop if anything hurts.</p>
+          <p className="small">
+            Sit at the front of a sturdy chair, feet on the floor. You’ll feel your foot working, and that’s normal. Stop if anything hurts.
+          </p>
           <Cta>
             <button
               className="btn"
@@ -152,22 +155,34 @@ export function After() {
 }
 
 /**
- * Her answer, given back as what she did, never as what it did to her feet.
- * How many moves are left today is counted from her plan, never typed.
+ * Her answer, given back as what she did, never as what it did to her feet:
+ * today's session has begun, and she is one move into it. How many moves
+ * today has is counted from her plan (the number her plan page shows), never
+ * typed.
  */
 export function FeltAnswer() {
   const s = useFunnel();
   const good = s.tryIt.felt === 'lighter' || s.tryIt.felt === 'better';
-  const left = sessionOne(s).length;
+  const today = todayCount(s);
+  const left = today - 1;
   return (
     <Reaction
       step={STEP.felt}
       photo={{ src: tryMove(s.answers).poster }}
-      title={good ? 'Nice work. That’s the first move of your plan.' : 'That’s common the first time.'}
+      title={!good ? 'That’s common the first time.' : left > 0 ? `Move 1 of ${today} done.` : 'Today’s first move, done.'}
       next={STEP.wake}
     >
       {good ? (
-        left > 0 && <p>Today’s session has {left === 1 ? 'one more' : 'two more'} like it.</p>
+        left > 0 && (
+          <>
+            <div className="dots" aria-hidden="true">
+              {Array.from({ length: today }, (_, i) => (
+                <i key={i} className={i === 0 ? 'on' : undefined} />
+              ))}
+            </div>
+            <p>Nice work. Today’s session has {left === 1 ? 'one more' : `${left} more`} like it.</p>
+          </>
+        )
       ) : (
         <p>New moves often feel awkward at first. In the app, every move has a video you can follow.</p>
       )}
@@ -182,7 +197,7 @@ export function FeltAnswer() {
 export function Routine() {
   const s = useFunnel();
   // Ad 2 is about this routine, so for its visitors it is the plan's own, whatever they answered.
-  const hero = s.answers.when === 'morning' || s.answers.life?.includes('mornings') === true || adOf(s) === 'ad2_v1morning';
+  const hero = s.answers.when === 'morning' || mentionedGoals(s.answers).includes('mornings') || adOf(s) === 'ad2_v1morning';
   const moves = FIRST_STEP_MOVES.map((id) => moveOf({ id }));
   useEffect(() => {
     track('first_step_routine_shown');
@@ -220,7 +235,7 @@ export function Routine() {
         <button
           className="btn"
           type="button"
-          onClick={() => (track('step_completed', { step: STEP.routine }), go(STEP.commit))}
+          onClick={() => (track('step_completed', { step: STEP.routine }), go(STEP.anchor))}
         >
           Add it to my plan
         </button>
@@ -243,12 +258,13 @@ export function Building() {
   const a = s.answers;
   const goals = goalLabels(a);
   const tried = triedRow(a);
+  const pattern = patternName(a);
   const lines = [
-    `${FOCUS_LABEL[a.focus ?? 'heel']} · ${WHEN_LABEL[a.when ?? 'varies'].toLowerCase()}`,
+    `${pattern[0]!.toUpperCase()}${pattern.slice(1)}${a.when != null ? ` · ${WHEN_LABEL[a.when].toLowerCase()}` : ''}`,
     tried !== '' ? `Already tried: ${tried}` : a.day != null ? DAY_LABEL[a.day] : null,
     `Your time: ${herTime(a)}`,
     goals[0] != null ? `Goal: ${goals[0]}` : null,
-    `Your plan: ${PLAN_NAME[kindOf(a)]}`,
+    `Your plan: ${PLAN_NAME[sceneOf(a)]}`,
   ].filter((line): line is string => line != null);
   const total = lines.length * LINE_MS;
   const [done, setDone] = useState(0);

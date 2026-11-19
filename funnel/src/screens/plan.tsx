@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 
-import { adOf, clockLabel, firstName, FOCUS_LABEL, goalLabels, kindOf, OUTLOOK_SOURCE, PLAN_NAME, planLine, planView, STEP, WHEN_LABEL } from '../flow';
+import { adOf, clockLabel, firstName, goalLabels, OUTLOOK_SOURCE, patternName, PLAN_NAME, planLine, planView, sceneOf, STEP } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
@@ -30,6 +30,8 @@ export function Plan() {
   const goals = goalLabels(s.answers);
   const a = s.answers;
   const tried = triedRow(a);
+  const capital = (text: string) => text[0]!.toUpperCase() + text.slice(1);
+  const begun = today?.moves.some((m) => m.doneToday) === true;
   // Ad 1 promised seven days, so her week is counted in days. The plan itself has no end either way.
   const week = adOf(s) === 'ad1_plancard' ? 'Your first 7 days' : 'Your first week';
   useEffect(() => {
@@ -43,28 +45,25 @@ export function Plan() {
           <em>ready</em>
         </h1>
         <p className="lead">
-          {PLAN_NAME[kindOf(s.answers)]} · {planLine(s.answers)}
+          {PLAN_NAME[sceneOf(s.answers)]} · {planLine(s.answers)}
         </p>
       </div>
 
       <section className="card stack" aria-label="Built from what you told us">
         <h3>Built from what you told us</h3>
         <div>
-          <b>Your feet</b>
-          <p className="small">
-            {FOCUS_LABEL[a.focus ?? 'heel']}
-            {a.when != null && ` · ${WHEN_LABEL[a.when].toLowerCase()}`}
-          </p>
+          <b>Your pattern</b>
+          <p className="small">{capital(patternName(a))}</p>
         </div>
         {tried !== '' && (
           <div>
             <b>Already tried</b>
-            <p className="small">{tried[0]!.toUpperCase() + tried.slice(1)}</p>
+            <p className="small">{capital(tried)}</p>
           </div>
         )}
         <div>
           <b>Your time</b>
-          <p className="small">{herTime(a)}</p>
+          <p className="small">{capital(herTime(a))}</p>
         </div>
       </section>
 
@@ -88,6 +87,11 @@ export function Plan() {
         <p className="caption">
           {sessions} sessions and {view.days.length - sessions} rest days. Rest days are the outlined ones.
         </p>
+        {begun && today != null && today.moves.length > 1 && (
+          <p className="small">
+            <b>Day 1:</b> move 1 of {today.moves.length} done.
+          </p>
+        )}
       </section>
 
       {today != null && (

@@ -5,6 +5,7 @@ import { appLink, prevOf, PROGRESS, sectionOf } from './flow';
 import { ICONS, type IconName } from './icons.gen';
 import { track } from './lib/analytics';
 import { back, go, usePath } from './router';
+import { useFunnel } from './state';
 
 export type { IconName };
 
@@ -24,8 +25,9 @@ export function Page({
   footer?: boolean;
 }) {
   const path = usePath();
+  const answers = useFunnel().answers;
   const section = sectionOf(path);
-  const before = backTo === undefined ? prevOf(path) : backTo;
+  const before = backTo === undefined ? prevOf(path, answers) : backTo;
   return (
     <main className="page">
       <header className="topbar">

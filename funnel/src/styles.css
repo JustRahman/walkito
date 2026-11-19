@@ -277,6 +277,12 @@ b { font-weight: 700; }
 .receipt li + li { border-top: 1.5px dashed var(--line); }
 .receipt li:last-child { color: var(--text); font-weight: 700; }
 .receipt li:last-child span { color: var(--primary); }
+/* Today's moves as dots: the one she did is filled. */
+.dots { display: flex; gap: 0.5rem; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--control); }
+.dots i.on { background: var(--positive); border-color: var(--positive); }
+/* Her plan in one sentence, in her own voice. */
+.pledge { margin: 0; font-family: var(--serif); font-size: 1.375rem; line-height: 1.35; }
 /* A photograph or an exercise still, cropped to one shape. */
 .still { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 16px; background: var(--track); }
 

@@ -4,7 +4,7 @@ import bedMorning from '../assets/photos/bed-morning.jpg';
 import chairWindow from '../assets/photos/chair-window.jpg';
 import hero from '../assets/photos/hero-socks-morning.jpg';
 import { DEFAULT_VARIANT, money, PRICE_VARIANTS, url, yearlyPerMonth } from '../config';
-import { adOf, PROGRESS, STEP, WAKE_TIMES, wakeOf, type Ad } from '../flow';
+import { adOf, anchorsFor, paidFor, PROGRESS, STEP, WAKE_TIMES, wakeOf, type Ad } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, useFunnel, type Answers } from '../state';
@@ -287,11 +287,18 @@ export function Since() {
   );
 }
 
+/**
+ * In her words, the things she names most often first. `shoes` and `shot` are
+ * new in v7; `insoles` was "Insoles or new shoes" until then, so what is said
+ * back about it never mentions shoes (words.ts).
+ */
 const TRIED: ReadonlyArray<Option<string>> = [
-  { value: 'stretching', label: 'Stretching on my own' },
-  { value: 'insoles', label: 'Insoles or new shoes' },
-  { value: 'pt', label: 'A doctor or physical therapist' },
-  { value: 'roller', label: 'Massage or a foot roller' },
+  { value: 'shoes', label: 'Special shoes or slippers' },
+  { value: 'insoles', label: 'Insoles or orthotics' },
+  { value: 'stretching', label: 'Stretching or exercises on my own' },
+  { value: 'roller', label: 'A ball, a roller or massage' },
+  { value: 'pt', label: 'A doctor, a podiatrist or physical therapy' },
+  { value: 'shot', label: 'A shot or a night splint' },
   { value: 'videos', label: 'Videos online' },
   { value: 'nothing', label: 'Nothing yet' },
 ];
@@ -326,13 +333,52 @@ export function Tried() {
           onClick={() => {
             answer({ tried: picked });
             track('step_completed', { step: STEP.tried });
-            go(STEP.heardTried);
+            // What it all cost is only asked of someone who paid for some of it.
+            go(paidFor(picked) ? STEP.spent : STEP.heardTried);
           }}
         >
           Continue
         </button>
       </Cta>
     </Page>
+  );
+}
+
+/**
+ * What it has cost her so far, in her own rough figure. Asked only after she
+ * ticked something that costs money. She can decline to add it up.
+ */
+export function Spent() {
+  return (
+    <Single
+      path={STEP.spent}
+      field="spent"
+      title="Roughly how much have you spent on your feet so far?"
+      sub="Shoes, insoles, visits, gadgets. A rough guess is fine."
+      options={[
+        { value: 'under100', label: 'Under $100' },
+        { value: '100-500', label: '$100 to $500' },
+        { value: '500-1000', label: '$500 to $1,000' },
+        { value: 'over1000', label: 'More than $1,000' },
+        { value: 'unsure', label: 'I’d rather not add it up' },
+      ]}
+      next={STEP.heardTried}
+    />
+  );
+}
+
+/** The moment in her day that her minutes follow: something she already does, the likeliest for her scene first. */
+export function AnchorStep() {
+  const a = useFunnel().answers;
+  return (
+    <Single
+      path={STEP.anchor}
+      field="anchor"
+      title={`When will you do your ${a.minutes ?? 5} minutes?`}
+      sub="Pick something you already do every day. New habits stick better when they follow an old one."
+      options={anchorsFor(a)}
+      next={STEP.commit}
+    />
   );
 }
 

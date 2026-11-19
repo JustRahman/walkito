@@ -8,9 +8,9 @@ import { Code, Email } from './screens/email';
 import { HealthData, Privacy, Terms } from './screens/legal';
 import { Plan } from './screens/plan';
 import { Price } from './screens/price';
-import { Age, Day, Focus, Minutes, Safety, SafetyNote, Since, Start, Tried, Wake, When } from './screens/quiz';
+import { Age, AnchorStep, Day, Focus, Minutes, Safety, SafetyNote, Since, Spent, Start, Tried, Wake, When } from './screens/quiz';
 import { StartDay1 } from './screens/start';
-import { Commit, Goals, HeardTried, HeardWhen, Life, Name, Proof, Summary } from './screens/story';
+import { Commit, Goals, HeardTried, HeardWhen, Life, Name, Pattern, Summary } from './screens/story';
 import { After, Building, FeltAnswer, Routine, TryMove } from './screens/try-it';
 import { useFunnel } from './state';
 
@@ -22,6 +22,7 @@ export const ROUTES: Readonly<Record<string, ComponentType>> = {
   [STEP.heardWhen]: HeardWhen,
   [STEP.since]: Since,
   [STEP.tried]: Tried,
+  [STEP.spent]: Spent,
   [STEP.heardTried]: HeardTried,
   [STEP.day]: Day,
   [STEP.start]: Start,
@@ -30,13 +31,14 @@ export const ROUTES: Readonly<Record<string, ComponentType>> = {
   [STEP.minutes]: Minutes,
   [STEP.summary]: Summary,
   [STEP.life]: Life,
-  [STEP.proof]: Proof,
+  [STEP.proof]: Pattern,
   [STEP.goals]: Goals,
   [STEP.move]: TryMove,
   [STEP.after]: After,
   [STEP.felt]: FeltAnswer,
   [STEP.wake]: Wake,
   [STEP.routine]: Routine,
+  [STEP.anchor]: AnchorStep,
   [STEP.commit]: Commit,
   [STEP.building]: Building,
   [STEP.name]: Name,

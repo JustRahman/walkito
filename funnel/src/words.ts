@@ -1,9 +1,10 @@
-import { factsOf, START_LABEL } from './flow';
+import { anchorLabel, burned, factsOf, patternName, sceneOf, spentALot, spentOf, START_LABEL, tickedCount, type Scene } from './flow';
 import type { Answers } from './state';
 
 /**
  * Her own answers, said back to her: the guess after "When do you notice it
- * most?", what she tried, the paragraph half-way. Everything here is built
+ * most?", what she tried, the paragraph half-way, her pattern, her plan in one
+ * sentence. Everything here is built
  * from what she tapped and nothing else, and every function works with any
  * answer missing (a visitor from before v7, or one who came in by a link).
  *
@@ -105,19 +106,21 @@ export const NOT_QUITE = 'Thanks. That helps us get it right.';
 // ── /s/37: what she tried ──────────────────────────────────────────────────
 
 /**
- * Things to wear or use, as they read after "You tried". They act on the foot
- * from outside. `insoles` still means "insoles or new shoes", as its answer
- * card says.
+ * Things to wear or have done, as they read after "You tried". They act on
+ * the foot from outside. `insoles` was "insoles or new shoes" until v7: for an
+ * answer stored then it still says insoles, and nothing about shoes.
  */
 const THINGS: Readonly<Record<string, string>> = {
-  insoles: 'new insoles or shoes',
+  shoes: 'special shoes',
+  insoles: 'insoles',
   roller: 'a roller or massage',
+  shot: 'a shot or splint',
 };
 
 /** Everything she ticked on "What have you already tried?", as a list reads it. A doctor is not something she "tried". */
 const TRIED_NOUN: Readonly<Record<string, string>> = {
-  stretching: 'stretching on your own',
   ...THINGS,
+  stretching: 'stretching on your own',
   videos: 'videos online',
 };
 
@@ -131,14 +134,33 @@ export function sawSomeone(a: Answers): boolean {
   return a.tried?.includes('pt') === true;
 }
 
-/** All of it in one row, a doctor included: "new insoles or shoes, a doctor or physical therapist". Empty when she tried nothing. */
+/** All of it in one row, a doctor included: "insoles, a doctor or physical therapist". Empty when she tried nothing. */
 export function triedRow(a: Answers): string {
   return [...triedNouns(a), ...(sawSomeone(a) ? ['a doctor or physical therapist'] : [])].join(', ');
 }
 
-/** "5 minutes a day, in a chair": the time and the place she chose. */
+/**
+ * Her time, as she chose it: "with my morning coffee, 5 minutes" once she has
+ * picked the moment her minutes follow, and until then (or for a visitor from
+ * before v7) "5 minutes a day, in a chair".
+ */
 export function herTime(a: Answers): string {
+  if (a.anchor != null) return `${anchorLabel(a.anchor, a).toLowerCase()}, ${a.minutes ?? 5} minutes`;
   return `${a.minutes ?? 5} minutes a day, ${START_LABEL[a.start ?? 'chair'].toLowerCase()}`;
+}
+
+/** What she said she has spent, as it reads after "You've spent". Nothing for "I'd rather not add it up" or no answer. */
+export function spentSaid(a: Answers): string | null {
+  const spent = spentOf(a);
+  return spent === 'under100'
+    ? 'less than $100'
+    : spent === '100-500'
+      ? 'between $100 and $500'
+      : spent === '500-1000'
+        ? 'more than $500'
+        : spent === 'over1000'
+          ? 'more than $1,000'
+          : null;
 }
 
 export type Release = { title: string; lines: string[]; cta: string };
@@ -147,8 +169,10 @@ export type Release = { title: string; lines: string[]; cta: string };
  * After "What have you already tried?": built from her own ticks, so it is
  * never the same three things for everyone. What she bought helps for a while
  * and trains nothing; what she did on her own came with no plan. Neither is
- * her doing. A doctor or physical therapist is never part of that list:
- * Walkito does not replace one.
+ * her doing. A doctor or physical therapist is never part of that list.
+ *
+ * Short on purpose: with every box ticked and $500 spent it is 69 words, so
+ * the whole card is in view over the button (words.test.ts counts them).
  */
 export function releaseOf(a: Answers): Release {
   const tried = a.tried ?? [];
@@ -161,19 +185,21 @@ export function releaseOf(a: Answers): Release {
 
   if (things.length === 1) lines.push(`You tried ${things[0]}. That helps for a while. It doesn’t make your foot any stronger.`);
   else if (things.length === 2) lines.push(`You tried ${listOf(things)}. Both help for a while. Neither one makes your foot any stronger.`);
-  else if (things.length > 2) lines.push(`You tried ${listOf(things)}. They all help for a while. None of them makes your foot any stronger.`);
+  else if (things.length > 2) lines.push(`You tried ${listOf(things)}. It all helps for a while. None of it makes your foot stronger.`);
 
-  const too = things.length > 0 ? ' too' : '';
-  if (stretched && videos) lines.push(`You stretched and followed videos on your own${too}. Nobody told you which moves were yours, or when to move on.`);
-  else if (stretched) lines.push(`You stretched on your own${too}, with no plan to follow.`);
-  else if (videos) lines.push(`You followed videos online${too}, and nobody told you which moves were yours.`);
+  if (things.length > 0) {
+    // Said second, in a line: her list above is already long.
+    if (stretched && videos) lines.push('Stretching and videos came with no plan.');
+    else if (stretched) lines.push('The stretching came with no plan.');
+    else if (videos) lines.push('The videos came with no plan.');
+  } else if (stretched && videos) lines.push('You stretched and followed videos on your own. Nobody told you which moves were yours, or when to move on.');
+  else if (stretched) lines.push('You stretched on your own, with no plan to follow.');
+  else if (videos) lines.push('You followed videos online, and nobody told you which moves were yours.');
 
   const own = lines.length > 0;
-  if (own) lines.push('That part’s been missing, and it’s where your plan starts.');
-  if (sawSomeone(a))
-    lines.push(
-      'Walkito doesn’t replace your doctor or physical therapist. Use it on the days in between, for the part there’s never time for in an appointment.',
-    );
+  if (own) lines.push('That part’s been missing. Your plan starts there.');
+  if (sawSomeone(a)) lines.push('Keep your doctor or physical therapist. Use this on the days in between.');
+  if (spentALot(a)) lines.push('After that much money, doubt is fair. You don’t have to believe this yet.');
 
   if (own) return { title: 'You didn’t do anything wrong.', lines, cta: 'Show me the part I haven’t tried' };
   if (sawSomeone(a)) return { title: 'You did the right thing.', lines, cta: 'Keep going' };
@@ -229,7 +255,97 @@ export function summaryOf(a: Answers): string[] {
   if (tried.length > 0) out.push(`You’ve tried ${listOf(tried)}${sawSomeone(a) ? ', and you’ve seen a doctor or physical therapist' : ''}.`);
   else if (sawSomeone(a)) out.push('You’ve seen a doctor or physical therapist about it.');
   else if (a.tried?.includes('nothing') === true) out.push('You haven’t tried anything for it yet.');
+  const spent = spentSaid(a);
+  if (spent != null) out.push(`You’ve spent ${spent} on your feet so far.`);
   out.push(`You want something you can do ${WHERE[a.start ?? 'chair']}, in about ${a.minutes ?? 5} minutes a day.`);
   if (factsOf(a).safetyFlag) out.push('And because of what you told us, your first week stays seated.');
   return out;
+}
+
+// ── /s/28: her pattern ─────────────────────────────────────────────────────
+
+/**
+ * Why each scene happens, as something she did not cause and can change, and
+ * what her plan does about it. About 50 words each. Nothing here says what she
+ * has: the card calls it a description of her answers, and says it is not a
+ * diagnosis. Never the competitors' story of a foot that is injured again
+ * every morning, never her age, never her weight.
+ */
+const WHY: Readonly<Record<Scene, string[]>> = {
+  morning: [
+    'It’s one of the most common kinds, and it’s not something you did.',
+    'While you sleep or sit, the tissue under your foot tightens up. Then the first steps ask it to hold you up, cold.',
+    'A well-known trial timed its stretches for that exact moment, so your plan starts there.',
+  ],
+  shift: [
+    'You’re not weak, and you’re not being dramatic.',
+    'Hours on hard floors ask more of two feet than anything ever trained them for. Shoes and insoles soften the floor. Nothing trains the muscles holding you up.',
+    'So your plan is made for after the shoes come off, with rest days built in.',
+  ],
+  walks: [
+    'You didn’t give up on walking. Your feet stopped you.',
+    'Then less walking left them a little weaker, and every walk cost more. That’s a loop, and willpower has nothing to do with it.',
+    'Your plan starts at home, a few minutes at a time, and works back toward your walk.',
+  ],
+  steady: [
+    'Balance starts in your feet, and almost nobody is ever told that.',
+    'Feet that don’t get much practice lose some of their strength and feel. That comes down to practice, and practice is something you can start from a chair.',
+    'Your plan starts easy, with something to hold whenever you stand.',
+  ],
+  sport: [
+    'You kept training. Your feet never got training of their own to match.',
+    'Resting it helps for a bit. Getting the foot stronger is what lasts.',
+    'So your plan adds the foot work, a few minutes before or after your runs.',
+  ],
+  general: [
+    'Most of what people try for sore feet cushions them or rests them. Very little trains them.',
+    'Your plan is the training part, a few minutes a day.',
+  ],
+};
+
+export type Pattern = { title: string; lines: string[] };
+
+/**
+ * The pay-off of the ticks: her pattern, named the way a neighbor would. The
+ * count is of what she ticked; with nothing ticked the name comes from her
+ * earlier answers and says so. "Nothing's broken" opens the general card only,
+ * and never for someone who told us about a recent surgery or injury.
+ */
+export function patternOf(a: Answers): Pattern {
+  const scene = sceneOf(a);
+  const n = tickedCount(a);
+  const name = patternName(a);
+  const lines = [...WHY[scene]];
+  if (scene === 'general' && !factsOf(a).safetyFlag) lines.unshift('Nothing’s broken. Your feet just haven’t been asked to do any work in years.');
+  // For someone who has tried everything: what all of it had in common. The shift and general cards already say it.
+  if (burned(a) && scene !== 'shift' && scene !== 'general')
+    lines.push('The things you tried held your foot or soothed it. This is the part where it works.');
+  return { title: n > 0 ? `You ticked ${n}. That’s ${name}.` : `From what you told us, it’s ${name}.`, lines };
+}
+
+// ── /s/31: her plan in one sentence ────────────────────────────────────────
+
+/**
+ * Her minutes tied to something she already does, in her own first person, for
+ * her to read and agree to. Null until she has picked that moment (a visitor
+ * from before v7): the screen then asks the old question instead.
+ */
+export function planSentence(a: Answers): string | null {
+  if (a.anchor == null) return null;
+  const mine = `my ${a.minutes ?? 5} minutes`;
+  // Told us about something to plan around: her first week is seated, wherever she chose.
+  const standing = a.start === 'standing' && !factsOf(a).safetyFlag;
+  const place = a.start === 'bed' ? 'on the edge of the bed' : standing ? 'at the counter' : 'in my chair';
+  switch (a.anchor) {
+    case 'bed':
+      return standing ? `Right after I get out of bed, I do ${mine} at the counter.` : `Before I get out of bed, I do ${mine} on the edge of it.`;
+    case 'coffee':
+      return `After I pour my morning coffee, I do ${mine} ${place}.`;
+    case 'home':
+      return `When I get home and the shoes come off, I do ${mine} ${place}.`;
+    case 'show':
+      return `When my evening show starts, I do ${mine} ${place}.`;
+    case 'walk':
+      return `Before my ${sceneOf(a) === 'sport' ? 'run' : 'walk'}, I do ${mine} ${place}.`;
+  }
 }

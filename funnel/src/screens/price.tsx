@@ -15,7 +15,7 @@ import {
   url,
   yearlySaving,
 } from '../config';
-import { addDays, firstName, kindOf, PLAN_NAME, planLine, shortDate, STEP, wakeOf } from '../flow';
+import { addDays, firstName, PLAN_NAME, planLine, sceneOf, shortDate, STEP, wakeOf } from '../flow';
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
@@ -232,7 +232,7 @@ export function Price() {
           <em>today</em>
         </h1>
         <p className="lead">
-          {PLAN_NAME[kindOf(s.answers)]} · {planLine(s.answers)}
+          {PLAN_NAME[sceneOf(s.answers)]} · {planLine(s.answers)}
         </p>
         <p className="small">Your first-step routine starts tomorrow morning.</p>
       </div>

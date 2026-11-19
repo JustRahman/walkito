@@ -2,7 +2,34 @@ import { describe, expect, test } from 'bun:test';
 
 import { ROUTES } from './App';
 import { PRICE_OFFER, PRICE_VARIANTS, yearlyPerMonth, yearlySaving } from './config';
-import { adOf, clockLabel, lifeFor, mentionedGoals, missingStep, ORDER, planLine, planView, prevOf, RETIRED, sectionOf, sessionOne, STEP, WAKE_TIMES } from './flow';
+import {
+  adOf,
+  anchorsFor,
+  burned,
+  clockLabel,
+  goalLabels,
+  goalsFor,
+  lifeFor,
+  mentionedGoals,
+  missingStep,
+  ORDER,
+  paidFor,
+  patternName,
+  PLAN_NAME,
+  planLine,
+  planView,
+  prevOf,
+  RETIRED,
+  sceneOf,
+  sectionOf,
+  sessionOne,
+  spentALot,
+  spentOf,
+  STEP,
+  tickedCount,
+  todayCount,
+  WAKE_TIMES,
+} from './flow';
 import type { Answers, FunnelState } from './state';
 
 const ANSWERS: Answers = {
@@ -63,6 +90,8 @@ describe('the funnel’s paths', () => {
     expect(sectionOf(STEP.focus)).toBe('About you');
     expect(sectionOf('/s/7/note')).toBe('About you');
     expect(sectionOf(STEP.summary)).toBe('About you');
+    expect(sectionOf(STEP.spent)).toBe('About you');
+    expect(sectionOf(STEP.anchor)).toBe('Your plan');
     expect(sectionOf(STEP.life)).toBe('Your goals');
     expect(sectionOf(STEP.goals)).toBe('Your goals');
     expect(sectionOf(STEP.move)).toBe('Your first move');
@@ -93,6 +122,8 @@ describe('the funnel’s paths', () => {
     expect(prevOf('/s/7/note')).toBe(STEP.safety);
     expect(prevOf(STEP.wake)).toBe(STEP.felt);
     expect(prevOf(STEP.name)).toBe(STEP.commit);
+    expect(prevOf(STEP.commit)).toBe(STEP.anchor);
+    expect(prevOf(STEP.anchor)).toBe(STEP.routine);
     expect(prevOf(STEP.me)).toBeNull();
     for (const path of ORDER.slice(1)) {
       expect(ORDER.indexOf(prevOf(path)!), path).toBeLessThan(ORDER.indexOf(path));
@@ -100,10 +131,44 @@ describe('the funnel’s paths', () => {
     }
   });
 
-  test('the order is the one the founders approved', () => {
+  test('the order is the one the founders approved: v6’s, with /s/39 after what she tried and /s/41 before her sentence', () => {
     expect(ORDER.join(' ')).toBe(
-      '/s/1 /s/2 /s/3 /s/36 /s/21 /s/5 /s/37 /s/22 /s/6 /s/7 /s/9 /s/38 /s/23 /s/28 /s/26 /s/11 /s/12 /s/32 /s/34 /s/35 /s/31 /s/14 /s/20 /s/15 /s/16 /s/17 /s/18',
+      '/s/1 /s/2 /s/3 /s/36 /s/21 /s/5 /s/39 /s/37 /s/22 /s/6 /s/7 /s/9 /s/38 /s/23 /s/28 /s/26 /s/11 /s/12 /s/32 /s/34 /s/35 /s/41 /s/31 /s/14 /s/20 /s/15 /s/16 /s/17 /s/18',
     );
+  });
+
+  test('what it cost is only asked of someone who paid for something, and Back passes over it for anyone else', () => {
+    expect(paidFor(['stretching', 'videos'])).toBe(false);
+    expect(paidFor(['nothing'])).toBe(false);
+    expect(paidFor(undefined)).toBe(false);
+    for (const paid of ['shoes', 'insoles', 'roller', 'pt', 'shot']) expect(paidFor(['stretching', paid]), paid).toBe(true);
+    expect(prevOf(STEP.heardTried, { tried: ['stretching'] })).toBe(STEP.tried);
+    expect(prevOf(STEP.heardTried, { tried: ['nothing'] })).toBe(STEP.tried);
+    expect(prevOf(STEP.heardTried, {})).toBe(STEP.tried);
+    expect(prevOf(STEP.heardTried, { tried: ['insoles'] })).toBe(STEP.spent);
+    expect(prevOf(STEP.spent, { tried: ['insoles'] })).toBe(STEP.tried);
+    // She told us a figure, then went back and unticked everything she paid for: the figure is not hers any more.
+    expect(spentOf({ tried: ['insoles'], spent: 'over1000' })).toBe('over1000');
+    expect(spentOf({ tried: ['stretching'], spent: 'over1000' })).toBeUndefined();
+    expect(spentALot({ tried: ['stretching'], spent: 'over1000' })).toBe(false);
+    expect(spentALot({ tried: ['pt'], spent: '500-1000' })).toBe(true);
+    expect(spentALot({ tried: ['pt'], spent: '100-500' })).toBe(false);
+    expect(spentALot({ tried: ['pt'], spent: 'unsure' })).toBe(false);
+  });
+
+  test('no new answer is required: a visitor from before v7 is never sent back for one', () => {
+    // Yesterday's stored state: v6's answers and nothing else, as an email's link to the price finds it.
+    const yesterday = state(ANSWERS, { email: 'sam@example.com', verified: true, tryIt: { seconds: 60, felt: 'lighter' } });
+    expect(yesterday.answers.spent).toBeUndefined();
+    expect(yesterday.answers.anchor).toBeUndefined();
+    for (const path of ORDER) expect(missingStep(path, yesterday), path).toBeNull();
+    // The same with every tick of v6's on it.
+    const full = state({ ...ANSWERS, tried: ['stretching', 'insoles', 'pt', 'roller', 'videos'], life: ['mornings', 'walks', 'shift', 'shoes', 'evening', 'runs'], goals: ['mornings', 'walk', 'shift', 'shoes', 'evenings', 'runs'] });
+    expect(goalLabels(full.answers).length).toBe(6);
+    expect(mentionedGoals(full.answers).length).toBeGreaterThan(3);
+    expect(tickedCount(full.answers)).toBe(6);
+    expect(goalsFor(full.answers).every((o) => typeof o.label === 'string' && o.label !== '')).toBe(true);
+    expect(PLAN_NAME[sceneOf(full.answers)]).toBe('First Steps Plan');
   });
 
   test('an ad has a first screen of its own only under the utm_content its links carry', () => {
@@ -151,6 +216,104 @@ describe('what the plan and the price say', () => {
     expect(WAKE_TIMES.map((w) => clockLabel(w.value))).toEqual(['5:30 AM', '6:30 AM', '7:30 AM', '8:30 AM', '9:30 AM']);
     expect(clockLabel('12:05')).toBe('12:05 PM');
     expect(clockLabel('00:15')).toBe('12:15 AM');
+  });
+
+  test('her scene: the first rule that fits, and general when nothing does', () => {
+    // A runner first, whatever else she said.
+    expect(sceneOf({ day: 'run_short', focus: 'steady', when: 'morning' })).toBe('sport');
+    expect(sceneOf({ day: 'run_long', focus: 'heel', when: 'evening' })).toBe('sport');
+    // Then feeling unsteady, before any time of day.
+    expect(sceneOf({ focus: 'steady', when: 'morning', day: 'feet' })).toBe('steady');
+    // Then stiff after rest: the morning, or standing up after sitting.
+    expect(sceneOf({ focus: 'heel', when: 'morning', day: 'feet' })).toBe('morning');
+    expect(sceneOf({ focus: 'allday', when: 'sitting' })).toBe('morning');
+    // Then the long day: on her feet, sore after a day on them, or by the evening.
+    expect(sceneOf({ focus: 'heel', when: 'running', day: 'feet' })).toBe('shift');
+    expect(sceneOf({ focus: 'allday', when: 'varies' })).toBe('shift');
+    expect(sceneOf({ focus: 'flat', when: 'evening', day: 'sit8' })).toBe('shift');
+    // Then her walks.
+    expect(sceneOf({ focus: 'heel', when: 'running', day: 'sit4' })).toBe('walks');
+    // Anything else, and anyone with answers missing.
+    expect(sceneOf({ focus: 'moving', when: 'allday', day: 'sit8' })).toBe('general');
+    expect(sceneOf({ focus: 'flat', when: 'varies' })).toBe('general');
+    expect(sceneOf({})).toBe('general');
+  });
+
+  test('"tried everything" is a layer on any scene: three paid things, or a year and two things, or $500', () => {
+    expect(burned({})).toBe(false);
+    expect(burned({ tried: ['nothing'], since: 'years' })).toBe(false);
+    expect(burned({ tried: ['shoes', 'insoles'], since: 'months' })).toBe(false);
+    expect(burned({ tried: ['shoes', 'insoles', 'shot'], since: 'new' })).toBe(true);
+    // Stretching and videos cost nothing, so three things with one paid is not it in the first year.
+    expect(burned({ tried: ['stretching', 'videos', 'insoles'], since: 'months' })).toBe(false);
+    expect(burned({ tried: ['stretching', 'videos'], since: 'year' })).toBe(true);
+    expect(burned({ tried: ['stretching'], since: 'years' })).toBe(false);
+    expect(burned({ tried: ['pt'], since: 'new', spent: '500-1000' })).toBe(true);
+    expect(burned({ tried: ['pt'], since: 'new', spent: 'over1000' })).toBe(true);
+    expect(burned({ tried: ['pt'], since: 'new', spent: '100-500' })).toBe(false);
+    // An answer from before v7: "insoles or new shoes" is one thing.
+    expect(burned({ tried: ['insoles', 'roller'], since: 'months' })).toBe(false);
+  });
+
+  test('each scene has its plan’s name, its pattern’s name and five private details; two more for someone who has tried everything', () => {
+    const scenes: Array<[Answers, string, string, string]> = [
+      [{ focus: 'heel', when: 'morning' }, 'First Steps Plan', 'the morning-stiff kind', 'I know the shortest way to the bathroom'],
+      [{ focus: 'allday', when: 'evening', day: 'feet' }, 'Long-Day Feet Plan', 'the long-shift kind', 'By the last hours I’m counting down'],
+      [{ focus: 'flat', when: 'evening', day: 'sit8' }, 'Long-Day Feet Plan', 'the long-day kind', 'When I get home I don’t want to move'],
+      [{ focus: 'heel', when: 'running' }, 'Back to Your Walk Plan', 'the shrinking-walks kind', 'I’ve turned back halfway'],
+      [{ focus: 'steady', when: 'varies' }, 'Steady Feet Plan', 'the watch-every-step kind', 'Nobody ever mentioned my feet'],
+      [{ focus: 'heel', when: 'morning', day: 'run_short' }, 'Runner’s Feet', 'the runner’s kind', 'I cut my runs short'],
+      [{ focus: 'moving', when: 'varies' }, 'Daily Feet Reset', 'the comes-and-goes kind', 'I’ve stopped mentioning it'],
+    ];
+    for (const [a, plan, pattern, line] of scenes) {
+      expect(PLAN_NAME[sceneOf(a)], pattern).toBe(plan);
+      expect(patternName(a)).toBe(pattern);
+      const lines = lifeFor(a);
+      expect(lines.length, pattern).toBe(5);
+      expect(lines.some((o) => o.label === line), line).toBe(true);
+      const more = lifeFor({ ...a, tried: ['shoes', 'insoles', 'shot'] });
+      expect(more.length, pattern).toBe(7);
+      expect(more.at(-2)!.label).toBe('I have a drawer of things that helped for two weeks');
+    }
+    // No stored value means two things.
+    const values = scenes.flatMap(([a]) => lifeFor({ ...a, tried: ['shoes', 'insoles', 'shot'] }).map((o) => `${o.value}|${o.label}`));
+    expect(new Set([...new Set(values)].map((v) => v.split('|')[0])).size).toBe(new Set(values).size);
+  });
+
+  test('her goals: six that fit her scene, what she mentioned first, kept in the order she tapped', () => {
+    const morning: Answers = { focus: 'heel', when: 'morning', age: '60-69' };
+    expect(goalsFor(morning).map((o) => o.value)).toEqual(['mornings', 'walk', 'stairs', 'shoes', 'trips', 'grandkids']);
+    expect(goalsFor(morning)[0]!.label).toBe('Getting out of bed without bracing for it');
+    // She ticked holding the wall (stairs) and walking like someone older (her walk): those two lead, and are marked.
+    const ticked = goalsFor({ ...morning, life: ['wall', 'older'] });
+    expect(ticked.map((o) => o.value)).toEqual(['stairs', 'walk', 'mornings', 'shoes', 'trips', 'grandkids']);
+    expect(ticked.map((o) => o.mentioned)).toEqual([true, true, false, false, false, false]);
+    // Grandkids are not put to someone under 50.
+    expect(goalsFor({ ...morning, age: 'under50' }).some((o) => o.value === 'grandkids')).toBe(false);
+    // The dog's walk is for the walks, the run for a runner.
+    expect(goalsFor({ focus: 'heel', when: 'running' }).map((o) => o.value)).toContain('dog');
+    expect(goalsFor({ focus: 'heel', when: 'running' }).some((o) => o.value === 'runs')).toBe(false);
+    expect(goalsFor({ day: 'run_short' })[0]!.value).toBe('runs');
+    // The first one she tapped is first, wherever it is in the list.
+    expect(goalLabels({ goals: ['trips', 'mornings'] })).toEqual(['Trips and outings without planning around my feet', 'Getting out of bed without bracing for it']);
+    expect(goalLabels({ goals: ['from_a_later_build', 'dog'] })).toEqual(['The dog’s whole walk']);
+    expect(goalLabels({})).toEqual([]);
+  });
+
+  test('the moment her minutes follow: the same five for everyone, her scene’s likeliest first', () => {
+    expect(anchorsFor({ focus: 'heel', when: 'morning' })[0]).toEqual({ value: 'bed', label: 'Before I get out of bed' });
+    expect(anchorsFor({ day: 'feet' })[0]!.label).toBe('When I get home and the shoes come off');
+    expect(anchorsFor({ when: 'running' })[0]!.label).toBe('Before my walk');
+    expect(anchorsFor({ day: 'run_short' })[0]).toEqual({ value: 'walk', label: 'Before my run' });
+    for (const a of [{}, { focus: 'steady' }, { day: 'feet' }, { day: 'run_long' }] as Answers[])
+      expect(anchorsFor(a).map((o) => o.value).sort()).toEqual(['bed', 'coffee', 'home', 'show', 'walk']);
+  });
+
+  test('"move 1 of N" is the number of moves her plan page shows for today', () => {
+    const now = new Date(2026, 10, 18, 9, 0);
+    const tried = state(ANSWERS, { tryIt: { seconds: 60, felt: 'lighter' } });
+    expect(todayCount(tried, now)).toBe(planView(tried, now).days[0]!.moves.length);
+    expect(todayCount(tried, now)).toBeGreaterThan(1);
   });
 
   test('running is only asked of a runner', () => {
