@@ -27,7 +27,9 @@ import {
   planLine,
   planView,
   prevOf,
+  remindAtFor,
   RETIRED,
+  savedPlan,
   sceneOf,
   sectionOf,
   sessionOne,
@@ -474,6 +476,57 @@ describe('what the plan and the price say', () => {
     expect(price.includes("if (offerOf(s, new Date()) === 'over') return (setOfferShownNow(false), null);\n            return buyOffer(consentText);")).toBe(true);
     // What the card says is what the rule does.
     expect(price.includes('This offer is shown once. It stays here until midnight tonight.')).toBe(true);
+  });
+
+  test('after Day 1: her 0-10 number is saved only with her health consent, and a skip is never saved as a number', () => {
+    const answers: Answers = { minutes: 5, focus: 'arch' };
+    const agreed = { health: true, marketing: false };
+    expect(savedPlan(state(answers, { consents: agreed, feeling: 'ok', firstSteps: 6, remindAt: 'morning', remindBy: 'email' }))).toEqual({
+      minutes: 5,
+      focus: 'arch',
+      remindAt: 'morning',
+      remindBy: 'email',
+      feeling: 'ok',
+      firstSteps: 6,
+    });
+    // Zero is an answer.
+    expect(savedPlan(state(answers, { consents: agreed, firstSteps: 0 })).firstSteps).toBe(0);
+    expect(savedPlan(state(answers, { consents: agreed, firstSteps: 'skipped' })).firstSteps).toBeUndefined();
+    for (const consents of [undefined, { health: false, marketing: true }]) {
+      const row = savedPlan(state(answers, { consents, feeling: 'hard', firstSteps: 8, remindAt: 'evening' }));
+      expect([row.firstSteps, row.feeling, row.focus]).toEqual([undefined, undefined, undefined]);
+      expect([row.minutes, row.remindAt]).toEqual([5, 'evening']);
+    }
+  });
+
+  test('/s/start sends analytics four events and the number is in none of them', () => {
+    const start = readFileSync(join(import.meta.dir, 'screens/start.tsx'), 'utf8');
+    const calls = [...start.matchAll(/track\(([^;]*)\);/g)].map((m) => m[1]!);
+    expect(calls.map((c) => c.split("'")[1]).sort()).toEqual(['access_confirmed', 'reminder_chosen', 'session1_completed', 'session1_started']);
+    for (const call of calls) expect(/firstSteps|feeling/.test(call)).toBe(false);
+    // The number goes two places only: this browser's state, and the plan row savedPlan guards.
+    expect(start.match(/firstSteps: /g)?.length).toBe(2);
+    expect(start.includes('void saveAnswers({ plan: savedPlan({ ...s, ...patch }) });')).toBe(true);
+    const analytics = readFileSync(join(import.meta.dir, 'lib/analytics.ts'), 'utf8');
+    expect(/first_?steps/i.test(analytics)).toBe(false);
+  });
+
+  test('the reminder’s time comes from the moment she picked: morning for bed and coffee, evening for home and her show, asked for a walk', () => {
+    expect(remindAtFor({ anchor: 'bed' })).toBe('morning');
+    expect(remindAtFor({ anchor: 'coffee' })).toBe('morning');
+    expect(remindAtFor({ anchor: 'home' })).toBe('evening');
+    expect(remindAtFor({ anchor: 'show' })).toBe('evening');
+    expect(remindAtFor({ anchor: 'walk' })).toBeUndefined();
+    // A visitor from before v7 never picked one: she is asked, as before.
+    expect(remindAtFor({})).toBeUndefined();
+  });
+
+  test('/s/start leads with the rest of today’s session, and the app comes after it', () => {
+    const start = readFileSync(join(import.meta.dir, 'screens/start.tsx'), 'utf8');
+    const first = start.slice(start.indexOf('<h1>You’re in.</h1>'), start.indexOf('Move {index + 1} of {moves.length}'));
+    expect(first.indexOf('today’s session:')).toBeGreaterThan(0);
+    expect(first.indexOf('today’s session:')).toBeLessThan(first.indexOf('<GetTheApp'));
+    expect(first.indexOf("{begun ? 'Finish today’s session' : 'Start today’s session'}")).toBeLessThan(first.indexOf('<GetTheApp'));
   });
 
   test('the prices are Rahman’s: $4.99 then $9.99 a month, $49.99 a year, $29.99 for the one offer', () => {

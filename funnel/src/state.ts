@@ -65,6 +65,8 @@ export type FunnelState = {
   /** When it was first shown, as an ISO instant. A visitor from before v7 has none: for her it has ended. */
   offerShownAt?: string;
   feeling?: 'easy' | 'ok' | 'hard';
+  /** Her first steps that morning, 0 to 10, asked once after Day 1. Kept here; saved with her plan only with her health consent; never sent to analytics. */
+  firstSteps?: number | 'skipped';
   remindAt?: 'morning' | 'midday' | 'evening';
   remindBy?: 'email' | 'app';
   session1?: 'started' | 'done';

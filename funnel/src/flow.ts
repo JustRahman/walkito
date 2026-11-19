@@ -248,6 +248,26 @@ export function minutesOf(moves: readonly Move[]): number {
   return Math.max(1, Math.round(moves.reduce((sum, m) => sum + Math.min(MOVE_CAP, m.seconds), 0) / 60));
 }
 
+/** When the reminder goes, read from the moment she tied her session to. "Before my walk" is any hour of the day, so that one is asked. */
+export function remindAtFor(a: Answers): FunnelState['remindAt'] {
+  if (a.anchor === 'bed' || a.anchor === 'coffee') return 'morning';
+  if (a.anchor === 'home' || a.anchor === 'show') return 'evening';
+  return undefined;
+}
+
+/** What /s/start saves with her plan. Her focus, how the session felt and her 0-10 number say something about her body: they go only with her health consent. */
+export function savedPlan(s: FunnelState) {
+  const health = s.consents?.health === true;
+  return {
+    minutes: s.answers.minutes,
+    focus: health ? s.answers.focus : undefined,
+    remindAt: s.remindAt,
+    remindBy: s.remindBy,
+    feeling: health ? s.feeling : undefined,
+    firstSteps: health && typeof s.firstSteps === 'number' ? s.firstSteps : undefined,
+  };
+}
+
 export function appLink(from: string): string {
   const url = new URL(ONELINK);
   url.searchParams.set('pid', 'web_funnel');

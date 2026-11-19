@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { url, YEARLY_UPGRADE_ENABLED } from '../config';
-import { minutesOf, MOVE_CAP, sessionOne, STEP } from '../flow';
+import { anchorLabel, minutesOf, MOVE_CAP, remindAtFor, savedPlan, sessionOne, STEP } from '../flow';
 import { access, saveAnswers } from '../lib/account';
 import { track } from '../lib/analytics';
 import { go } from '../router';
@@ -87,13 +87,12 @@ export function StartDay1() {
         <>
           <h1>You’re in.</h1>
           <AccessLine status={status} email={s.email} />
-          <GetTheApp email={s.email} via={s.via} />
           <section className="stack">
-            <h2>{begun ? 'Or finish today’s session here' : 'Or start today’s session here'}</h2>
-            <p className="small">
-              {moves.length === 1 ? 'One move' : `${moves.length} moves`}
-              {begun ? ' left' : ''}, about {minutes} {minutes > 1 ? 'minutes' : 'minute'}, in your browser. At your own pace.
-            </p>
+            <h2>
+              {begun ? 'Finish' : 'Start'} today’s session: {moves.length === 1 ? '1 move' : `${moves.length} moves`}
+              {begun ? ' left' : ''}, about {minutes} {minutes > 1 ? 'minutes' : 'minute'}
+            </h2>
+            <p className="small">Right here in your browser, at your own pace.</p>
             {moves.map((m) => (
               <div className="card move" key={m.id}>
                 <img src={m.poster} alt="" />
@@ -105,7 +104,7 @@ export function StartDay1() {
             ))}
           </section>
           <button
-            className="btn secondary"
+            className="btn"
             type="button"
             onClick={() => {
               update({ session1: 'started' });
@@ -113,8 +112,13 @@ export function StartDay1() {
               begin(0);
             }}
           >
-            {begun ? 'Finish today’s session in the browser' : 'Start today’s session in the browser'}
+            {begun ? 'Finish today’s session' : 'Start today’s session'}
           </button>
+          {/* The app comes second: in full once Day 1 is done, and here for whoever wants it first. */}
+          <details>
+            <summary>Rather do it in the app?</summary>
+            <GetTheApp email={s.email} via={s.via} plain />
+          </details>
         </>
       ) : (
         <>
@@ -144,13 +148,13 @@ export function StartDay1() {
 }
 
 /** The one thing to do after paying: the app, signed in to this same account. */
-function GetTheApp({ email, via, from = 'start' }: { email?: string; via?: 'google' | 'email'; from?: string }) {
+function GetTheApp({ email, via, from = 'start', plain = false }: { email?: string; via?: 'google' | 'email'; from?: string; plain?: boolean }) {
   const ua = navigator.userAgent;
   const android = /Android/.test(ua);
   const ios = /iPhone|iPad|iPod/.test(ua);
   const address = <b>{email ?? 'the email you used here'}</b>;
   return (
-    <div className="card stack gap-l">
+    <div className={plain ? 'stack gap-l' : 'card stack gap-l'}>
       <img className="hero" style={{ height: 210 }} src={url('/img/phone-home.webp')} alt="The Walkito app" />
       <div className="stack gap-s center">
         <h2>Now get the app</h2>
@@ -188,12 +192,21 @@ function AccessLine({ status, email }: { status: 'checking' | 'yes' | 'slow'; em
   return <p className="caption">Setting up your account…</p>;
 }
 
+const REMIND_AT = { morning: 'in the morning', midday: 'around midday', evening: 'in the evening' } as const;
+
 function AfterSession() {
   const s = useFunnel();
+  const [pickTime, setPickTime] = useState(false);
+  /** The time her own moment already says. She can still pick another. */
+  const preset = remindAtFor(s.answers);
+  const time = s.remindAt ?? (pickTime ? undefined : preset);
   const save = (patch: Partial<FunnelState>) => {
     update(patch);
-    const next = { ...s, ...patch };
-    void saveAnswers({ plan: { minutes: next.answers.minutes, focus: s.consents?.health === true ? next.answers.focus : undefined, remindAt: next.remindAt, remindBy: next.remindBy, feeling: s.consents?.health === true ? next.feeling : undefined } });
+    void saveAnswers({ plan: savedPlan({ ...s, ...patch }) });
+  };
+  const remindBy = (channel: 'email' | 'app') => {
+    save({ remindAt: time, remindBy: channel });
+    track('reminder_chosen', { time: time ?? '', channel });
   };
   return (
     <Page footer>
@@ -213,9 +226,27 @@ function AfterSession() {
             </Choice>
           ))}
         </section>
-      ) : s.remindAt == null ? (
+      ) : s.firstSteps == null && s.remindBy == null ? (
         <section className="stack">
           <p className="lead">Thank you. Tomorrow’s session takes that into account.</p>
+          <h2>One number for later.</h2>
+          <p>How were your first steps this morning, 0 to 10?</p>
+          <p className="caption">0 is no pain. 10 is the worst it gets.</p>
+          {/* Hers alone: kept on this device, saved with her plan only with her health consent, and in no analytics event. */}
+          <div className="scale">
+            {Array.from({ length: 11 }, (_, n) => (
+              <button key={n} type="button" aria-label={`${n} out of 10`} onClick={() => save({ firstSteps: n })}>
+                {n}
+              </button>
+            ))}
+          </div>
+          <p className="caption">{s.consents?.health === true ? 'We keep it with your plan.' : 'It stays on this device.'}</p>
+          <button className="btn quiet" type="button" onClick={() => save({ firstSteps: 'skipped' })}>
+            Skip
+          </button>
+        </section>
+      ) : time == null ? (
+        <section className="stack">
           <h2>When should we remind you?</h2>
           {(
             [
@@ -232,27 +263,23 @@ function AfterSession() {
       ) : s.remindBy == null ? (
         <section className="stack">
           <h2>How should we remind you?</h2>
-          <Choice
-            onClick={() => {
-              save({ remindBy: 'email' });
-              track('reminder_chosen', { time: s.remindAt ?? '', channel: 'email' });
-            }}
-          >
-            By email
-          </Choice>
-          <Choice
-            onClick={() => {
-              save({ remindBy: 'app' });
-              track('reminder_chosen', { time: s.remindAt ?? '', channel: 'app' });
-            }}
-          >
-            With a notification from the app
-          </Choice>
+          {s.remindAt == null && s.answers.anchor != null && (
+            <p className="small">
+              You picked “{anchorLabel(s.answers.anchor, s.answers)}”, so we’ll remind you {REMIND_AT[time]}.
+            </p>
+          )}
+          <Choice onClick={() => remindBy('email')}>By email</Choice>
+          <Choice onClick={() => remindBy('app')}>With a notification from the app</Choice>
+          {s.remindAt == null && (
+            <button className="btn quiet" type="button" onClick={() => setPickTime(true)}>
+              Pick another time
+            </button>
+          )}
         </section>
       ) : (
         <section className="stack gap-l">
           <p className="lead">
-            Done. We will remind you {s.remindAt === 'morning' ? 'in the morning' : s.remindAt === 'midday' ? 'around midday' : 'in the evening'}
+            Done. We will remind you {REMIND_AT[s.remindAt ?? 'morning']}
             {s.remindBy === 'email' ? ' by email.' : ' once you have the app.'}
           </p>
           <GetTheApp email={s.email} via={s.via} from="success" />
