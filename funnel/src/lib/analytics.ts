@@ -3,7 +3,7 @@ import type { PostHog } from 'posthog-js';
 import { env } from '../config';
 import { getState } from '../state';
 import { accessToken, currentUser } from './account';
-import { matchOf, storeMatch, storedMatch, type Match } from './meta-match';
+import { eventPair, matchOf, storeMatch, storedMatch, waitFor, type Match, type MetaEvent } from './meta-match';
 
 /**
  * Every funnel event, declared once. Names and properties say that something
@@ -121,8 +121,6 @@ export function identify(userId: string, email?: string): void {
 // without a pixel id.
 // ---------------------------------------------------------------------------
 
-type MetaEvent = 'PageView' | 'ViewContent' | 'InitiateCheckout' | 'Purchase';
-
 type Fbq = ((...args: unknown[]) => void) & { callMethod?: unknown; queue?: unknown[]; loaded?: boolean; version?: string; push?: unknown; disablePushState?: boolean };
 
 declare global {
@@ -207,16 +205,21 @@ async function tokenForServer(): Promise<string | null> {
   return accessToken().catch(() => null);
 }
 
+/** The pixel's `_fbp` cookie is there, or 2 s have passed without it (a blocked pixel). One wait a page load. */
+let browserIdReady: Promise<void> | null = null;
+
 export function meta(event: MetaEvent, eventId: string, value?: { value: number; currency: string }): void {
   if (env.pixelId === '' || window.fbq == null) return;
-  window.fbq('track', event, value ?? {}, { eventID: eventId });
+  // The page as it is now: the server's copy may leave a moment later.
+  const pair = eventPair(event, eventId, location.origin + location.pathname, value);
+  window.fbq(...pair.pixel);
   if (event === 'Purchase' || env.supabaseUrl === '') return;
-  const body = { event_name: event, event_id: eventId, event_source_url: location.origin + location.pathname };
-  void tokenForServer().then((token) =>
+  browserIdReady ??= waitFor(() => cookie('_fbp') != null, 2000);
+  void Promise.all([tokenForServer(), browserIdReady]).then(([token]) =>
     fetch(`${env.supabaseUrl}/functions/v1/meta-capi`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', apikey: env.supabaseAnonKey, ...(token != null ? { authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ ...body, fbp: cookie('_fbp'), fbc: cookie('_fbc') }),
+      body: JSON.stringify({ ...pair.server, fbp: cookie('_fbp'), fbc: cookie('_fbc') }),
       keepalive: true,
     }).catch(() => undefined),
   );

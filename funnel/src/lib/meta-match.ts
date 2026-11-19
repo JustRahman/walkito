@@ -48,3 +48,34 @@ export function storeMatch(match: Match | null): void {
     // See storedMatch().
   }
 }
+
+export type MetaEvent = 'PageView' | 'ViewContent' | 'InitiateCheckout' | 'Purchase';
+
+/**
+ * One event, written once for both places it goes: the pixel's call and the
+ * body for our server. Meta keeps one of the pair only when the name and the
+ * id are the same in both, so neither is ever typed twice.
+ */
+export function eventPair(event: MetaEvent, eventId: string, sourceUrl: string, value?: { value: number; currency: string }) {
+  return {
+    pixel: ['track', event, value ?? {}, { eventID: eventId }] as const,
+    server: { event_name: event, event_id: eventId, event_source_url: sourceUrl },
+  };
+}
+
+/**
+ * Resolves once `has()` is true, or after `maxMs` without it. The pixel writes
+ * its `_fbp` cookie only when its script has loaded, which is after a first
+ * visit's PageView was called: sent at once, the server's copy never had the
+ * browser id Meta pairs the two by when it cannot use the event id alone.
+ */
+export function waitFor(has: () => boolean, maxMs: number, stepMs = 100): Promise<void> {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const check = (): void => {
+      if (has() || Date.now() - started >= maxMs) resolve();
+      else setTimeout(check, stepMs);
+    };
+    check();
+  });
+}
