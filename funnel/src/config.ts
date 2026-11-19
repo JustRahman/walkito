@@ -83,6 +83,13 @@ export const REMINDER_DAYS_BEFORE = 2;
 /** Refund window, days after any charge. */
 export const GUARANTEE_DAYS = 14;
 
+/**
+ * The refund tied to her mornings ("If your first steps don't feel easier…"),
+ * to test against the standard wording. It still promises the refund, never
+ * the result. OFF until the founders turn it on.
+ */
+export const BOLD_GUARANTEE: boolean = false;
+
 export const ONELINK = 'https://walkito.onelink.me/2L97/';
 
 // ── Trust lines on the plan and price pages ────────────────────────────────

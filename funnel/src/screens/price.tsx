@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  BOLD_GUARANTEE,
   COMPANY_LINE,
   DEFAULT_VARIANT,
   DESCRIPTOR,
@@ -217,6 +218,11 @@ export function Price() {
 
   const retest = addDays(today, 14);
   const saving = yearlySaving(variant);
+  /** True for the first full monthly charge and for a yearly renewal: the two emails the server sends. */
+  const reminder =
+    plan === 'monthly'
+      ? `We email you ${REMINDER_DAYS_BEFORE} days before your first ${money(m.price)} charge`
+      : `We email you ${REMINDER_DAYS_BEFORE} days before your plan renews`;
   const name = firstName(s);
   return (
     <Page backTo={STEP.plan} footer>
@@ -317,11 +323,25 @@ export function Price() {
             </p>
           </div>
 
+          <section className="card stack" aria-label="How billing works">
+            <h3>The boring part (billing), in plain words:</h3>
+            <ul className="ticks plain">
+              <li>One price, the one on the card above. No sign-up fee, and the app’s included.</li>
+              <li>{reminder}.</li>
+              <li>Cancel any time at {SITE}/s/cancel, or reply to any email from us.</li>
+              <li>Every charge can be refunded for {GUARANTEE_DAYS} days, renewals too. No phone call, no forms.</li>
+            </ul>
+          </section>
+
           <div className="panel" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
             <img src={url('/img/art-shield.webp')} alt="" width={44} height={44} style={{ objectFit: 'contain', flex: 'none' }} />
             <div>
               <b>{GUARANTEE_DAYS}-day money-back guarantee</b>
-              <div className="small">Not for you? Reply to any email and we refund it.</div>
+              <div className="small">
+                Give it {GUARANTEE_DAYS} days.{' '}
+                {BOLD_GUARANTEE ? 'If your first steps don’t feel easier' : 'If it wasn’t worth it to you'}, reply to any email and we refund
+                every cent.
+              </div>
             </div>
           </div>
 
@@ -355,6 +375,14 @@ export function Price() {
               <li>A morning reminder</li>
             </ul>
           </section>
+
+          <section className="card stack" aria-label="What this won’t do">
+            <h3>What this won’t do</h3>
+            <p className="small">
+              It won’t work overnight. It won’t diagnose anything, and it doesn’t replace your doctor. What you’re paying for is the daily
+              part: which moves, and for how long.
+            </p>
+          </section>
         </>
       )}
 
@@ -370,9 +398,29 @@ export function Price() {
           </p>
         </details>
         <details>
+          <summary>Why pay when there are free videos?</summary>
+          <p className="small">
+            A video shows you one move. Your plan tells you which moves, in what order, for how long, and when to move on. If that isn’t
+            worth it to you, the refund is one email.
+          </p>
+        </details>
+        <details>
           <summary>How do I cancel?</summary>
           <p className="small">
             Go to {SITE}/s/cancel and tap Cancel, or reply to any email from us. You keep access until the end of the time you paid for.
+          </p>
+        </details>
+        <details>
+          <summary>What if I forget to cancel?</summary>
+          <p className="small">
+            {reminder}, so it won’t sneak up on you. And every charge can be refunded for {GUARANTEE_DAYS} days.
+          </p>
+        </details>
+        <details>
+          <summary>What if a move hurts?</summary>
+          <p className="small">
+            Stop. Feeling your foot work is normal. Sharp pain, or pain that’s getting worse, is a reason to skip that move and ask your
+            doctor or physical therapist.
           </p>
         </details>
         <details>
