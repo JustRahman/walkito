@@ -5,22 +5,31 @@
  * `event_id`.
  *
  *   POST { event_name, event_id, event_source_url, fbp?, fbc? }
+ *   Authorization: Bearer <her own token>   (only once she has given her email)
  *
  * Three events only: PageView, ViewContent (the plan) and InitiateCheckout.
  * Purchase is sent by `revenuecat-webhook` alone, from RevenueCat's record,
  * so a page cannot report a purchase that did not happen. What reaches Meta is
  * the event, the page's address without its query, the visitor's IP address
  * and user agent (from this request, never the body), and the browser's own
- * Meta ids. Nothing else: no email, no answers (`_shared/web/capi.ts`).
+ * Meta ids. Once she has given her email the funnel sends her token as well,
+ * and two SHA-256 hashes go with the event for Meta to match her by: her
+ * email (`em`) and our account id (`external_id`). Both are looked up here
+ * from the token (the address on her account, or the one her lead holds while
+ * the account is still anonymous) and hashed here; the body never carries an
+ * email, and a token that cannot be checked sends the event without them.
+ * Never the email itself, never an answer (`_shared/web/capi.ts`).
  *
  * Without META_PIXEL_ID and META_CAPI_TOKEN it answers 204 and sends nothing,
  * so the funnel can call it before the dataset exists. META_TEST_EVENT_CODE
- * routes everything to Events Manager's Test events tab. No Supabase JWT
- * (verify_jwt off in config.toml); CORS lets in the funnel's origins only,
- * plus any in WEB_FUNNEL_ORIGINS.
+ * routes everything to Events Manager's Test events tab. No Supabase JWT is
+ * required (verify_jwt off in config.toml); CORS lets in the funnel's origins
+ * only, plus any in WEB_FUNNEL_ORIGINS.
  */
 
-import { capiEvent, clientIp, eventId, isClientEvent, sendToMeta, sourceUrl, browserId } from '../_shared/web/capi.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+import { capiEvent, clientIp, eventId, isClientEvent, matchKeys, sendToMeta, sourceUrl, browserId } from '../_shared/web/capi.ts';
 import { corsHeaders, funnelOrigins, hostsOf } from '../_shared/web/cors.ts';
 
 const env = (name: string): string => Deno.env.get(name) ?? '';
@@ -31,6 +40,31 @@ const TEST_CODE = env('META_TEST_EVENT_CODE');
 const VERSION = env('META_GRAPH_VERSION');
 const ORIGINS = funnelOrigins(env('WEB_FUNNEL_ORIGINS'));
 const HOSTS = hostsOf(ORIGINS);
+
+const db = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
+
+/** A slow lookup never holds an event back: it goes without the hashes instead. */
+const LOOKUP_MS = 3000;
+
+/** The account the token names and its address, or null: no token, a token Supabase Auth does not know, or no answer in time. */
+async function whoIs(req: Request): Promise<{ userId: string; email: string | null } | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!token) return null;
+  const lookup = async () => {
+    const { data, error } = await db.auth.getUser(token);
+    const user = error == null ? data.user : null;
+    if (user == null) return null;
+    if (user.email) return { userId: user.id, email: user.email };
+    // Before she pays, her address is on her lead, not on the anonymous account she will buy with.
+    const { data: lead } = await db.from('web_leads').select('email').eq('user_id', user.id).maybeSingle();
+    return { userId: user.id, email: typeof lead?.email === 'string' ? lead.email : null };
+  };
+  try {
+    return await Promise.race([lookup(), new Promise<null>((resolve) => setTimeout(() => resolve(null), LOOKUP_MS))]);
+  } catch {
+    return null;
+  }
+}
 
 Deno.serve(async (req) => {
   const origin = req.headers.get('Origin');
@@ -51,15 +85,19 @@ Deno.serve(async (req) => {
   const url = sourceUrl(body?.event_source_url, HOSTS);
   if (url == null) return json({ error: 'event_source_url must be a page of the funnel' }, 400);
 
+  const time = Date.now() / 1000;
+  const match = await matchKeys(await whoIs(req));
   const event = capiEvent({
     name,
     id,
-    time: Date.now() / 1000,
+    time,
     sourceUrl: url,
     ip: clientIp(req.headers),
     userAgent: req.headers.get('user-agent'),
     fbp: browserId(body?.fbp),
     fbc: browserId(body?.fbc),
+    em: match.em,
+    externalId: match.externalId,
   });
   const sent = await sendToMeta({ pixelId: PIXEL_ID, token: TOKEN, testEventCode: TEST_CODE, version: VERSION }, [event]);
   return json({ ok: sent.ok }, sent.ok ? 200 : 502);

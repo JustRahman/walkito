@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 
 import {
   CLIENT_EVENTS,
@@ -7,16 +7,28 @@ import {
   capiEvent,
   clientIp,
   eventId,
+  hashedEmail,
+  hashedId,
   isClientEvent,
+  matchKeys,
+  sendToMeta,
+  sha256Hex,
   sourceUrl,
   type CapiInput,
 } from '../supabase/functions/_shared/web/capi.ts';
 import { corsHeaders, funnelOrigins, hostsOf } from '../supabase/functions/_shared/web/cors.ts';
 
 /**
- * What reaches Meta: four events, the browser's ids, IP and user agent, and
- * the amount on a Purchase. Never an email, never an answer.
+ * What reaches Meta: four events, the browser's ids, IP and user agent, the
+ * amount on a Purchase and, once she has given her email, two SHA-256 hashes
+ * (her email, our account id). Never the email itself, never an answer.
  */
+
+const EMAIL = 'sam@example.com';
+const USER_ID = '6f1c1d52-3a2b-4c8d-9e0f-1a2b3c4d5e6f';
+/** `printf 'sam@example.com' | shasum -a 256`, and the same for the id. */
+const EMAIL_HASH = 'cd25a6171969f2a3c6e35c7667e3908ef1bd2424241db04411a0eec454ca6c16';
+const ID_HASH = '028b9645b24feeead773167b704482c15345e010354849606c4f2ebb53a95a59';
 
 const FBP = 'fb.1.1596403881668.1116446470';
 const FBC = 'fb.1.1554763741205.AbCdEfGhIjKlMnOpQrStUvWxYz1234567890';
@@ -39,8 +51,8 @@ function careless(name: CapiInput['name']): CapiInput {
     fbc: FBC,
     value: 0.99,
     currency: 'usd',
-    // Fields that must never travel, smuggled past the type.
-    ...({ email: 'sam@example.com', em: 'abc', ph: '555', answers: { pain: 7, zones: ['heel'] }, custom_data: { goal: 'heel' } } as object),
+    // Fields that must never travel, smuggled past the type: her address as it is, in `em` too.
+    ...({ email: EMAIL, em: EMAIL, externalId: USER_ID, ph: '555', answers: { pain: 7, zones: ['heel'] }, custom_data: { goal: 'heel' } } as object),
   } as CapiInput;
 }
 
@@ -75,10 +87,10 @@ describe('the payload', () => {
     expect(Object.keys(event.user_data).sort()).toEqual(['client_ip_address', 'client_user_agent', 'fbc', 'fbp']);
   });
 
-  test('no email, hashed or not, and no answer anywhere in what is sent', () => {
+  test('an address or an id that was not hashed is dropped, and no answer is in what is sent', () => {
     for (const name of [...CLIENT_EVENTS, 'Purchase'] as const) {
       const body = JSON.stringify(capiBody([capiEvent(careless(name))], 'TEST123'));
-      for (const banned of ['sam@example.com', '"em"', '"ph"', 'email', 'answers', 'pain', 'heel', 'zones', 'goal']) {
+      for (const banned of [EMAIL, USER_ID, '@', '"em"', '"external_id"', '"ph"', 'email', 'answers', 'pain', 'heel', 'zones', 'goal']) {
         expect(body).not.toContain(banned);
       }
     }
@@ -101,6 +113,102 @@ describe('the payload', () => {
     expect(capiBody([event], 'TEST123')).toEqual({ data: [event], test_event_code: 'TEST123' });
     expect(capiBody([event], '')).toEqual({ data: [event] });
     expect(capiBody([event], null)).toEqual({ data: [event] });
+  });
+});
+
+describe('the two hashes Meta matches her by', () => {
+  test('SHA-256 as lowercase hex, against known values', async () => {
+    expect(await sha256Hex('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+    expect(await hashedEmail(EMAIL)).toBe(EMAIL_HASH);
+    expect(await hashedId(USER_ID)).toBe(ID_HASH);
+  });
+
+  test('the email is trimmed and put in lowercase first, as Meta asks', async () => {
+    expect(await hashedEmail('  Sam@Example.COM \n')).toBe(EMAIL_HASH);
+    expect(await hashedId(` ${USER_ID.toUpperCase()} `)).toBe(ID_HASH);
+  });
+
+  test('nothing to hash gives nothing, never the hash of an empty string', async () => {
+    for (const raw of [null, undefined, '', '   ', 'not an address', 42]) expect(await hashedEmail(raw)).toBeNull();
+    for (const raw of [null, undefined, '', '   ', 42]) expect(await hashedId(raw)).toBeNull();
+    expect(await matchKeys(null)).toEqual({ em: null, externalId: null });
+    expect(await matchKeys({ userId: USER_ID, email: null })).toEqual({ em: null, externalId: ID_HASH });
+  });
+
+  test('known: `em` and `external_id` go as arrays of one hash each, beside what was there before', async () => {
+    const match = await matchKeys({ userId: USER_ID, email: ` ${EMAIL.toUpperCase()}` });
+    for (const name of CLIENT_EVENTS) {
+      const event = capiEvent({ ...careless(name), ...match });
+      expect(event.user_data).toEqual({
+        client_ip_address: '203.0.113.7',
+        client_user_agent: 'Mozilla/5.0 (iPhone) FBAN/FBIOS',
+        fbp: FBP,
+        fbc: FBC,
+        em: [EMAIL_HASH],
+        external_id: [ID_HASH],
+      });
+      for (const hash of [...event.user_data.em!, ...event.user_data.external_id!]) expect(hash).toMatch(/^[0-9a-f]{64}$/);
+      expect(event.custom_data).toBeUndefined();
+    }
+  });
+
+  test('not known: neither key is in the payload', async () => {
+    const event = capiEvent({ ...careless('ViewContent'), ...(await matchKeys(null)) });
+    expect(Object.keys(event.user_data).sort()).toEqual(['client_ip_address', 'client_user_agent', 'fbc', 'fbp']);
+  });
+
+  test('a hash in capitals is not sent as it is: Meta wants lowercase', () => {
+    const event = capiEvent({ ...careless('ViewContent'), em: EMAIL_HASH.toUpperCase(), externalId: ID_HASH.slice(1) });
+    expect(event.user_data.em).toBeUndefined();
+    expect(event.user_data.external_id).toBeUndefined();
+  });
+});
+
+describe('the request to Meta', () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  /** Stands in for graph.facebook.com: nothing leaves this machine. */
+  function capture(): { url: string; body: string }[] {
+    const calls: { url: string; body: string }[] = [];
+    globalThis.fetch = (async (url: unknown, init?: { body?: unknown }) => {
+      calls.push({ url: String(url), body: String(init?.body) });
+      return new Response('{"events_received":1}', { status: 200 });
+    }) as typeof fetch;
+    return calls;
+  }
+
+  test('known: the body has both arrays, and her address is nowhere in it', async () => {
+    const calls = capture();
+    const match = await matchKeys({ userId: USER_ID, email: EMAIL });
+    const sent = await sendToMeta({ pixelId: '123', token: 'secret' }, [capiEvent({ ...careless('ViewContent'), ...match })]);
+    expect(sent.ok).toBe(true);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toStartWith('https://graph.facebook.com/v25.0/123/events?');
+    const data = JSON.parse(calls[0]!.body).data[0];
+    expect(data.user_data.em).toEqual([EMAIL_HASH]);
+    expect(data.user_data.external_id).toEqual([ID_HASH]);
+    for (const raw of [EMAIL, 'sam', 'example.com', '@', USER_ID]) expect(calls[0]!.url + calls[0]!.body).not.toContain(raw);
+  });
+
+  test('not known: no `em` and no `external_id`', async () => {
+    const calls = capture();
+    await sendToMeta({ pixelId: '123', token: 'secret' }, [capiEvent({ ...careless('PageView'), ...(await matchKeys(null)) })]);
+    expect(calls[0]!.body).not.toContain('"em"');
+    expect(calls[0]!.body).not.toContain('external_id');
+  });
+
+  test("the browser's event id and event name reach Meta as they came, so Meta can pair the two copies", async () => {
+    const calls = capture();
+    for (const name of CLIENT_EVENTS) {
+      const id = `${name}-6f1c1d52-3a2b-4c8d-9e0f-1a2b3c4d5e6f`;
+      await sendToMeta({ pixelId: '123', token: 'secret' }, [capiEvent({ ...careless(name), id: eventId(id)! })]);
+      const data = JSON.parse(calls.at(-1)!.body).data[0];
+      expect(data.event_id).toBe(id);
+      expect(data.event_name).toBe(name);
+    }
   });
 });
 
