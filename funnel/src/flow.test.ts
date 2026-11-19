@@ -359,18 +359,20 @@ describe('what the plan and the price say', () => {
     expect(mentionedGoals({ ...ANSWERS, life: ['none'] })).toEqual([]);
   });
 
-  test('the plan that is marked: hers if she has one, the year for steady or sixty and over, monthly for everyone else', () => {
+  test('the plan that is marked: hers if she has one, Monthly for everyone else, sixty and over and steady included', () => {
     const fifty: Answers = { ...ANSWERS, age: '50-59' };
     expect(defaultPlan(state(fifty))).toBe('monthly');
-    expect(defaultPlan(state({ ...fifty, focus: 'steady' }))).toBe('yearly');
-    for (const age of ['60-69', '70+', '65-74', '75+'] as const) expect(defaultPlan(state({ ...ANSWERS, age }))).toBe('yearly');
+    expect(defaultPlan(state({ ...fifty, focus: 'steady' }))).toBe('monthly');
+    for (const age of ['60-69', '70+', '65-74', '75+'] as const) {
+      expect(sixtyPlus({ ...ANSWERS, age })).toBe(true);
+      expect(defaultPlan(state({ ...ANSWERS, age }))).toBe('monthly');
+    }
     // 55-64 was asked before v6 and may be 55; with no age at all she is not put in a group.
     for (const age of ['under50', '50-59', '55-64', 'under55', undefined] as const) {
       expect(sixtyPlus({ ...ANSWERS, age })).toBe(false);
       expect(defaultPlan(state({ ...ANSWERS, age }))).toBe('monthly');
     }
     expect(defaultPlan(state({}))).toBe('monthly');
-    // Someone who has tried everything keeps the smallest first payment, whatever her age or scene.
     const tired: Answers = { ...ANSWERS, age: '70+', focus: 'steady', tried: ['insoles', 'shoes', 'shot'] };
     expect(burned(tired)).toBe(true);
     expect(defaultPlan(state(tired))).toBe('monthly');
@@ -452,7 +454,7 @@ describe('what the plan and the price say', () => {
     expect(offerOf(shown, new Date(2026, 10, 20, 8, 0))).toBe('over');
     expect(offerOf(shown, new Date(2026, 10, 26, 14, 5))).toBe('over');
     expect(offerOf(shown, new Date(2026, 11, 19, 14, 5))).toBe('over');
-    // Shown a minute before midnight: one minute of it, as the card says.
+    // Shown a minute before midnight: one minute of it.
     const late = { offerShown: true, offerShownAt: new Date(2026, 10, 19, 23, 59).toISOString() };
     expect(offerOf(late, new Date(2026, 10, 19, 23, 59, 30))).toBe('open');
     expect(offerOf(late, new Date(2026, 10, 20, 0, 0, 1))).toBe('over');
@@ -474,8 +476,10 @@ describe('what the plan and the price say', () => {
     expect(price.match(/exit_gift_shown/g)?.length).toBe(1);
     expect(price.match(/offerShown: true/g)?.length).toBe(1);
     expect(price.includes("if (offerOf(s, new Date()) === 'over') return (setOfferShownNow(false), null);\n            return buyOffer(consentText);")).toBe(true);
-    // What the card says is what the rule does.
-    expect(price.includes('This offer is shown once. It stays here until midnight tonight.')).toBe(true);
+    // The deadline lives in her browser only, so the page names none: no "midnight", no "tonight", no "expires".
+    expect(price.includes('<p className="small">This offer is shown once.</p>')).toBe(true);
+    const shown = price.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+    expect(/midnight|tonight|expires|ends today|left today/i.test(shown)).toBe(false);
   });
 
   test('after Day 1: her 0-10 number is saved only with her health consent, and a skip is never saved as a number', () => {

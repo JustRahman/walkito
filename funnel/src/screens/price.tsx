@@ -63,8 +63,10 @@ export function Price() {
   const [nudge, setNudge] = useState(false);
   /** The yearly row shows once RevenueCat has the product, so it never opens a checkout that is not there. */
   const [yearly, setYearly] = useState<boolean | null>(null);
-  /** RevenueCat has the one-time offer's product: without it the offer is never shown. */
+  /** RevenueCat has the one-time offer's product, with its first year for her: without it the offer is never shown. */
   const [offerReady, setOfferReady] = useState(false);
+  /** RevenueCat still offers her the first month's price. False for anyone who has bought before: she pays the full month today. */
+  const [intro, setIntro] = useState(true);
   const consentBox = useRef<HTMLDivElement>(null);
   /** A link's `?plan=yearly` falls back to the first plan when RevenueCat has no yearly product. */
   const plan: PlanId = picked === 'yearly' && yearly === false ? 'monthly' : picked;
@@ -74,9 +76,11 @@ export function Price() {
   const y = variant.yearly;
   const charge = addMonths(today, 1);
   const renewYear = addMonths(today, y.months);
+  /** What the monthly plan costs her today: the first month's price, or the full month for a returning member. */
+  const monthToday = intro ? m.intro : m.price;
   const consent =
     plan === 'monthly'
-      ? `I understand: ${money(m.intro)} today, then ${money(m.price)} a month from ${shortDate(charge)} until I cancel.`
+      ? `I understand: ${money(monthToday)} today, then ${money(m.price)} a month from ${shortDate(charge)} until I cancel.`
       : `I understand: ${money(y.price)} today, then ${money(y.price)} every year from ${yearDate(renewYear)} until I cancel.`;
 
   useEffect(() => {
@@ -91,6 +95,10 @@ export function Price() {
         const loaded = await loadPackages(user.id, variant);
         setYearly(loaded.yearly != null);
         setOfferReady(loaded.offer != null);
+        if (!loaded.monthlyIntro) {
+          setIntro(false);
+          setAgreed(false);
+        }
         return loaded;
       } catch {
         setYearly(false);
@@ -126,6 +134,8 @@ export function Price() {
     if (!(await onHerOwnAccount(s.email))) return setPhase('idle');
     const loaded = await packages.current;
     const pkg = loaded?.[plan];
+    // She ticked a box that named the first month's price before RevenueCat said it isn't hers: the page now shows the full month, unticked.
+    if (plan === 'monthly' && intro && loaded?.monthlyIntro === false) return setPhase('idle');
     if (!billingReady() || pkg == null) {
       setError('Checkout is not open yet. Please try again in a few minutes.');
       setPhase('idle');
@@ -139,7 +149,7 @@ export function Price() {
     setPhase('open');
     const result = await buy(user.id, pkg, s.email);
     if (result.status === 'bought') {
-      const value = plan === 'monthly' ? m.intro : y.price;
+      const value = plan === 'monthly' ? monthToday : y.price;
       update({ purchased: true, plan });
       track('purchase_completed', { plan });
       meta('Purchase', `purchase-${user.id}`, { value, currency: 'USD' });
@@ -177,9 +187,10 @@ export function Price() {
 
   /**
    * The one-time offer, under "What held you back?" -> "The price". Shown once,
-   * and it stays until midnight of the day it was first shown (`offerOf`): she
+   * and it stays for the rest of the day it was first shown (`offerOf`): she
    * can leave, think, and find it again that day. Never on a later day, never
-   * after a purchase, never when RevenueCat has no such product. The first
+   * after a purchase, never when RevenueCat has no such product or no longer
+   * gives her its first-year price. The page names no deadline. The first
    * showing is the one that is stored and counted.
    */
   const showOffer = (): void => {
@@ -228,18 +239,20 @@ export function Price() {
 
   const retest = addDays(today, 14);
   const saving = yearlySaving(variant);
-  /** True for the first full monthly charge and for a yearly renewal: the two emails the server sends. */
+  /** True for the first full monthly charge and for every yearly renewal: the emails the server sends. None for a month at the full price. */
   const reminder =
-    plan === 'monthly'
-      ? `We email you ${REMINDER_DAYS_BEFORE} days before your first ${money(m.price)} charge`
-      : `We email you ${REMINDER_DAYS_BEFORE} days before your plan renews`;
+    plan === 'yearly'
+      ? `We email you ${REMINDER_DAYS_BEFORE} days before your plan renews`
+      : intro
+        ? `We email you ${REMINDER_DAYS_BEFORE} days before your first ${money(m.price)} charge`
+        : null;
   const name = firstName(s);
   const view = useMemo(() => planView(s, today), [s.answers, s.tryIt, today]);
   const left = useMemo(() => sessionOne(s, today), [s.answers, s.tryIt, today]);
   const begun = view.days[0]?.moves.some((move) => move.doneToday) === true;
   const sessions = view.days.filter((d) => !d.rest).length;
   const moves = new Set(view.days.flatMap((d) => d.moves.map((move) => move.id))).size;
-  const priceToday = money(plan === 'monthly' ? m.intro : y.price);
+  const priceToday = money(plan === 'monthly' ? monthToday : y.price);
   /** Her next morning, read once as the page opens. The clock leads for a morning answer and for the ad about mornings. */
   const morning = useMemo(() => morningOf(s.answers, today), [s.answers, today]);
   const clock = sceneOf(s.answers) === 'morning' || adOf(s) === 'ad2_v1morning' ? inboxLine(s.answers, today) : null;
@@ -270,7 +283,7 @@ export function Price() {
           picked={heldBack}
           offer={heldBack === 'price' && offerShownNow}
           ended={s.offerShown === true && offerOf(s, new Date()) === 'over'}
-          monthly={m.intro}
+          monthly={monthToday}
           onPick={(reason) => {
             setHeldBack(reason);
             track('held_back', { reason });
@@ -281,7 +294,7 @@ export function Price() {
             }
           }}
           onBuyOffer={async (consentText) => {
-            // A card left open past midnight is no longer the offer: the page said until midnight.
+            // A card left open past midnight is no longer the offer: it is kept for the day it was shown.
             if (offerOf(s, new Date()) === 'over') return (setOfferShownNow(false), null);
             return buyOffer(consentText);
           }}
@@ -294,7 +307,7 @@ export function Price() {
         <>
           {offerReady && offerOf(s, today) === 'open' && (
             <div className="card stack">
-              <p>Your first year for {money(PRICE_OFFER.intro)} is still here, until midnight tonight.</p>
+              <p>Your first year for {money(PRICE_OFFER.intro)} is still here.</p>
               <button
                 className="btn secondary"
                 type="button"
@@ -321,10 +334,8 @@ export function Price() {
               <span className="radio" />
               <span className="grow">
                 <span className="name">Monthly</span>
-                <span className="today">{money(m.intro)} today</span>
-                <span className="hint">
-                  First month, for new members. Then {money(m.price)} a month.
-                </span>
+                <span className="today">{money(monthToday)} today</span>
+                <span className="hint">{intro ? `First month, for new members. Then ${money(m.price)} a month.` : 'A month at a time.'}</span>
               </span>
             </button>
             {(yearly === true || (yearly === null && plan === 'yearly')) && (
@@ -351,12 +362,8 @@ export function Price() {
                 </span>
               </button>
             )}
-            {ours && yearly === true && (
-              <p className="small">
-                {plan === 'monthly'
-                  ? 'We selected Monthly because it’s the smallest first payment. It’s the same plan either way.'
-                  : 'We selected 1 year because it’s one payment, with no monthly bills.'}
-              </p>
+            {ours && yearly === true && plan === 'monthly' && (
+              <p className="small">We selected Monthly because it’s the smallest first payment. It’s the same plan either way.</p>
             )}
           </div>
 
@@ -388,7 +395,7 @@ export function Price() {
             <h3>The boring part (billing), in plain words:</h3>
             <ul className="ticks plain">
               <li>One price, the one on the card above. No sign-up fee, and the app’s included.</li>
-              <li>{reminder}.</li>
+              {reminder != null && <li>{reminder}.</li>}
               <li>Cancel any time at {SITE}/s/cancel, or reply to any email from us.</li>
               <li>Every charge can be refunded for {GUARANTEE_DAYS} days, renewals too. No phone call, no forms.</li>
             </ul>
@@ -413,10 +420,10 @@ export function Price() {
             <div className="timeline">
               {plan === 'monthly' ? (
                 <>
-                  <TimelineRow now title="Today" text={`${money(m.intro)}. Your plan starts now.`} />
+                  <TimelineRow now title="Today" text={`${money(monthToday)}. Your plan starts now.`} />
                   {firstStep}
                   <TimelineRow title={shortDate(retest)} text="Day 14: your first progress check in the app." />
-                  <TimelineRow title={shortDate(addDays(charge, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />
+                  {intro && <TimelineRow title={shortDate(addDays(charge, -REMINDER_DAYS_BEFORE))} text="We email you a reminder." />}
                   <TimelineRow title={shortDate(charge)} text={`${money(m.price)} a month. Cancel any time.`} />
                 </>
               ) : (
@@ -481,7 +488,7 @@ export function Price() {
         <details>
           <summary>What if I forget to cancel?</summary>
           <p className="small">
-            {reminder}, so it won’t sneak up on you. And every charge can be refunded for {GUARANTEE_DAYS} days.
+            {reminder != null ? `${reminder}, so it won’t sneak up on you. And every` : 'Every'} charge can be refunded for {GUARANTEE_DAYS} days.
           </p>
         </details>
         <details>
@@ -647,7 +654,7 @@ function OfferCard({ onBuy }: { onBuy: (consentText: string) => Promise<string |
         That’s {money(perMonth)} a month. Same plan, same {GUARANTEE_DAYS}-day refund. Then {money(PRICE_OFFER.price)} a year from{' '}
         {yearDate(renews)}, and we email you {REMINDER_DAYS_BEFORE} days before.
       </p>
-      <p className="small">This offer is shown once. It stays here until midnight tonight.</p>
+      <p className="small">This offer is shown once.</p>
       <Check checked={agreed} onChange={setAgreed}>
         {consent}
       </Check>

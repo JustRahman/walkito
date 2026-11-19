@@ -348,22 +348,22 @@ export function sixtyPlus(a: Answers): boolean {
 
 /**
  * The plan the price page opens on. A plan she came with (`?plan=` on a link)
- * or tapped herself always wins. Otherwise the year, one known number, for the
- * steady scene and for sixty or older; and the smallest first payment for
- * everyone else, and for anyone who has tried everything, whatever her age.
+ * or tapped herself always wins. Otherwise Monthly, the smallest first payment,
+ * for everyone: Rahim's decision (Nov 19), since a year marked for sixty and
+ * over was a refund and chargeback risk.
  *
  * It only picks which card is marked. It is never stored and never tracked:
  * `plan_selected` is her own tap.
  */
 export function defaultPlan(s: Pick<FunnelState, 'plan' | 'answers'>): 'monthly' | 'yearly' {
-  if (s.plan != null) return s.plan;
-  return (sceneOf(s.answers) === 'steady' || sixtyPlus(s.answers)) && !burned(s.answers) ? 'yearly' : 'monthly';
+  return s.plan ?? 'monthly';
 }
 
 /**
- * The one-time $29.99 offer: shown once, and it stays until midnight of the
- * day it was first shown, in her own time zone. The price page says exactly
- * that, so this is what makes it true.
+ * The one-time $29.99 offer: shown once, and it stays for the rest of the day
+ * it was first shown, in her own time zone. The page names no deadline: this
+ * is kept in her browser only, and a deadline nobody enforces on the server is
+ * not one to state.
  *
  * `first`: never shown. `open`: first shown earlier today. `over`: shown on an
  * earlier day, or by a build that kept no time (v6), or she has bought.

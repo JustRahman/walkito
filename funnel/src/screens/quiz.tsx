@@ -166,7 +166,7 @@ export function Age() {
           // Her ad named a price, so this screen does too.
           <p className="caption">
             The quiz is free. The plan is {money(price.yearly.price)} a year (that’s {money(yearlyPerMonth(price))} a month), or{' '}
-            {money(price.monthly.intro)} for the first month and {money(price.monthly.price)} a month after that. You’ll see everything
+            {money(price.monthly.intro)} for the first month for new members and {money(price.monthly.price)} a month after that. You’ll see everything
             before you decide.
           </p>
         ) : (

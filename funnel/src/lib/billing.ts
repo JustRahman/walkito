@@ -24,7 +24,18 @@ export function billingReady(): boolean {
   return env.rcKey !== '';
 }
 
-export type Packages = { monthly: Package | null; yearly: Package | null; offer: Package | null };
+/**
+ * `monthlyIntro`: RevenueCat offers her the $4.99 first month. It answers per
+ * app user id and leaves the intro out for anyone who has bought before
+ * ("has never made any purchase"), so a returning member sees $9.99 today.
+ * `offer` is null when she can no longer get its $29.99 first year.
+ */
+export type Packages = { monthly: Package | null; yearly: Package | null; offer: Package | null; monthlyIntro: boolean };
+
+/** RevenueCat gives this product an intro price for her. */
+export function hasIntro(pkg: Package | null): boolean {
+  return pkg?.webBillingProduct.introPricePhase?.price != null;
+}
 
 export async function loadPackages(userId: string, variant: PriceVariant): Promise<Packages> {
   const rc = await purchases(userId);
@@ -34,10 +45,13 @@ export async function loadPackages(userId: string, variant: PriceVariant): Promi
     offering?.availablePackages.find((p) => p.identifier === pkg && p.product.identifier === product) ??
     offering?.availablePackages.find((p) => p.product.identifier === product) ??
     null;
+  const monthly = find(variant.monthly.pkg, variant.monthly.product);
+  const offer = find(PRICE_OFFER.pkg, PRICE_OFFER.product);
   return {
-    monthly: find(variant.monthly.pkg, variant.monthly.product),
+    monthly,
     yearly: find(variant.yearly.pkg, variant.yearly.product),
-    offer: find(PRICE_OFFER.pkg, PRICE_OFFER.product),
+    offer: hasIntro(offer) ? offer : null,
+    monthlyIntro: hasIntro(monthly),
   };
 }
 
