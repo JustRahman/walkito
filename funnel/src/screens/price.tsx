@@ -16,7 +16,7 @@ import {
   yearlyPerMonth,
   yearlySaving,
 } from '../config';
-import { addDays, adOf, defaultPlan, firstName, longDate, minutesOf, PLAN_NAME, planLine, planView, sceneOf, sessionOne, shortDate, STEP, wakeOf } from '../flow';
+import { addDays, adOf, defaultPlan, firstName, longDate, minutesOf, offerOf, PLAN_NAME, planLine, planView, sceneOf, sessionOne, shortDate, STEP, wakeOf } from '../flow';
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
@@ -176,16 +176,20 @@ export function Price() {
   };
 
   /**
-   * The one-time offer, only under "What held you back?" -> "The price" and at
-   * most once per person: marked before it is seen, so a reload never brings
-   * it back. Not shown when it was shown before, she has bought, or RevenueCat
-   * has no such product.
+   * The one-time offer, under "What held you back?" -> "The price". Shown once,
+   * and it stays until midnight of the day it was first shown (`offerOf`): she
+   * can leave, think, and find it again that day. Never on a later day, never
+   * after a purchase, never when RevenueCat has no such product. The first
+   * showing is the one that is stored and counted.
    */
   const showOffer = (): void => {
-    if (!offerReady || s.offerShown === true || s.purchased === true) return;
+    const offer = offerOf(s, new Date());
+    if (!offerReady || offer === 'over') return;
     setOfferShownNow(true);
-    update({ offerShown: true });
-    void saveLead({ offer_shown_at: new Date().toISOString() });
+    if (offer === 'open') return;
+    const at = new Date().toISOString();
+    update({ offerShown: true, offerShownAt: at });
+    void saveLead({ offer_shown_at: at });
     track('exit_gift_shown', { offer: PRICE_OFFER.id, trigger: 'held_back' });
   };
 
@@ -265,6 +269,8 @@ export function Price() {
         <HeldBack
           picked={heldBack}
           offer={heldBack === 'price' && offerShownNow}
+          ended={s.offerShown === true && offerOf(s, new Date()) === 'over'}
+          monthly={m.intro}
           onPick={(reason) => {
             setHeldBack(reason);
             track('held_back', { reason });
@@ -274,7 +280,11 @@ export function Price() {
               track('plan_email_requested');
             }
           }}
-          onBuyOffer={buyOffer}
+          onBuyOffer={async (consentText) => {
+            // A card left open past midnight is no longer the offer: the page said until midnight.
+            if (offerOf(s, new Date()) === 'over') return (setOfferShownNow(false), null);
+            return buyOffer(consentText);
+          }}
           onBack={() => {
             setHeldBack(null);
             setPhase('idle');
@@ -282,6 +292,22 @@ export function Price() {
         />
       ) : (
         <>
+          {offerReady && offerOf(s, today) === 'open' && (
+            <div className="card stack">
+              <p>Your first year for {money(PRICE_OFFER.intro)} is still here, until midnight tonight.</p>
+              <button
+                className="btn secondary"
+                type="button"
+                onClick={() => {
+                  setHeldBack('price');
+                  showOffer();
+                  setPhase('held-back');
+                }}
+              >
+                See the {money(PRICE_OFFER.intro)} offer
+              </button>
+            </div>
+          )}
           <div className="plans" role="radiogroup" aria-label="Choose a plan">
             <button
               className="choice plan"
@@ -524,18 +550,24 @@ function TimelineRow({ title, text, now }: { title: string; text: string; now?: 
   );
 }
 
-/** The answer under "The price" once the one-time offer has been shown (or when there is none). */
-const PRICE_ANSWER = `If a charge was not worth it, reply to any email within ${GUARANTEE_DAYS} days and we refund it.`;
+/** The answer under "The price" when there is no offer to show. */
+const PRICE_ANSWER = `If a charge isn’t worth it to you, reply to any email within ${GUARANTEE_DAYS} days and we refund it.`;
 
 function HeldBack({
   picked,
   offer,
+  ended,
+  monthly,
   onPick,
   onBuyOffer,
   onBack,
 }: {
   picked: string | null;
   offer: boolean;
+  /** The offer was shown on an earlier day: said plainly, with what still stands. */
+  ended: boolean;
+  /** Today's price of the monthly plan. */
+  monthly: number;
   onPick: (reason: string) => void;
   onBuyOffer: (consentText: string) => Promise<string | null>;
   onBack: () => void;
@@ -563,10 +595,17 @@ function HeldBack({
       {picked === 'price' && offer ? (
         <OfferCard onBuy={onBuyOffer} />
       ) : picked === 'price' ? (
-        <p className="card">{PRICE_ANSWER}</p>
+        <p className="card">
+          {ended
+            ? `The ${money(PRICE_OFFER.intro)} offer has ended. The refund hasn’t: if a charge isn’t worth it to you, reply to any email within ${GUARANTEE_DAYS} days and we refund it.`
+            : PRICE_ANSWER}
+        </p>
       ) : picked === 'unsure' ? (
         <div className="card stack">
-          <p className="lead">Try it. If it isn’t for you, email us within {GUARANTEE_DAYS} days and we refund it.</p>
+          <p className="lead">
+            That’s fair. You don’t have to be sure. Start with the month for {money(monthly)}, do your first few sessions, and if it isn’t
+            for you, reply to any email within {GUARANTEE_DAYS} days and it’s refunded.
+          </p>
           <button className="btn" type="button" onClick={onBack}>
             Back to the plans
           </button>
@@ -575,7 +614,7 @@ function HeldBack({
           </button>
         </div>
       ) : picked === 'think' ? (
-        <p className="card">Your plan is saved. We’ll email it to you.</p>
+        <p className="card">Of course. Your plan is saved, and we’ll email it to you so it’s there when you’re ready.</p>
       ) : (
         <p className="card">
           Write to us, a person reads every email. <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
@@ -587,9 +626,10 @@ function HeldBack({
 }
 
 /**
- * Shown once, after "The price": the first year for $29.99, then $49.99 a
- * year. The same unticked consent box as the main plans, with the exact
- * amounts and the renewal date.
+ * The one-time offer, after "The price": the first year for $29.99, then
+ * $49.99 a year, with the reason it is offered and how long it stays. The same
+ * unticked consent box as the main plans, with the exact amounts and the
+ * renewal date.
  */
 function OfferCard({ onBuy }: { onBuy: (consentText: string) => Promise<string | null> }) {
   const [agreed, setAgreed] = useState(false);
@@ -597,13 +637,17 @@ function OfferCard({ onBuy }: { onBuy: (consentText: string) => Promise<string |
   const [error, setError] = useState<string | null>(null);
   const renews = useMemo(() => addMonths(new Date(), PRICE_OFFER.months), []);
   const consent = `I understand: ${money(PRICE_OFFER.intro)} today for my first year, then ${money(PRICE_OFFER.price)} every year from ${yearDate(renews)} until I cancel.`;
+  const perMonth = Math.round((PRICE_OFFER.intro / PRICE_OFFER.months) * 100) / 100;
   return (
     <div className="card stack">
       <p className="lead">
-        <b>
-          We can offer your first year for {money(PRICE_OFFER.intro)}. Then {money(PRICE_OFFER.price)} a year. Cancel any time.
-        </b>
+        <b>Because the price is what’s in the way, your first year is {money(PRICE_OFFER.intro)}.</b>
       </p>
+      <p>
+        That’s {money(perMonth)} a month. Same plan, same {GUARANTEE_DAYS}-day refund. Then {money(PRICE_OFFER.price)} a year from{' '}
+        {yearDate(renews)}, and we email you {REMINDER_DAYS_BEFORE} days before.
+      </p>
+      <p className="small">This offer is shown once. It stays here until midnight tonight.</p>
       <Check checked={agreed} onChange={setAgreed}>
         {consent}
       </Check>

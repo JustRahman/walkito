@@ -18,6 +18,7 @@ import {
   minutesOf,
   missingStep,
   nextMorning,
+  offerOf,
   MOVE_CAP,
   ORDER,
   paidFor,
@@ -434,6 +435,45 @@ describe('what the plan and the price say', () => {
         }
       }
     }
+  });
+
+  test('the $29.99 offer: shown once, still there at 11 PM, gone the next morning, never after a purchase', () => {
+    const shownAt = new Date(2026, 10, 19, 14, 5);
+    expect(offerOf({}, shownAt)).toBe('first');
+    const shown = { offerShown: true, offerShownAt: shownAt.toISOString() };
+    // The same day it is the same offer, still there: never a first showing again.
+    expect(offerOf(shown, new Date(2026, 10, 19, 14, 6))).toBe('open');
+    expect(offerOf(shown, new Date(2026, 10, 19, 23, 0))).toBe('open');
+    expect(offerOf(shown, new Date(2026, 10, 19, 23, 59, 59))).toBe('open');
+    // Midnight, the next morning, a week on, and the same date a month later.
+    expect(offerOf(shown, new Date(2026, 10, 20, 0, 0, 0))).toBe('over');
+    expect(offerOf(shown, new Date(2026, 10, 20, 8, 0))).toBe('over');
+    expect(offerOf(shown, new Date(2026, 10, 26, 14, 5))).toBe('over');
+    expect(offerOf(shown, new Date(2026, 11, 19, 14, 5))).toBe('over');
+    // Shown a minute before midnight: one minute of it, as the card says.
+    const late = { offerShown: true, offerShownAt: new Date(2026, 10, 19, 23, 59).toISOString() };
+    expect(offerOf(late, new Date(2026, 10, 19, 23, 59, 30))).toBe('open');
+    expect(offerOf(late, new Date(2026, 10, 20, 0, 0, 1))).toBe('over');
+    // Never after a purchase, shown before or not.
+    expect(offerOf({ purchased: true }, shownAt)).toBe('over');
+    expect(offerOf({ ...shown, purchased: true }, new Date(2026, 10, 19, 15, 0))).toBe('over');
+    // v6 marked it shown and kept no time: for her it has ended. A time that cannot be read ends it too.
+    expect(offerOf({ offerShown: true }, shownAt)).toBe('over');
+    expect(offerOf({ offerShown: true, offerShownAt: 'yesterday' }, shownAt)).toBe('over');
+  });
+
+  test('the price page asks that rule before it shows the offer, counts the first showing only, and asks again at the tap', () => {
+    const price = readFileSync(join(import.meta.dir, 'screens/price.tsx'), 'utf8');
+    const show = price.slice(price.indexOf('const showOffer = (): void => {'), price.indexOf("/** The one-time offer's checkout"));
+    expect(show.includes("const offer = offerOf(s, new Date());\n    if (!offerReady || offer === 'over') return;")).toBe(true);
+    // An offer that is still open is put back on screen and nothing more: one stored time, one event.
+    expect(show.indexOf("if (offer === 'open') return;")).toBeGreaterThan(0);
+    expect(show.indexOf("if (offer === 'open') return;")).toBeLessThan(show.indexOf('update({ offerShown: true, offerShownAt: at })'));
+    expect(price.match(/exit_gift_shown/g)?.length).toBe(1);
+    expect(price.match(/offerShown: true/g)?.length).toBe(1);
+    expect(price.includes("if (offerOf(s, new Date()) === 'over') return (setOfferShownNow(false), null);\n            return buyOffer(consentText);")).toBe(true);
+    // What the card says is what the rule does.
+    expect(price.includes('This offer is shown once. It stays here until midnight tonight.')).toBe(true);
   });
 
   test('the prices are Rahman’s: $4.99 then $9.99 a month, $49.99 a year, $29.99 for the one offer', () => {

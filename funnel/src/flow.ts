@@ -340,6 +340,21 @@ export function defaultPlan(s: Pick<FunnelState, 'plan' | 'answers'>): 'monthly'
   return (sceneOf(s.answers) === 'steady' || sixtyPlus(s.answers)) && !burned(s.answers) ? 'yearly' : 'monthly';
 }
 
+/**
+ * The one-time $29.99 offer: shown once, and it stays until midnight of the
+ * day it was first shown, in her own time zone. The price page says exactly
+ * that, so this is what makes it true.
+ *
+ * `first`: never shown. `open`: first shown earlier today. `over`: shown on an
+ * earlier day, or by a build that kept no time (v6), or she has bought.
+ */
+export function offerOf(s: Pick<FunnelState, 'offerShown' | 'offerShownAt' | 'purchased'>, now: Date): 'first' | 'open' | 'over' {
+  if (s.purchased === true) return 'over';
+  if (s.offerShown !== true && s.offerShownAt == null) return 'first';
+  const shown = new Date(s.offerShownAt ?? Number.NaN);
+  return shown.toDateString() === now.toDateString() ? 'open' : 'over';
+}
+
 /** Her plan's name, by scene. A name is where the plan is headed, never a promise. */
 export const PLAN_NAME: Readonly<Record<Scene, string>> = {
   morning: 'First Steps Plan',

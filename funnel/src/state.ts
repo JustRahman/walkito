@@ -60,8 +60,10 @@ export type FunnelState = {
   purchased?: boolean;
   utm?: Record<string, string>;
   askedWhy?: boolean;
-  /** The one-time price offer was shown: never again, on this browser or (via web_leads) after a reload. */
+  /** The one-time price offer was shown. It stays until midnight of that day and never comes back after (offerOf in flow.ts). */
   offerShown?: boolean;
+  /** When it was first shown, as an ISO instant. A visitor from before v7 has none: for her it has ended. */
+  offerShownAt?: string;
   feeling?: 'easy' | 'ok' | 'hard';
   remindAt?: 'morning' | 'midday' | 'evening';
   remindBy?: 'email' | 'app';
