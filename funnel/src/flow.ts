@@ -104,7 +104,7 @@ export const RETIRED: Readonly<Record<string, string>> = {
 };
 
 /** What she tried that costs money. Stretching and videos do not. */
-const PAID = ['shoes', 'insoles', 'roller', 'pt', 'shot'];
+const PAID = ['shoes', 'insoles', 'roller', 'pt', 'shot', 'splint'];
 
 export function paidFor(tried: readonly string[] | undefined): boolean {
   return tried?.some((value) => PAID.includes(value)) === true;

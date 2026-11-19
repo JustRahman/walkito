@@ -141,7 +141,7 @@ describe('the funnel’s paths', () => {
     expect(paidFor(['stretching', 'videos'])).toBe(false);
     expect(paidFor(['nothing'])).toBe(false);
     expect(paidFor(undefined)).toBe(false);
-    for (const paid of ['shoes', 'insoles', 'roller', 'pt', 'shot']) expect(paidFor(['stretching', paid]), paid).toBe(true);
+    for (const paid of ['shoes', 'insoles', 'roller', 'pt', 'shot', 'splint']) expect(paidFor(['stretching', paid]), paid).toBe(true);
     expect(prevOf(STEP.heardTried, { tried: ['stretching'] })).toBe(STEP.tried);
     expect(prevOf(STEP.heardTried, { tried: ['nothing'] })).toBe(STEP.tried);
     expect(prevOf(STEP.heardTried, {})).toBe(STEP.tried);

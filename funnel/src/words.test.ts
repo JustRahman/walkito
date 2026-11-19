@@ -12,7 +12,7 @@ const WHEN = ['morning', 'sitting', 'evening', 'running', 'allday', 'varies', un
 const SINCE = ['new', 'months', 'year', 'years', undefined] as const;
 const START = ['chair', 'bed', 'standing', undefined] as const;
 const SAFETY = ['none', 'numb', undefined] as const;
-const TRIED_VALUES = ['shoes', 'insoles', 'stretching', 'roller', 'pt', 'shot', 'videos'];
+const TRIED_VALUES = ['shoes', 'insoles', 'stretching', 'roller', 'pt', 'shot', 'splint', 'videos'];
 const SPENT = ['under100', '100-500', '500-1000', 'over1000', 'unsure', undefined] as const;
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
 
@@ -45,7 +45,7 @@ describe('what is said back to her', () => {
     expect(listOf(['insoles', 'a shot'])).toBe('insoles and a shot');
     expect(listOf(['insoles', 'a shot', 'a ball'])).toBe('insoles, a shot and a ball');
     // An "or" inside an item takes a comma before the "and".
-    expect(listOf(['insoles', 'a shot or splint'])).toBe('insoles, and a shot or splint');
+    expect(listOf(['insoles', 'a roller or massage'])).toBe('insoles, and a roller or massage');
     expect(listOf(['special shoes', 'a roller or massage', 'videos online'])).toBe('special shoes, a roller or massage, and videos online');
   });
 
@@ -99,17 +99,20 @@ describe('what is said back to her', () => {
   });
 
   test('what she tried: built from her own ticks, never a fixed list', () => {
-    // The founders' own example, word for word but for the tick's two things ("a shot or a night splint").
+    // The founders' own example, word for word.
     expect(releaseOf({ tried: ['insoles', 'shot'] })).toEqual({
       title: 'You didn’t do anything wrong.',
-      lines: ['You tried insoles, and a shot or splint. Both help for a while. Neither one makes your foot any stronger.', 'That part’s been missing. Your plan starts there.'],
+      lines: ['You tried insoles and a shot. Both help for a while. Neither one makes your foot any stronger.', 'That part’s been missing. Your plan starts there.'],
       cta: 'Show me the part I haven’t tried',
     });
     expect(releaseOf({ tried: ['shoes'] }).lines[0]).toBe('You tried special shoes. That helps for a while. It doesn’t make your foot any stronger.');
     expect(releaseOf({ tried: ['shoes', 'insoles'] }).lines[0]).toBe('You tried special shoes and insoles. Both help for a while. Neither one makes your foot any stronger.');
-    expect(releaseOf({ tried: ['shoes', 'insoles', 'roller', 'shot'] }).lines[0]).toBe(
-      'You tried special shoes, insoles, a roller or massage, and a shot or splint. It all helps for a while. None of it makes your foot stronger.',
+    expect(releaseOf({ tried: ['shoes', 'insoles', 'roller', 'shot', 'splint'] }).lines[0]).toBe(
+      'You tried special shoes, insoles, a roller or massage, a shot, and a night splint. It all helps for a while. None of it makes your foot stronger.',
     );
+    // A shot and a night splint are a tick each, so one is never said for the other.
+    expect(releaseOf({ tried: ['splint'] }).lines[0]).toBe('You tried a night splint. That helps for a while. It doesn’t make your foot any stronger.');
+    expect(releaseOf({ tried: ['shot'] }).lines.join(' ')).not.toContain('splint');
     // An answer stored before v7, when the tick was "Insoles or new shoes": insoles, and not a word about shoes.
     expect(releaseOf({ tried: ['insoles'] }).lines.join(' ')).not.toMatch(/shoe/i);
     // On her own: a line of its own, or one short line after a list.
@@ -153,7 +156,7 @@ describe('what is said back to her', () => {
     expect(
       summaryOf({ focus: 'heel', when: 'morning', since: 'year', tried: ['insoles', 'shoes', 'shot', 'pt'], spent: '500-1000', start: 'chair', safety: 'none', minutes: 5 }).join(' '),
     ).toBe(
-      'Your heel bothers you most with the first steps of the morning. It’s been more than a year. You’ve tried special shoes, insoles, and a shot or splint, and you’ve seen a doctor or physical therapist. You’ve spent more than $500 on your feet so far. You want something you can do from a chair, in about 5 minutes a day.',
+      'Your heel bothers you most with the first steps of the morning. It’s been more than a year. You’ve tried special shoes, insoles and a shot, and you’ve seen a doctor or physical therapist. You’ve spent more than $500 on your feet so far. You want something you can do from a chair, in about 5 minutes a day.',
     );
     // "I'd rather not add it up" is respected: no figure is said back.
     expect(summaryOf({ focus: 'heel', tried: ['insoles'], spent: 'unsure' }).join(' ')).not.toContain('spent');
@@ -223,7 +226,7 @@ describe('what is said back to her', () => {
     for (const scene of [{ when: 'morning' }, { day: 'feet' }, { when: 'running' }, { focus: 'steady' }, { day: 'run_short' }] as Answers[])
       expect(patternOf(scene).lines.join(' ')).not.toContain('broken');
     // Tried everything: one more line, where the card does not already say it.
-    expect(patternOf({ when: 'morning', tried: ['shoes', 'insoles', 'shot'] }).lines.at(-1)).toBe('The things you tried held your foot or soothed it. This is the part where it works.');
+    expect(patternOf({ when: 'morning', tried: ['shoes', 'insoles', 'shot'] }).lines.at(-1)).toBe('The things you tried held your foot or soothed it. This is the part that makes the foot itself stronger.');
     expect(patternOf({ when: 'morning', tried: ['shoes'] }).lines.join(' ')).not.toContain('The things you tried');
   });
 

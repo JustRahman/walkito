@@ -14,7 +14,7 @@ export type Answers = {
   focus?: Focus;
   when?: 'morning' | 'sitting' | 'evening' | 'running' | 'allday' | 'varies';
   since?: 'new' | 'months' | 'year' | 'years';
-  /** What she has already tried (/s/5). v7 added `shoes` and `shot`; `insoles` was "insoles or new shoes" before it. */
+  /** What she has already tried (/s/5). v7 added `shoes`, `shot` and `splint`; `insoles` was "insoles or new shoes" before it. */
   tried?: string[];
   /** Roughly what she has spent on her feet so far (/s/39). Only asked of someone who tried something that costs money. */
   spent?: 'under100' | '100-500' | '500-1000' | 'over1000' | 'unsure';

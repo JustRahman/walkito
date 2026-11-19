@@ -114,7 +114,8 @@ const THINGS: Readonly<Record<string, string>> = {
   shoes: 'special shoes',
   insoles: 'insoles',
   roller: 'a roller or massage',
-  shot: 'a shot or splint',
+  shot: 'a shot',
+  splint: 'a night splint',
 };
 
 /** Everything she ticked on "What have you already tried?", as a list reads it. A doctor is not something she "tried". */
@@ -171,7 +172,7 @@ export type Release = { title: string; lines: string[]; cta: string };
  * and trains nothing; what she did on her own came with no plan. Neither is
  * her doing. A doctor or physical therapist is never part of that list.
  *
- * Short on purpose: with every box ticked and $500 spent it is 69 words, so
+ * Short on purpose: with every box ticked and $500 spent it is 70 words, so
  * the whole card is in view over the button (words.test.ts counts them).
  */
 export function releaseOf(a: Answers): Release {
@@ -319,7 +320,7 @@ export function patternOf(a: Answers): Pattern {
   if (scene === 'general' && !factsOf(a).safetyFlag) lines.unshift('Nothing’s broken. Your feet just haven’t been asked to do any work in years.');
   // For someone who has tried everything: what all of it had in common. The shift and general cards already say it.
   if (burned(a) && scene !== 'shift' && scene !== 'general')
-    lines.push('The things you tried held your foot or soothed it. This is the part where it works.');
+    lines.push('The things you tried held your foot or soothed it. This is the part that makes the foot itself stronger.');
   return { title: n > 0 ? `You ticked ${n}. That’s ${name}.` : `From what you told us, it’s ${name}.`, lines };
 }
 

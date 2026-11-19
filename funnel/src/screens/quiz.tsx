@@ -298,7 +298,8 @@ const TRIED: ReadonlyArray<Option<string>> = [
   { value: 'stretching', label: 'Stretching or exercises on my own' },
   { value: 'roller', label: 'A ball, a roller or massage' },
   { value: 'pt', label: 'A doctor, a podiatrist or physical therapy' },
-  { value: 'shot', label: 'A shot or a night splint' },
+  { value: 'shot', label: 'A shot in my foot' },
+  { value: 'splint', label: 'A night splint' },
   { value: 'videos', label: 'Videos online' },
   { value: 'nothing', label: 'Nothing yet' },
 ];
