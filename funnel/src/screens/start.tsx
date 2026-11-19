@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { url, YEARLY_UPGRADE_ENABLED } from '../config';
-import { sessionOne, STEP } from '../flow';
+import { minutesOf, MOVE_CAP, sessionOne, STEP } from '../flow';
 import { access, saveAnswers } from '../lib/account';
 import { track } from '../lib/analytics';
 import { go } from '../router';
@@ -35,8 +35,6 @@ function useAccess(): 'checking' | 'yes' | 'slow' {
   return state;
 }
 
-const MOVE_CAP = 120;
-
 export function StartDay1() {
   const s = useFunnel();
   const moves = useMemo(() => sessionOne(s), [s.answers]);
@@ -49,7 +47,7 @@ export function StartDay1() {
   /** She did the first move of today's session in the quiz, so what is here is the rest of it: Day 1 happens once. */
   const begun = s.tryIt.skipped !== true && (s.tryIt.seconds ?? 0) > 0;
   const move = index >= 0 ? moves[index] : undefined;
-  const total = moves.reduce((sum, m) => sum + Math.min(MOVE_CAP, m.seconds), 0);
+  const minutes = minutesOf(moves);
 
   const begin = (i: number) => {
     const next = moves[i];
@@ -94,8 +92,7 @@ export function StartDay1() {
             <h2>{begun ? 'Or finish today’s session here' : 'Or start today’s session here'}</h2>
             <p className="small">
               {moves.length === 1 ? 'One move' : `${moves.length} moves`}
-              {begun ? ' left' : ''}, about {Math.max(1, Math.round(total / 60))}{' '}
-              {Math.round(total / 60) > 1 ? 'minutes' : 'minute'}, in your browser. At your own pace.
+              {begun ? ' left' : ''}, about {minutes} {minutes > 1 ? 'minutes' : 'minute'}, in your browser. At your own pace.
             </p>
             {moves.map((m) => (
               <div className="card move" key={m.id}>

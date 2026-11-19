@@ -231,13 +231,21 @@ export function todayCount(s: FunnelState, now: Date = new Date()): number {
   return planView(s, now).days[0]?.moves.length ?? 0;
 }
 
-/** Session 1 after purchase: two moves from today that she has not just done. */
+/**
+ * Session 1 after purchase: what is left of today's session, the move she did
+ * in the quiz taken out. The same moves her plan page lists under Today, so
+ * "move 1 of 3 done" there is "2 moves left" here.
+ */
 export function sessionOne(s: FunnelState, now: Date = new Date()): Move[] {
-  const view = planView(s, now);
-  const tried = s.tryIt.skipped !== true && (s.tryIt.seconds ?? 0) > 0 ? tryMove(s.answers).id : null;
-  const pool = view.days.flatMap((d) => d.moves).filter((m) => m.id !== tried && m.clip != null);
-  const unique = pool.filter((m, i) => pool.findIndex((x) => x.id === m.id) === i);
-  return unique.slice(0, 2);
+  return planView(s, now).days[0]?.moves.filter((m) => !m.doneToday && m.clip != null) ?? [];
+}
+
+/** The longest one move runs in the browser's session. */
+export const MOVE_CAP = 120;
+
+/** "About 3 minutes": how long these moves take in the browser, never under one. */
+export function minutesOf(moves: readonly Move[]): number {
+  return Math.max(1, Math.round(moves.reduce((sum, m) => sum + Math.min(MOVE_CAP, m.seconds), 0) / 60));
 }
 
 export function appLink(from: string): string {

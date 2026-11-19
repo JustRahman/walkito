@@ -11,7 +11,9 @@ import {
   goalsFor,
   lifeFor,
   mentionedGoals,
+  minutesOf,
   missingStep,
+  MOVE_CAP,
   ORDER,
   paidFor,
   patternName,
@@ -210,6 +212,27 @@ describe('what the plan and the price say', () => {
     const left = sessionOne(tried, now);
     expect(left.length).toBeGreaterThan(0);
     expect(left.some((m) => m.id === view.days[0]!.moves[0]!.id)).toBe(false);
+  });
+
+  test('after payment the session is the rest of today’s: "move 1 of N done" on the plan page is N - 1 moves left', () => {
+    const now = new Date(2026, 10, 18, 9, 0);
+    for (const focus of ['heel', 'steady', 'flat', 'allday', 'moving'] as const)
+      for (const start of ['chair', 'bed', 'standing'] as const)
+        for (const safety of ['none', 'numb', 'aid'] as const)
+          for (const minutes of [3, 5, 10] as const) {
+            const answers = { ...ANSWERS, focus, start, safety, minutes };
+            const tried = state(answers, { tryIt: { seconds: 60 } });
+            const today = planView(tried, now).days[0]!.moves;
+            expect(sessionOne(tried, now).map((m) => m.id)).toEqual(today.slice(1).map((m) => m.id));
+            expect(sessionOne(tried, now).length).toBe(todayCount(tried, now) - 1);
+            // "Not now" in the quiz: nothing is done, so all of today is left.
+            const skipped = state(answers, { tryIt: { skipped: true } });
+            expect(sessionOne(skipped, now).length).toBe(todayCount(skipped, now));
+            expect(sessionOne(skipped, now).length).toBeGreaterThan(0);
+          }
+    const two = sessionOne(state(ANSWERS, { tryIt: { seconds: 60 } }), now);
+    expect(minutesOf(two)).toBe(Math.max(1, Math.round(two.reduce((sum, m) => sum + Math.min(MOVE_CAP, m.seconds), 0) / 60)));
+    expect(minutesOf([])).toBe(1);
   });
 
   test('a wake time reads as a clock, for the hours she can tap and for an exact one', () => {
