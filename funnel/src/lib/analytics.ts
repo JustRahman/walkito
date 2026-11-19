@@ -87,8 +87,8 @@ export function startAnalytics(): void {
     });
     posthog.register({
       funnel: 'web-v1',
-      // The quiz's order and look. Step charts split where it changes: v6 from Nov 2026.
-      design: 'v6',
+      // The quiz's order and look. Step charts split where it changes: v6 from Nov 18, 2026; v7 (two new steps, /s/39 and /s/41) after it.
+      design: 'v7',
       app_variant: import.meta.env.DEV ? 'development' : 'web',
       // The ad she tapped (its `utm_content`), on every event from `funnel_landed` on, so a step chart splits by ad. An ad's id is not health data.
       ad: getState().utm?.utm_content ?? null,
