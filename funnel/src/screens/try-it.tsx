@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { moveOf } from '../engine/plan';
 import { APP_STORE_RATING } from '../config';
 import {
+  adOf,
   DAY_LABEL,
   FIRST_STEP_MOVES,
   FIRST_STEP_SOURCE,
@@ -179,7 +180,8 @@ export function FeltAnswer() {
  */
 export function Routine() {
   const s = useFunnel();
-  const hero = s.answers.when === 'morning' || s.answers.life?.includes('mornings') === true;
+  // Ad 2 is about this routine, so for its visitors it is the plan's own, whatever they answered.
+  const hero = s.answers.when === 'morning' || s.answers.life?.includes('mornings') === true || adOf(s) === 'ad2_v1morning';
   const moves = FIRST_STEP_MOVES.map((id) => moveOf({ id }));
   useEffect(() => {
     track('first_step_routine_shown');

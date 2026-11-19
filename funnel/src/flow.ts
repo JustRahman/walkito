@@ -71,6 +71,18 @@ export const ORDER: readonly string[] = [
 ];
 
 /**
+ * The ads whose first screen carries on from them, by the `utm_content` their
+ * links have. Any other visitor gets the default first screen.
+ */
+export const ADS = ['ad1_plancard', 'ad2_v1morning', 'ad3_receipt'] as const;
+export type Ad = (typeof ADS)[number];
+
+export function adOf(s: Pick<FunnelState, 'utm'>): Ad | null {
+  const content = s.utm?.utm_content;
+  return ADS.find((ad) => ad === content) ?? null;
+}
+
+/**
  * Paths the quiz no longer has, each with where its visitor goes now. Somebody
  * part-way through when a new order ships, or coming back to a saved link,
  * would otherwise land on the first screen.

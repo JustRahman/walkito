@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
 import { ROUTES } from './App';
-import { PRICE_OFFER, PRICE_VARIANTS, yearlySaving } from './config';
-import { clockLabel, lifeFor, mentionedGoals, missingStep, ORDER, planLine, planView, prevOf, RETIRED, sectionOf, sessionOne, STEP, WAKE_TIMES } from './flow';
+import { PRICE_OFFER, PRICE_VARIANTS, yearlyPerMonth, yearlySaving } from './config';
+import { adOf, clockLabel, lifeFor, mentionedGoals, missingStep, ORDER, planLine, planView, prevOf, RETIRED, sectionOf, sessionOne, STEP, WAKE_TIMES } from './flow';
 import type { Answers, FunnelState } from './state';
 
 const ANSWERS: Answers = {
@@ -106,6 +106,16 @@ describe('the funnel’s paths', () => {
     );
   });
 
+  test('an ad has a first screen of its own only under the utm_content its links carry', () => {
+    expect(adOf(state(ANSWERS, { utm: { utm_content: 'ad1_plancard' } }))).toBe('ad1_plancard');
+    expect(adOf(state(ANSWERS, { utm: { utm_content: 'ad2_v1morning' } }))).toBe('ad2_v1morning');
+    expect(adOf(state(ANSWERS, { utm: { utm_content: 'ad3_receipt', utm_source: 'fb' } }))).toBe('ad3_receipt');
+    // Anything else is the default screen: another ad, no ad, a visitor from before v7.
+    expect(adOf(state(ANSWERS, { utm: { utm_content: 'ad4_new' } }))).toBeNull();
+    expect(adOf(state(ANSWERS, { utm: { utm_source: 'fb' } }))).toBeNull();
+    expect(adOf(state(ANSWERS))).toBeNull();
+  });
+
   test('the price needs her email, and the code where one was sent', () => {
     expect(missingStep(STEP.price, state(ANSWERS))).toBe(STEP.email);
     expect(missingStep(STEP.price, state(ANSWERS, { email: 'sam@example.com' }))).toBe(STEP.code);
@@ -157,6 +167,10 @@ describe('what the plan and the price say', () => {
   test('the prices are Rahman’s: $4.99 then $9.99 a month, $49.99 a year, $29.99 for the one offer', () => {
     const v = PRICE_VARIANTS.b!;
     expect([v.monthly.intro, v.monthly.price, v.yearly.price, PRICE_OFFER.intro, PRICE_OFFER.price]).toEqual([4.99, 9.99, 49.99, 29.99, 49.99]);
+  });
+
+  test('the year as a monthly figure is $4.17, as Ad 3 says it', () => {
+    expect(yearlyPerMonth(PRICE_VARIANTS.b!)).toBe(4.17);
   });
 
   test('the yearly saving is the same twelve months paid monthly, less the year', () => {

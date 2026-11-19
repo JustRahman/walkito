@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 
-import { clockLabel, firstName, goalLabels, kindOf, PLAN_NAME, planLine, planView, STEP } from '../flow';
+import { adOf, clockLabel, firstName, goalLabels, kindOf, PLAN_NAME, planLine, planView, STEP } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
@@ -27,6 +27,8 @@ export function Plan() {
   const today = view.days[0];
   const sessions = view.days.filter((d) => !d.rest).length;
   const goals = goalLabels(s.answers);
+  // Ad 1 promised seven days, so her week is counted in days. The plan itself has no end either way.
+  const week = adOf(s) === 'ad1_plancard' ? 'Your first 7 days' : 'Your first week';
   useEffect(() => {
     track('plan_viewed');
   }, []);
@@ -42,8 +44,8 @@ export function Plan() {
         </p>
       </div>
 
-      <section className="stack" aria-label="Your first week">
-        <h3>Your first week</h3>
+      <section className="stack" aria-label={week}>
+        <h3>{week}</h3>
         <div className="week">
           {view.days.map((d, i) => {
             const { weekday, number } = dayOf(d.date);

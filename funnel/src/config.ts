@@ -45,6 +45,11 @@ export function yearlySaving(v: PriceVariant): number {
   return Math.round((v.monthly.intro + (v.yearly.months - 1) * v.monthly.price - v.yearly.price) * 100) / 100;
 }
 
+/** The year as a monthly figure, "$4.17": its price over its twelve months. The only smaller number the year is ever given; never one per day. */
+export function yearlyPerMonth(v: PriceVariant): number {
+  return Math.round((v.yearly.price / v.yearly.months) * 100) / 100;
+}
+
 /**
  * The one-time offer after "What held you back?" -> "The price": the first
  * year for $29.99, then $49.99 a year. A NEW RevenueCat product with a paid

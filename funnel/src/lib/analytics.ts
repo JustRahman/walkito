@@ -88,6 +88,8 @@ export function startAnalytics(): void {
       // The quiz's order and look. Step charts split where it changes: v6 from Nov 2026.
       design: 'v6',
       app_variant: import.meta.env.DEV ? 'development' : 'web',
+      // The ad she tapped (its `utm_content`), on every event from `funnel_landed` on, so a step chart splits by ad. An ad's id is not health data.
+      ad: getState().utm?.utm_content ?? null,
       price_variant: getState().variant,
     });
     ph = posthog;

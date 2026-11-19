@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from 'react';
 
+import bedMorning from '../assets/photos/bed-morning.jpg';
+import chairWindow from '../assets/photos/chair-window.jpg';
 import hero from '../assets/photos/hero-socks-morning.jpg';
-import { url } from '../config';
-import { PROGRESS, STEP, WAKE_TIMES, wakeOf } from '../flow';
+import { DEFAULT_VARIANT, money, PRICE_VARIANTS, url, yearlyPerMonth } from '../config';
+import { adOf, PROGRESS, STEP, WAKE_TIMES, wakeOf, type Ad } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { answer, useFunnel, type Answers } from '../state';
@@ -59,6 +61,73 @@ const AGES: ReadonlyArray<Option<NonNullable<Answers['age']>>> = [
   { value: '70+', label: '70 or older' },
 ];
 
+type Entry = {
+  title: ReactNode;
+  sub: string;
+  /** The photograph, and the part of it the band keeps. Left out: Ad 3's receipt. */
+  photo?: { src: string; at: string };
+};
+
+/**
+ * The first screen, one per ad: it starts with the words and the picture the
+ * ad she tapped ended on. The question under it is the same for everyone.
+ */
+const ENTRY: Readonly<Record<Ad | 'default', Entry>> = {
+  ad2_v1morning: {
+    title: (
+      <>
+        That first step out of bed. <em>You know the one.</em>
+      </>
+    ),
+    sub: '2 minutes on the edge of the bed, before your feet touch the floor.',
+    photo: { src: bedMorning, at: '50% 88%' },
+  },
+  ad3_receipt: {
+    title: (
+      <>
+        Insoles. Splints. New shoes. <em>And the first step still hurts?</em>
+      </>
+    ),
+    sub: 'You didn’t do anything wrong. Nobody showed you how to make your feet stronger. Start here, sitting down.',
+  },
+  ad1_plancard: {
+    title: (
+      <>
+        Your 7-day foot plan, <em>sitting down</em>.
+      </>
+    ),
+    sub: 'A few minutes a day from a chair. Answer a few questions and we’ll build your first week.',
+    photo: { src: chairWindow, at: '50% 72%' },
+  },
+  default: {
+    title: (
+      <>
+        Foot exercises you do <em>sitting down</em>.
+      </>
+    ),
+    sub: 'A few minutes a day. Answer a few questions and we’ll build your plan.',
+    photo: { src: hero, at: '50% 60%' },
+  },
+};
+
+/** Ad 3's receipt, carried on: three things bought and crossed out, and the one line still open. */
+function Receipt() {
+  return (
+    <ul className="receipt">
+      {['Insoles', 'Night splint', 'New shoes'].map((bought) => (
+        <li key={bought}>
+          <s>{bought}</s>
+          <span>tried</span>
+        </li>
+      ))}
+      <li>
+        Training your feet
+        <span>not yet</span>
+      </li>
+    </ul>
+  );
+}
+
 /**
  * The first screen is the first question: what this is, then her age. The four
  * cards are in view without scrolling on a 390 x 660 screen (Facebook's
@@ -66,6 +135,9 @@ const AGES: ReadonlyArray<Option<NonNullable<Answers['age']>>> = [
  */
 export function Age() {
   const s = useFunnel();
+  const ad = adOf(s);
+  const entry = ENTRY[ad ?? 'default'];
+  const price = PRICE_VARIANTS[s.variant] ?? PRICE_VARIANTS[DEFAULT_VARIANT]!;
   const pick = (value: NonNullable<Answers['age']>) => {
     answer({ age: value });
     track('step_completed', { step: STEP.age });
@@ -74,12 +146,10 @@ export function Age() {
   return (
     <Page footer>
       <div className="stack gap-s">
-        <h1>
-          Gentle daily foot exercises, made for <em>you</em>
-        </h1>
-        <p className="small">A few minutes a day, mostly from a chair. Answer a few questions to get your plan.</p>
+        <h1>{entry.title}</h1>
+        <p className="small">{entry.sub}</p>
       </div>
-      <img className="photo" src={hero} alt="" width={666} height={1000} />
+      {entry.photo != null ? <img className="photo" src={entry.photo.src} alt="" style={{ objectPosition: entry.photo.at }} /> : <Receipt />}
       <div className="stack">
         <h3>First, how old are you?</h3>
         <div className="grid2">
@@ -92,7 +162,16 @@ export function Age() {
         <p className="caption">We ask so your plan starts at the right pace.</p>
       </div>
       <div className="stack gap-s">
-        <p className="caption">The quiz is free. The plan is a paid subscription, and you’ll see the price before you decide.</p>
+        {ad === 'ad3_receipt' ? (
+          // Her ad named a price, so this screen does too.
+          <p className="caption">
+            The quiz is free. The plan is {money(price.yearly.price)} a year (that’s {money(yearlyPerMonth(price))} a month), or{' '}
+            {money(price.monthly.intro)} for the first month and {money(price.monthly.price)} a month after that. You’ll see everything
+            before you decide.
+          </p>
+        ) : (
+          <p className="caption">The quiz is free. The plan is a paid subscription, and you’ll see the price before you decide.</p>
+        )}
         <p className="caption">
           By choosing your age you agree to our <a href={url('/terms')}>Terms</a> and <a href={url('/privacy')}>Privacy Policy</a>.
         </p>
