@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { ROUTES } from './App';
 import { PRICE_OFFER, PRICE_VARIANTS, yearlyPerMonth, yearlySaving } from './config';
@@ -7,6 +9,7 @@ import {
   anchorsFor,
   burned,
   clockLabel,
+  defaultPlan,
   goalLabels,
   goalsFor,
   lifeFor,
@@ -25,6 +28,7 @@ import {
   sceneOf,
   sectionOf,
   sessionOne,
+  sixtyPlus,
   spentALot,
   spentOf,
   STEP,
@@ -348,6 +352,43 @@ describe('what the plan and the price say', () => {
   test('her goals are listed from what she mentioned, and the list is empty when she mentioned nothing', () => {
     expect(mentionedGoals(ANSWERS)).toEqual(['mornings', 'shoes']);
     expect(mentionedGoals({ ...ANSWERS, life: ['none'] })).toEqual([]);
+  });
+
+  test('the plan that is marked: hers if she has one, the year for steady or sixty and over, monthly for everyone else', () => {
+    const fifty: Answers = { ...ANSWERS, age: '50-59' };
+    expect(defaultPlan(state(fifty))).toBe('monthly');
+    expect(defaultPlan(state({ ...fifty, focus: 'steady' }))).toBe('yearly');
+    for (const age of ['60-69', '70+', '65-74', '75+'] as const) expect(defaultPlan(state({ ...ANSWERS, age }))).toBe('yearly');
+    // 55-64 was asked before v6 and may be 55; with no age at all she is not put in a group.
+    for (const age of ['under50', '50-59', '55-64', 'under55', undefined] as const) {
+      expect(sixtyPlus({ ...ANSWERS, age })).toBe(false);
+      expect(defaultPlan(state({ ...ANSWERS, age }))).toBe('monthly');
+    }
+    expect(defaultPlan(state({}))).toBe('monthly');
+    // Someone who has tried everything keeps the smallest first payment, whatever her age or scene.
+    const tired: Answers = { ...ANSWERS, age: '70+', focus: 'steady', tried: ['insoles', 'shoes', 'shot'] };
+    expect(burned(tired)).toBe(true);
+    expect(defaultPlan(state(tired))).toBe('monthly');
+    // A link's ?plan= (main.tsx stores it) or her own tap always wins, both ways.
+    expect(defaultPlan(state(tired, { plan: 'yearly' }))).toBe('yearly');
+    expect(defaultPlan(state({ ...ANSWERS, age: '70+' }, { plan: 'monthly' }))).toBe('monthly');
+  });
+
+  test('marking a plan for her is not her choosing it: plan_selected is sent from her tap and nowhere else', () => {
+    const price = readFileSync(join(import.meta.dir, 'screens/price.tsx'), 'utf8');
+    expect(price.match(/plan_selected/g)?.length).toBe(1);
+    const choose = price.slice(price.indexOf('const choose = (id: PlanId) => {'), price.indexOf('const checkout = '));
+    expect(choose.includes("track('plan_selected', { plan: id });")).toBe(true);
+    expect(price.includes('useState<PlanId>(() => defaultPlan(s))')).toBe(true);
+  });
+
+  test('"each with a video": every move of every first week has one', () => {
+    const now = new Date(2026, 10, 18, 9, 0);
+    for (const focus of ['heel', 'steady', 'flat', 'allday', 'moving'] as const)
+      for (const start of ['chair', 'standing'] as const)
+        for (const safety of ['none', 'numb'] as const)
+          for (const minutes of [3, 5, 10] as const)
+            expect(planView(state({ ...ANSWERS, focus, start, safety, minutes }), now).days.flatMap((d) => d.moves).every((m) => m.clip != null)).toBe(true);
   });
 
   test('the prices are Rahman’s: $4.99 then $9.99 a month, $49.99 a year, $29.99 for the one offer', () => {

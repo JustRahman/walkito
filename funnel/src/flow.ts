@@ -321,6 +321,25 @@ export function burned(a: Answers): boolean {
   return tried.filter((value) => PAID.includes(value)).length >= 3 || (long && tried.length >= 2) || spentALot(a);
 }
 
+/** Sixty or older, in the decades asked since v6 and the bands asked before it. "55-64" is not: she may be 55. */
+export function sixtyPlus(a: Answers): boolean {
+  return a.age === '60-69' || a.age === '70+' || a.age === '65-74' || a.age === '75+';
+}
+
+/**
+ * The plan the price page opens on. A plan she came with (`?plan=` on a link)
+ * or tapped herself always wins. Otherwise the year, one known number, for the
+ * steady scene and for sixty or older; and the smallest first payment for
+ * everyone else, and for anyone who has tried everything, whatever her age.
+ *
+ * It only picks which card is marked. It is never stored and never tracked:
+ * `plan_selected` is her own tap.
+ */
+export function defaultPlan(s: Pick<FunnelState, 'plan' | 'answers'>): 'monthly' | 'yearly' {
+  if (s.plan != null) return s.plan;
+  return (sceneOf(s.answers) === 'steady' || sixtyPlus(s.answers)) && !burned(s.answers) ? 'yearly' : 'monthly';
+}
+
 /** Her plan's name, by scene. A name is where the plan is headed, never a promise. */
 export const PLAN_NAME: Readonly<Record<Scene, string>> = {
   morning: 'First Steps Plan',

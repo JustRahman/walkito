@@ -13,15 +13,17 @@ import {
   SITE,
   SUPPORT_EMAIL,
   url,
+  yearlyPerMonth,
   yearlySaving,
 } from '../config';
-import { addDays, firstName, PLAN_NAME, planLine, sceneOf, shortDate, STEP, wakeOf } from '../flow';
+import { addDays, defaultPlan, firstName, longDate, minutesOf, PLAN_NAME, planLine, planView, sceneOf, sessionOne, shortDate, STEP, wakeOf } from '../flow';
 import { currentUser, guardCheckout, logConsent, saveLead } from '../lib/account';
 import { meta, track } from '../lib/analytics';
 import { billingReady, buy, loadPackages, type Packages } from '../lib/billing';
 import { go } from '../router';
 import { update, useFunnel } from '../state';
 import { AppButton, Check, Choice, Cta, Page } from '../ui';
+import { permissionLine, readyLine, spentAnchor } from '../words';
 import { ReviewCards, TrustLines } from './trust';
 
 type PlanId = 'monthly' | 'yearly';
@@ -47,7 +49,10 @@ const HELD_BACK = [
 export function Price() {
   const s = useFunnel();
   const variant = PRICE_VARIANTS[s.variant] ?? PRICE_VARIANTS[DEFAULT_VARIANT]!;
-  const [picked, setPlan] = useState<PlanId>(s.plan ?? 'monthly');
+  /** The card that is marked: hers if she came with one or tapped one, her group's otherwise. The group's is never stored or tracked. */
+  const [picked, setPlan] = useState<PlanId>(() => defaultPlan(s));
+  /** We chose the marked card, so the page says why. Over once she taps one herself. */
+  const [ours, setOurs] = useState(s.plan == null);
   const [agreed, setAgreed] = useState(false);
   const packages = useRef<Promise<Packages | null> | null>(null);
   const [phase, setPhase] = useState<'idle' | 'opening' | 'open' | 'held-back'>('idle');
@@ -98,6 +103,7 @@ export function Price() {
 
   const choose = (id: PlanId) => {
     setPlan(id);
+    setOurs(false);
     setAgreed(false);
     update({ plan: id });
     track('plan_selected', { plan: id });
@@ -224,6 +230,16 @@ export function Price() {
       ? `We email you ${REMINDER_DAYS_BEFORE} days before your first ${money(m.price)} charge`
       : `We email you ${REMINDER_DAYS_BEFORE} days before your plan renews`;
   const name = firstName(s);
+  const view = useMemo(() => planView(s, today), [s.answers, s.tryIt, today]);
+  const left = useMemo(() => sessionOne(s, today), [s.answers, s.tryIt, today]);
+  const begun = view.days[0]?.moves.some((move) => move.doneToday) === true;
+  const sessions = view.days.filter((d) => !d.rest).length;
+  const moves = new Set(view.days.flatMap((d) => d.moves.map((move) => move.id))).size;
+  const priceToday = money(plan === 'monthly' ? m.intro : y.price);
+  /** Her own spend against today's price; without one, the year against a pair of shoes, where the year is on offer. */
+  const anchor =
+    spentAnchor(s.answers, priceToday) ??
+    (yearly === true ? `A whole year is ${money(y.price)}. That’s less than most pairs of supportive shoes.` : null);
   return (
     <Page backTo={STEP.plan} footer>
       <div className="stack gap-s">
@@ -234,8 +250,11 @@ export function Price() {
         <p className="lead">
           {PLAN_NAME[sceneOf(s.answers)]} · {planLine(s.answers)}
         </p>
-        <p className="small">Your first-step routine starts tomorrow morning.</p>
+        <p className="small">
+          <b>Day 1 is today, {longDate(today)}.</b> {readyLine(left, minutesOf(left), begun)}
+        </p>
       </div>
+      <p>{permissionLine(s.answers)}</p>
 
       {phase === 'held-back' ? (
         <HeldBack
@@ -267,12 +286,14 @@ export function Price() {
               aria-pressed={plan === 'monthly'}
               onClick={() => choose('monthly')}
             >
-              <span className="tag flag">Lowest price today</span>
+              <span className="tag flag">Smallest first payment</span>
               <span className="radio" />
               <span className="grow">
                 <span className="name">Monthly</span>
                 <span className="today">{money(m.intro)} today</span>
-                <span className="hint">First month. Then {money(m.price)} a month.</span>
+                <span className="hint">
+                  First month, for new members. Then {money(m.price)} a month.
+                </span>
               </span>
             </button>
             {(yearly === true || (yearly === null && plan === 'yearly')) && (
@@ -284,18 +305,27 @@ export function Price() {
                 aria-pressed={plan === 'yearly'}
                 onClick={() => choose('yearly')}
               >
+                <span className="tag flag">Best value</span>
                 <span className="radio" />
                 <span className="grow">
                   <span className="name">1 year</span>
                   <span className="today">{money(y.price)} today</span>
-                  <span className="hint">Then {money(y.price)} a year.</span>
+                  <span className="hint">One payment. That’s {money(yearlyPerMonth(variant))} a month.</span>
                   {saving > 0 && (
                     <span className="saving">
                       {money(saving)} less than {y.months} months of monthly
                     </span>
                   )}
+                  <span className="hint">Then {money(y.price)} a year.</span>
                 </span>
               </button>
+            )}
+            {ours && yearly === true && (
+              <p className="small">
+                {plan === 'monthly'
+                  ? 'We selected Monthly because it’s the smallest first payment. It’s the same plan either way.'
+                  : 'We selected 1 year because it’s one payment, with no monthly bills.'}
+              </p>
             )}
           </div>
 
@@ -333,6 +363,8 @@ export function Price() {
             </ul>
           </section>
 
+          {anchor != null && <p className="card">{anchor}</p>}
+
           <div className="panel" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
             <img src={url('/img/art-shield.webp')} alt="" width={44} height={44} style={{ objectFit: 'contain', flex: 'none' }} />
             <div>
@@ -369,10 +401,13 @@ export function Price() {
           <section className="card stack" aria-label="What you get">
             <h3>What you get</h3>
             <ul className="ticks">
-              <li>A short session most days</li>
-              <li>A video for every move</li>
+              <li>{moves} moves in your first week, each with a video</li>
+              <li>
+                {sessions} sessions and {view.days.length - sessions} rest days
+              </li>
+              <li>A 2-minute first-step routine for the edge of the bed</li>
               <li>A plan that changes each week</li>
-              <li>A morning reminder</li>
+              <li>It works in your browser and in the Walkito app</li>
             </ul>
           </section>
 
@@ -455,7 +490,7 @@ export function Price() {
       {phase !== 'held-back' && (
         <Cta>
           <button className="btn" type="button" disabled={phase !== 'idle'} onClick={() => void checkout()}>
-            {phase === 'opening' ? 'Opening checkout…' : `Start my plan · ${money(plan === 'monthly' ? m.intro : y.price)}`}
+            {phase === 'opening' ? 'Opening checkout…' : `Start my plan · ${priceToday}`}
           </button>
           <div className="pay">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">

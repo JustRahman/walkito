@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { Answers } from './state';
-import { guessOf, herTime, listOf, NOT_QUITE, patternOf, planSentence, releaseOf, spentSaid, summaryOf, triedNouns, triedRow } from './words';
+import { guessOf, herTime, listOf, NOT_QUITE, patternOf, permissionLine, planSentence, readyLine, releaseOf, spentAnchor, spentSaid, summaryOf, triedNouns, triedRow } from './words';
 
 /**
  * What is said back to her is put together from her answers, so no reader of
@@ -245,5 +245,39 @@ describe('what is said back to her', () => {
     for (const anchor of ['bed', 'coffee', 'home', 'show', 'walk'] as const)
       for (const start of START)
         for (const safety of SAFETY) check(`${anchor} / ${start} / ${safety}`, planSentence({ anchor, start, safety })!);
+  });
+
+  test('the price page’s kind line: hers by group, with her own minutes', () => {
+    expect(permissionLine({ day: 'feet', minutes: 3 })).toBe('You look after everyone else all day. These 3 minutes are yours.');
+    expect(permissionLine({ when: 'evening' })).toBe('You look after everyone else all day. These 5 minutes are yours.');
+    expect(permissionLine({ focus: 'steady' })).toBe('Your feet carried you everywhere. This is for them.');
+    expect(permissionLine({ when: 'morning', age: '70+' })).toBe('Your feet carried you everywhere. This is for them.');
+    expect(permissionLine({ when: 'morning', age: '50-59' })).toBe('You’d pay this for someone you love without thinking twice. You’re allowed to do it for you.');
+    expect(permissionLine({})).toBe('You’d pay this for someone you love without thinking twice. You’re allowed to do it for you.');
+  });
+
+  test('her spend beside today’s price: only a figure she gave, only from $100, and never without something she paid for', () => {
+    expect(spentAnchor({ tried: ['insoles'], spent: 'over1000' }, '$4.99')).toBe(
+      'You told us you’ve spent more than $1,000 on your feet so far. This is $4.99 to find out whether training them is the missing part. And you can have it back.',
+    );
+    expect(spentAnchor({ tried: ['shoes'], spent: '100-500' }, '$49.99')).toContain('spent between $100 and $500 on your feet so far. This is $49.99 to');
+    expect(spentAnchor({ tried: ['shoes'], spent: '500-1000' }, '$4.99')).toContain('more than $500');
+    for (const spent of ['under100', 'unsure', undefined] as const) expect(spentAnchor({ tried: ['shoes'], spent }, '$4.99')).toBeNull();
+    // She went back and unticked everything that costs money: the figure is no longer hers.
+    expect(spentAnchor({ tried: ['stretching'], spent: 'over1000' }, '$4.99')).toBeNull();
+    for (const tried of TRIED)
+      for (const spent of SPENT) {
+        const line = spentAnchor({ tried, spent }, '$4.99');
+        if (line != null) check(`${tried} / ${spent}`, line);
+      }
+  });
+
+  test('what is waiting when she pays: the count and minutes /s/start shows, and "sitting down" only when every move is', () => {
+    const move = (seated: boolean) => ({ id: 'x', title: '', cue: '', seated, seconds: 60, dose: '', clip: null, poster: '' });
+    expect(readyLine([move(true), move(true)], 3, true)).toBe('The rest of today’s session is ready the moment you start: 2 moves, about 3 minutes, sitting down.');
+    expect(readyLine([move(true)], 1, true)).toBe('The rest of today’s session is ready the moment you start: one move, about 1 minute, sitting down.');
+    expect(readyLine([move(true), move(false)], 4, true)).toBe('The rest of today’s session is ready the moment you start: 2 moves, about 4 minutes.');
+    expect(readyLine([move(true), move(true), move(true)], 5, false)).toBe('Your first session is ready the moment you start. It’s about 5 minutes, sitting down.');
+    expect(readyLine([move(false)], 2, false)).toBe('Your first session is ready the moment you start. It’s about 2 minutes.');
   });
 });

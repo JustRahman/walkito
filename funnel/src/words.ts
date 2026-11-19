@@ -1,4 +1,5 @@
-import { anchorLabel, burned, factsOf, patternName, sceneOf, spentALot, spentOf, START_LABEL, tickedCount, type Scene } from './flow';
+import { anchorLabel, burned, factsOf, patternName, sceneOf, sixtyPlus, spentALot, spentOf, START_LABEL, tickedCount, type Scene } from './flow';
+import type { Move } from './engine/plan';
 import type { Answers } from './state';
 
 /**
@@ -349,4 +350,40 @@ export function planSentence(a: Answers): string | null {
     case 'walk':
       return `Before my ${sceneOf(a) === 'sport' ? 'run' : 'walk'}, I do ${mine} ${place}.`;
   }
+}
+
+// ── /s/18: the price ───────────────────────────────────────────────────────
+
+/**
+ * One line that says these minutes and this money may be for her, by group:
+ * the first that fits. It goes near the top of the price page and never right
+ * above the button, where a kind word reads as a push.
+ */
+export function permissionLine(a: Answers): string {
+  if (sceneOf(a) === 'shift') return `You look after everyone else all day. These ${a.minutes ?? 5} minutes are yours.`;
+  if (sceneOf(a) === 'steady' || sixtyPlus(a)) return 'Your feet carried you everywhere. This is for them.';
+  return 'You’d pay this for someone you love without thinking twice. You’re allowed to do it for you.';
+}
+
+/**
+ * What is waiting the moment she pays: today's session, or what is left of it
+ * after the move she did in the quiz. The count and the minutes are the ones
+ * /s/start shows. "Sitting down" only when every one of these moves is.
+ */
+export function readyLine(moves: readonly Move[], minutes: number, begun: boolean): string {
+  const seated = moves.length > 0 && moves.every((m) => m.seated) ? ', sitting down' : '';
+  const about = `about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+  if (!begun) return `Your first session is ready the moment you start. It’s ${about}${seated}.`;
+  return `The rest of today’s session is ready the moment you start: ${moves.length === 1 ? 'one move' : `${moves.length} moves`}, ${about}${seated}.`;
+}
+
+/**
+ * What she told us she has spent, next to what today costs: her own number,
+ * never a "was" price of ours. Only for $100 or more; under that, or with no
+ * answer, there is nothing of hers to set the price against.
+ */
+export function spentAnchor(a: Answers, today: string): string | null {
+  const spent = spentSaid(a);
+  if (spent == null || spentOf(a) === 'under100') return null;
+  return `You told us you’ve spent ${spent} on your feet so far. This is ${today} to find out whether training them is the missing part. And you can have it back.`;
 }
