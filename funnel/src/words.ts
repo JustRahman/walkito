@@ -1,4 +1,4 @@
-import { factsOf } from './flow';
+import { factsOf, START_LABEL } from './flow';
 import type { Answers } from './state';
 
 /**
@@ -129,6 +129,16 @@ export function triedNouns(a: Answers): string[] {
 
 export function sawSomeone(a: Answers): boolean {
   return a.tried?.includes('pt') === true;
+}
+
+/** All of it in one row, a doctor included: "new insoles or shoes, a doctor or physical therapist". Empty when she tried nothing. */
+export function triedRow(a: Answers): string {
+  return [...triedNouns(a), ...(sawSomeone(a) ? ['a doctor or physical therapist'] : [])].join(', ');
+}
+
+/** "5 minutes a day, in a chair": the time and the place she chose. */
+export function herTime(a: Answers): string {
+  return `${a.minutes ?? 5} minutes a day, ${START_LABEL[a.start ?? 'chair'].toLowerCase()}`;
 }
 
 export type Release = { title: string; lines: string[]; cta: string };

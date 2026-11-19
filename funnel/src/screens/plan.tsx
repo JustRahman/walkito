@@ -1,10 +1,11 @@
 import { useEffect, useMemo } from 'react';
 
-import { adOf, clockLabel, firstName, goalLabels, kindOf, PLAN_NAME, planLine, planView, STEP } from '../flow';
+import { adOf, clockLabel, firstName, FOCUS_LABEL, goalLabels, kindOf, OUTLOOK_SOURCE, PLAN_NAME, planLine, planView, STEP, WHEN_LABEL } from '../flow';
 import { track } from '../lib/analytics';
 import { go } from '../router';
 import { useFunnel } from '../state';
 import { Cta, Page } from '../ui';
+import { herTime, triedRow } from '../words';
 import { ReviewCards, TrustLines } from './trust';
 
 /** "2026-11-18" -> "Wed" and "18", in her own time zone. */
@@ -14,11 +15,11 @@ function dayOf(date: string): { weekday: string; number: number } {
 }
 
 /**
- * Her plan, as the app's own engine built it from her answers: the first
- * week's days, today's moves with the one she just did marked done, tomorrow
- * morning's routine, and what happens after week one. A picture of the plan,
- * never of a result: no length, no date by which anything changes, nothing
- * locked or blurred.
+ * Her plan, as the app's own engine built it from her answers: what it was
+ * built from, the first week's days, today's moves with the one she just did
+ * marked done, tomorrow morning's routine, and what to expect, said plainly.
+ * A picture of the plan, never of a result: no length, no date by which
+ * anything changes, nothing locked or blurred.
  */
 export function Plan() {
   const s = useFunnel();
@@ -27,6 +28,8 @@ export function Plan() {
   const today = view.days[0];
   const sessions = view.days.filter((d) => !d.rest).length;
   const goals = goalLabels(s.answers);
+  const a = s.answers;
+  const tried = triedRow(a);
   // Ad 1 promised seven days, so her week is counted in days. The plan itself has no end either way.
   const week = adOf(s) === 'ad1_plancard' ? 'Your first 7 days' : 'Your first week';
   useEffect(() => {
@@ -43,6 +46,27 @@ export function Plan() {
           {PLAN_NAME[kindOf(s.answers)]} · {planLine(s.answers)}
         </p>
       </div>
+
+      <section className="card stack" aria-label="Built from what you told us">
+        <h3>Built from what you told us</h3>
+        <div>
+          <b>Your feet</b>
+          <p className="small">
+            {FOCUS_LABEL[a.focus ?? 'heel']}
+            {a.when != null && ` · ${WHEN_LABEL[a.when].toLowerCase()}`}
+          </p>
+        </div>
+        {tried !== '' && (
+          <div>
+            <b>Already tried</b>
+            <p className="small">{tried[0]!.toUpperCase() + tried.slice(1)}</p>
+          </div>
+        )}
+        <div>
+          <b>Your time</b>
+          <p className="small">{herTime(a)}</p>
+        </div>
+      </section>
 
       <section className="stack" aria-label={week}>
         <h3>{week}</h3>
@@ -82,18 +106,30 @@ export function Plan() {
         </section>
       )}
 
-      <div className="card stack">
-        <div>
-          <b>Tomorrow morning</b>
-          <p className="small">
-            Your 2-minute first-step routine{s.answers.wake != null ? `, around ${clockLabel(s.answers.wake)}` : ', before your first step'}.
-          </p>
-        </div>
-        <div>
-          <b>After week one</b>
-          <p className="small">Your plan changes every week, based on how your sessions feel.</p>
-        </div>
+      <div className="card">
+        <b>Tomorrow morning</b>
+        <p className="small">
+          Your 2-minute first-step routine{s.answers.wake != null ? `, around ${clockLabel(s.answers.wake)}` : ', before your first step'}.
+        </p>
       </div>
+
+      <section className="card stack" aria-label="What to expect">
+        <h3>What to expect, honestly</h3>
+        <p className="small">In your first sessions you’ll feel your feet working. That’s normal.</p>
+        <p className="small">Your plan starts gentle. It changes every week, based on how your sessions feel.</p>
+        {a.focus === 'heel' ? (
+          <p className="small">
+            Be patient with it. A best-practice guide for heel pain says to expect several weeks or months, and that the outlook is good.
+            That’s why sessions are short enough to do daily.{' '}
+            <a href={OUTLOOK_SOURCE.url} target="_blank" rel="noopener noreferrer">
+              {OUTLOOK_SOURCE.label}
+            </a>
+          </p>
+        ) : (
+          <p className="small">Be patient with it. This is slow, steady work, which is why sessions are short enough to do daily.</p>
+        )}
+        <p className="small">Missing a day is fine. You pick it up the next day.</p>
+      </section>
 
       {goals.length > 0 && (
         <section className="stack" aria-label="Your goals">
@@ -111,7 +147,7 @@ export function Plan() {
 
       <Cta>
         <button className="btn" type="button" onClick={() => (track('step_completed', { step: STEP.plan }), go(STEP.email))}>
-          Continue
+          Send me my plan
         </button>
       </Cta>
     </Page>

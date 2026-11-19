@@ -21,6 +21,7 @@ import { track } from '../lib/analytics';
 import { go } from '../router';
 import { update, useFunnel, type TryIt } from '../state';
 import { ADVANCE_MS, Choice, clock, Clip, Cta, Page, Reaction } from '../ui';
+import { herTime, triedRow } from '../words';
 
 const LENGTH = 60;
 
@@ -233,16 +234,19 @@ const R = 72;
 const TURN = 2 * Math.PI * R;
 
 /**
- * Her answers, read back one by one as the plan is put together. Every line
- * is something she told us or did, so the work shown is the work done.
+ * Her answers, read back one by one as the plan is put together: the story
+ * she confirmed half-way, in the same order. Every line is something she told
+ * us or did, so the work shown is the work done.
  */
 export function Building() {
   const s = useFunnel();
   const a = s.answers;
   const goals = goalLabels(a);
+  const tried = triedRow(a);
   const lines = [
     `${FOCUS_LABEL[a.focus ?? 'heel']} · ${WHEN_LABEL[a.when ?? 'varies'].toLowerCase()}`,
-    a.day != null ? DAY_LABEL[a.day] : `${a.minutes ?? 5} minutes a day`,
+    tried !== '' ? `Already tried: ${tried}` : a.day != null ? DAY_LABEL[a.day] : null,
+    `Your time: ${herTime(a)}`,
     goals[0] != null ? `Goal: ${goals[0]}` : null,
     `Your plan: ${PLAN_NAME[kindOf(a)]}`,
   ].filter((line): line is string => line != null);

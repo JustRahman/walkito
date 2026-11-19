@@ -373,3 +373,15 @@ export const FIRST_STEP_SOURCE = {
   label: 'DiGiovanni et al., Journal of Bone and Joint Surgery, 2003',
   url: 'https://pubmed.ncbi.nlm.nih.gov/12837927/',
 } as const;
+
+/**
+ * Behind "expect several weeks or months, and the outlook is good" on the plan
+ * page: the best practice guide for plantar heel pain tells clinicians to
+ * "adopt a realistic tone as recovery may take several weeks or months but
+ * stress the positive prognosis". Said about heel pain only, to someone whose
+ * answer was her heel, and never about Walkito.
+ */
+export const OUTLOOK_SOURCE = {
+  label: 'Morrissey et al., British Journal of Sports Medicine, 2021',
+  url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8458083/',
+} as const;

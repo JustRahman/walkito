@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { Answers } from './state';
-import { guessOf, listOf, NOT_QUITE, releaseOf, summaryOf, triedNouns } from './words';
+import { guessOf, herTime, listOf, NOT_QUITE, releaseOf, summaryOf, triedNouns, triedRow } from './words';
 
 /**
  * What is said back to her is put together from her answers, so no reader of
@@ -144,5 +144,15 @@ describe('what is said back to her', () => {
     expect(triedNouns({ tried: ['pt', 'videos', 'stretching'] })).toEqual(['stretching on your own', 'videos online']);
     expect(triedNouns({ tried: ['nothing'] })).toEqual([]);
     expect(triedNouns({})).toEqual([]);
+  });
+
+  test('the loader and the plan page read back the same story: what she tried, and her time', () => {
+    expect(triedRow({ tried: ['insoles', 'pt'] })).toBe('new insoles or shoes, a doctor or physical therapist');
+    expect(triedRow({ tried: ['nothing'] })).toBe('');
+    expect(triedRow({})).toBe('');
+    expect(herTime({ minutes: 10, start: 'bed' })).toBe('10 minutes a day, on the edge of the bed');
+    expect(herTime({ minutes: 3, start: 'standing' })).toBe('3 minutes a day, standing, with a hand on a counter');
+    // No answer stored: the plan's own defaults, as the engine uses them.
+    expect(herTime({})).toBe('5 minutes a day, in a chair');
   });
 });
