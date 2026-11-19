@@ -162,7 +162,9 @@ export function triedRow(a: Answers): string {
  * before v7) "5 minutes a day, in a chair".
  */
 export function herTime(a: Answers): string {
-  if (a.anchor != null) return `${anchorLabel(a.anchor, a).toLowerCase()}, ${a.minutes ?? 5} minutes`;
+  // Only the first letter comes down: "before I get out of bed" keeps its "I".
+  const label = a.anchor != null ? anchorLabel(a.anchor, a) : null;
+  if (label != null) return `${label[0]!.toLowerCase()}${label.slice(1)}, ${a.minutes ?? 5} minutes`;
   return `${a.minutes ?? 5} minutes a day, ${START_LABEL[a.start ?? 'chair'].toLowerCase()}`;
 }
 

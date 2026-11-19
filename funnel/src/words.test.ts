@@ -184,6 +184,8 @@ describe('what is said back to her', () => {
     // Once she has picked the moment her minutes follow, that is her time.
     expect(herTime({ minutes: 5, start: 'chair', anchor: 'coffee' })).toBe('with my morning coffee, 5 minutes');
     expect(herTime({ minutes: 10, anchor: 'walk', day: 'run_short' })).toBe('before my run, 10 minutes');
+    expect(herTime({ minutes: 5, anchor: 'bed' })).toBe('before I get out of bed, 5 minutes');
+    expect(herTime({ minutes: 5, anchor: 'home' })).toBe('when I get home and the shoes come off, 5 minutes');
   });
 
   test('what she spent is said back only as she gave it', () => {
